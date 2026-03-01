@@ -4,6 +4,7 @@ import DashboardAdmin from "./pages/DashboardAdmin";
 import DashboardStaff from "./pages/DashboardStaff";
 import DashboardUser from "./pages/DashboardUser";
 import Unauthorized from "./pages/Unauthorized";
+import MasterDataAdmin from "./pages/MasterDataAdmin";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -37,6 +38,15 @@ function App() {
           element={
             <ProtectedRoute role={3}>
               <DashboardUser />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/master"
+          element={
+            <ProtectedRoute role={1}>
+              <MasterDataAdmin />
             </ProtectedRoute>
           }
         />

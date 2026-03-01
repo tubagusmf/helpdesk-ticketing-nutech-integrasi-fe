@@ -1,27 +1,34 @@
-import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import DashboardLayout from "../components/layout/DashboardLayout";
+import SummaryCard from "../components/dashboard/SummaryCard";
 
 export default function DashboardStaff() {
-    const { logout } = useAuth();
-    const navigate = useNavigate();
-
-    const handleLogout = () => {
-        logout();
-        navigate("/");
-      };
+  const menu = [
+    { label: "Dashboard", path: "/staff/dashboard" },
+    { label: "Data Ticket", path: "/staff/tickets" },
+  ];
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Dashboard Staff</h1>
-
-        <button
-          onClick={handleLogout}
-          className="bg-red-500 text-white px-4 py-2 rounded"
-        >
-          Logout
-        </button>
+    <DashboardLayout title="Staff Dashboard" menu={menu}>
+      <div className="grid grid-cols-3 gap-6">
+        <SummaryCard
+          title="Assigned Ticket"
+          value="8"
+          subtitle="Tiket ditugaskan"
+          color="text-blue-600"
+        />
+        <SummaryCard
+          title="Open Ticket"
+          value="3"
+          subtitle="Belum selesai"
+          color="text-yellow-600"
+        />
+        <SummaryCard
+          title="Resolved"
+          value="5"
+          subtitle="Sudah selesai"
+          color="text-green-600"
+        />
       </div>
-    </div>
+    </DashboardLayout>
   );
 }
