@@ -12,7 +12,7 @@ export default function DashboardAdmin() {
   return (
     <DashboardLayout title="Executive Dashboard" menu={menu}>
       
-      <div className="bg-white p-4 rounded-xl shadow mb-6 grid grid-cols-4 gap-4">
+      <div className="bg-white p-4 rounded-xl shadow mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <select className="border p-2 rounded">
           <option>Semua Project</option>
         </select>
@@ -25,7 +25,7 @@ export default function DashboardAdmin() {
         <input type="date" className="border p-2 rounded" />
       </div>
 
-      <div className="grid grid-cols-4 gap-6 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <SummaryCard
           title="Total Ticket"
           value="12"
@@ -52,7 +52,7 @@ export default function DashboardAdmin() {
         />
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-xl shadow h-64">
           <h3 className="font-semibold mb-4">Status Distribusi</h3>
           <div className="flex items-center justify-center h-full text-gray-400">
