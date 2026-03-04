@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
 import { FiEdit2, FiTrash2 } from "react-icons/fi";
-import LocationModal from "../modal/LocationModal";
+import PartModal from "../modal/PartModal";
 import DeleteConfirmModal from "../modal/DeleteConfirmModal";
 import {
-  getLocations,
-  createLocation,
-  updateLocation,
-  deleteLocation,
-} from "../../services/locationService";
+  getParts,
+  createPart,
+  updatePart,
+  deletePart,
+} from "../../services/partService";
 import { getProjects } from "../../services/projectService";
 
-export default function LocationTab() {
+export default function PartTab() {
   const [data, setData] = useState([]);
   const [projects, setProjects] = useState([]);
 
@@ -24,7 +24,7 @@ export default function LocationTab() {
   const [totalPage, setTotalPage] = useState(1);
 
   const fetchData = async () => {
-    const res = await getLocations(page, search);
+    const res = await getParts(page, search);
     setData(res.data);
     setTotalPage(res.total_page);
   };
@@ -51,9 +51,9 @@ export default function LocationTab() {
     };
 
     if (selectedData) {
-      await updateLocation(selectedData.id, payload);
+      await updatePart(selectedData.id, payload);
     } else {
-      await createLocation(payload);
+      await createPart(payload);
     }
 
     setIsModalOpen(false);
@@ -62,7 +62,7 @@ export default function LocationTab() {
   };
 
   const handleDelete = async () => {
-    await deleteLocation(deleteId);
+    await deletePart(deleteId);
     setDeleteId(null);
     fetchData();
   };
@@ -71,7 +71,7 @@ export default function LocationTab() {
     <>
     {/* HEADER */}
     <div className="flex justify-between items-center mb-6">
-        <h2 className="text-lg font-semibold">Data Locations</h2>
+        <h2 className="text-lg font-semibold">Data Parts</h2>
 
         <button
           onClick={() => {
@@ -80,7 +80,7 @@ export default function LocationTab() {
           }}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
         >
-          + Add Location
+          + Add Part
         </button>
       </div>
 
@@ -88,7 +88,7 @@ export default function LocationTab() {
       <div className="mb-6">
         <input
           type="text"
-          placeholder="Cari nama lokasi atau project..."
+          placeholder="Cari nama parts atau project..."
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
@@ -158,7 +158,7 @@ export default function LocationTab() {
       </div>
 
       {/* MODAL */}
-      <LocationModal
+      <PartModal
         isOpen={isModalOpen}
         onClose={() => {
           setIsModalOpen(false);

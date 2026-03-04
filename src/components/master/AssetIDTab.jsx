@@ -1,18 +1,18 @@
 import { useEffect, useState } from "react";
 import { FiEdit2, FiTrash2 } from "react-icons/fi";
-import LocationModal from "../modal/LocationModal";
+import AssetIDModal from "../modal/AssetIDModal";
 import DeleteConfirmModal from "../modal/DeleteConfirmModal";
 import {
-  getLocations,
-  createLocation,
-  updateLocation,
-  deleteLocation,
-} from "../../services/locationService";
-import { getProjects } from "../../services/projectService";
+  getAssetIDs,
+  createAssetID,
+  updateAssetID,
+  deleteAssetID,
+} from "../../services/assetIDService";
+import { getParts } from "../../services/partService";
 
-export default function LocationTab() {
+export default function AssetIDTab() {
   const [data, setData] = useState([]);
-  const [projects, setProjects] = useState([]);
+  const [parts, setParts] = useState([]);
 
   const [selectedData, setSelectedData] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
@@ -24,14 +24,14 @@ export default function LocationTab() {
   const [totalPage, setTotalPage] = useState(1);
 
   const fetchData = async () => {
-    const res = await getLocations(page, search);
+    const res = await getAssetIDs(page, search);
     setData(res.data);
     setTotalPage(res.total_page);
   };
 
-  const fetchProjects = async () => {
-    const res = await getProjects(1, "");
-    setProjects(res.data);
+  const fetchParts = async () => {
+    const res = await getParts(1, "");
+    setParts(res.data);
   };
 
   useEffect(() => {
@@ -39,21 +39,21 @@ export default function LocationTab() {
   }, [page, search]);
 
   useEffect(() => {
-    fetchProjects();
+    fetchParts();
   }, []);
 
-  const handleSubmit = async (name, projectId) => {
-    if (!name || !projectId) return;
+  const handleSubmit = async (name, partId) => {
+    if (!name || !partId) return;
 
     const payload = {
       name,
-      project_id: Number(projectId),
+      part_id: Number(partId),
     };
 
     if (selectedData) {
-      await updateLocation(selectedData.id, payload);
+      await updateAssetID(selectedData.id, payload);
     } else {
-      await createLocation(payload);
+      await createAssetID(payload);
     }
 
     setIsModalOpen(false);
@@ -62,16 +62,16 @@ export default function LocationTab() {
   };
 
   const handleDelete = async () => {
-    await deleteLocation(deleteId);
+    await deleteAssetID(deleteId);
     setDeleteId(null);
     fetchData();
   };
 
   return (
     <>
-    {/* HEADER */}
-    <div className="flex justify-between items-center mb-6">
-        <h2 className="text-lg font-semibold">Data Locations</h2>
+      {/* HEADER */}
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-lg font-semibold">Data Asset ID</h2>
 
         <button
           onClick={() => {
@@ -80,15 +80,14 @@ export default function LocationTab() {
           }}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
         >
-          + Add Location
+          + Add Asset ID
         </button>
       </div>
-
       {/* SEARCH */}
       <div className="mb-6">
         <input
           type="text"
-          placeholder="Cari nama lokasi atau project..."
+          placeholder="Cari Perangkat ID atau project..."
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
@@ -108,7 +107,10 @@ export default function LocationTab() {
             <div>
               <p className="font-medium">{item.name}</p>
               <p className="text-sm text-gray-500">
-                Project: {item.project?.name}
+                Part: {item.part?.name}
+              </p>
+              <p className="text-sm text-gray-500">
+                Project: {item.part?.project?.name}
               </p>
             </div>
 
@@ -158,7 +160,7 @@ export default function LocationTab() {
       </div>
 
       {/* MODAL */}
-      <LocationModal
+      <AssetIDModal
         isOpen={isModalOpen}
         onClose={() => {
           setIsModalOpen(false);
@@ -166,7 +168,7 @@ export default function LocationTab() {
         }}
         onSubmit={handleSubmit}
         initialData={selectedData}
-        projects={projects}
+        parts={parts}
       />
 
       {/* DELETE CONFIRM */}

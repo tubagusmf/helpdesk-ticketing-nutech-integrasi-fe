@@ -52,6 +52,21 @@ export default function ProjectTab() {
 
   return (
     <>
+    {/* HEADER */}
+    <div className="flex justify-between items-center mb-6">
+        <h2 className="text-lg font-semibold">Data Projects</h2>
+
+        <button
+          onClick={() => {
+            setSelectedData(null);
+            setIsModalOpen(true);
+          }}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+        >
+          + Add Project
+        </button>
+      </div>
+
       {/* SEARCH */}
       <div className="mb-6">
         <input
