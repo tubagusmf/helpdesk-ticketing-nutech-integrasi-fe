@@ -3,6 +3,8 @@ import ProjectTab from "../components/master/ProjectTab";
 import LocationTab from "../components/master/LocationTab";
 import PartTab from "../components/master/PartTab";
 import AssetIDTab from "../components/master/AssetIDTab";
+import CauseTab from "../components/master/CauseTab";
+import SolutionTab from "../components/master/SolutionTab";
 import { useState } from "react";
 
 export default function MasterDataAdmin() {
@@ -13,7 +15,7 @@ export default function MasterDataAdmin() {
     { label: "Master Data", path: "/admin/master" },
   ];
 
-  const tabs = ["Project", "Location", "Part", "Asset ID"];
+  const tabs = ["Project", "Location", "Part", "Asset ID", "Cause", "Solution"];
   const [activeTab, setActiveTab] = useState("Project");
 
   return (
@@ -43,6 +45,8 @@ export default function MasterDataAdmin() {
         {activeTab === "Location" && <LocationTab />}
         {activeTab === "Part" && <PartTab />}
         {activeTab === "Asset ID" && <AssetIDTab />}
+        {activeTab === "Cause" && <CauseTab />}
+        {activeTab === "Solution" && <SolutionTab />}
       </div>
     </DashboardLayout>
   );
