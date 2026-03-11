@@ -9,16 +9,24 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    console.log("TOKEN SAAT REFRESH:", token);
   
     if (token) {
       try {
         const decoded = jwtDecode(token);
-        console.log("DECODED:", decoded);
-        setUser(decoded);
+  
+        const currentTime = Date.now() / 1000;
+  
+        if (decoded.exp < currentTime) {
+          console.log("TOKEN EXPIRED");
+          localStorage.removeItem("token");
+          setUser(null);
+        } else {
+          setUser(decoded);
+        }
       } catch (err) {
         console.log("TOKEN INVALID");
         localStorage.removeItem("token");
+        setUser(null);
       }
     }
   

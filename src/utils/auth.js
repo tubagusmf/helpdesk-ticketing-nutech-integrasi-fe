@@ -21,7 +21,23 @@ export function getRoleID() {
 }
 
 export function isAuthenticated() {
-  return !!getToken();
+  const token = getToken();
+  if (!token) return false;
+
+  try {
+    const decoded = jwtDecode(token);
+    const currentTime = Date.now() / 1000;
+
+    if (decoded.exp < currentTime) {
+      localStorage.removeItem("token");
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    localStorage.removeItem("token");
+    return false;
+  }
 }
 
 export function logout() {
