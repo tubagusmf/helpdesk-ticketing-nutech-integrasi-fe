@@ -45,7 +45,7 @@ export default function UserTab({
         <div className="mb-6">
           <input
             type="text"
-            placeholder="Cari nama project..."
+            placeholder="Cari nama, email, role, atau project..."
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);

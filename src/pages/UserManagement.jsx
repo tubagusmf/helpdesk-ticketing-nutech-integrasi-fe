@@ -30,12 +30,14 @@ export default function UserManagement() {
     loadUsers()
     loadProjects()
   },[])
-
+  
   const loadUsers = async () => {
     const res = await getUsers(page, search);
   
-    setUsers(res.data);
-    setTotalPage(res.total_page);
+    console.log("API USERS:", res);
+  
+    setUsers(res.data || []);
+    setTotalPage(res.total_page || 1);
   };
 
   useEffect(() => {
