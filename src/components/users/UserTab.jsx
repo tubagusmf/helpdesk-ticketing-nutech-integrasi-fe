@@ -124,14 +124,14 @@ export default function UserTab({
   
                   <button
                     onClick={() => onEdit(user)}
-                    className="px-3 py-1 text-xs bg-orange-50 text-orange-600 rounded hover:bg-orange-100"
+                    className="text-orange-600 rounded hover:bg-orange-100"
                   >
                     <FiEdit2 size={18} />
                   </button>
   
                   <button
                     onClick={() => handleDeleteClick(user)}
-                    className="px-3 py-1 text-xs bg-red-50 text-red-600 rounded hover:bg-red-100"
+                    className="text-red-600 rounded hover:bg-red-100"
                   >
                     <FiTrash2 size={18} />
                   </button>

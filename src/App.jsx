@@ -8,6 +8,7 @@ import MasterDataAdmin from "./pages/MasterDataAdmin";
 import UserManagement from "./pages/UserManagement";
 
 import ProtectedRoute from "./components/ProtectedRoute";
+import TicketManagement from "./pages/TicketManagement";
 
 function App() {
   return (
@@ -57,6 +58,15 @@ function App() {
           element={
             <ProtectedRoute role={1}>
               <MasterDataAdmin />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/tickets"
+          element={
+            <ProtectedRoute role={1}>
+              <TicketManagement />
             </ProtectedRoute>
           }
         />
