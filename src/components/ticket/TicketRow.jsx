@@ -1,4 +1,5 @@
 import { FiEdit, FiEye, FiTrash } from "react-icons/fi";
+import { useState, useEffect } from "react";
 
 export default function TicketRow({ ticket }) {
 
@@ -14,13 +15,55 @@ export default function TicketRow({ ticket }) {
       RESOLVED: "bg-green-100 text-green-600",
       CLOSED: "bg-gray-200 text-gray-600",
     };
+
+    const parseLocalDate = (dateString) => {
+      const [date, time] = dateString.split("T");
+      const [year, month, day] = date.split("-");
+      const [hour, minute] = time.split(":");
+    
+      return new Date(
+        year,
+        month - 1,
+        day,
+        hour,
+        minute
+      );
+    };
+
+    const getSLA = (dueAt) => {
+      const now = new Date();
+      const due = parseLocalDate(dueAt);
+    
+      const diffMs = due - now;
+    
+      if (diffMs <= 0) return "OVERDUE";
+    
+      const minutes = Math.floor(diffMs / 60000);
+      const hours = Math.floor(minutes / 60);
+    
+      if (hours > 0) {
+        return `${hours} jam ${minutes % 60} menit lagi`;
+      }
+    
+      return `${minutes} menit lagi`;
+    };
+
+    const [now, setNow] = useState(new Date());
+
+    useEffect(() => {
+      const interval = setInterval(() => {
+        setNow(new Date());
+      }, 60000);
+    
+      return () => clearInterval(interval);
+    }, []);
   
     const overdue =
-      new Date(ticket.due_at) < new Date() &&
+      parseLocalDate(ticket.due_at) < now &&
       ticket.status === "OPEN";
   
     return (
-      <div className="grid grid-cols-5 py-4 border-b items-start text-sm">
+      <div className="grid grid-cols-6 py-4 border-b items-start text-sm">
   
         {/* TICKET INFO */}
   
@@ -69,20 +112,31 @@ export default function TicketRow({ ticket }) {
           </div>
   
         </div>
+
+        {/* ASSIGN TO */}
+        <div>
+          <div className="text-gray-800 font-medium">
+            {ticket.assigned_to_name || "-"}
+          </div>
+        </div>
   
         {/* STATUS */}
   
         <div>
-  
           <span
             className={`px-3 py-1 text-xs rounded-full ${statusColor[ticket.status]}`}
           >
             {ticket.status}
           </span>
-  
-          {overdue && (
-            <div className="text-red-500 text-xs mt-1">
-              ⚠ Overdue
+
+          {/* SLA */}
+          {ticket.status === "OPEN" && (
+            <div
+              className={`text-xs mt-1 ${
+                overdue ? "text-red-500" : "text-gray-500"
+              }`}
+            >
+              {overdue ? "⚠ Overdue" : `⏳ ${getSLA(ticket.due_at)}`}
             </div>
           )}
         </div>

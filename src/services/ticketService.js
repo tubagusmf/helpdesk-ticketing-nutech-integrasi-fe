@@ -24,11 +24,19 @@ export async function getTicketById(id) {
 export async function createTicket(data) {
   const res = await fetch(`${BASE_URL}/create`, {
     method: "POST",
-    headers: getHeaders(),
-    body: JSON.stringify(data),
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+    body: data,
   });
 
-  return res.json();
+  const result = await res.json();
+
+  if (!res.ok) {
+    throw new Error(result.message || "Gagal create ticket");
+  }
+
+  return result;
 }
 
 export async function updateTicketStatus(id, data) {
@@ -46,6 +54,48 @@ export async function deleteTicket(id) {
     method: "DELETE",
     headers: getHeaders(),
   });
+
+  return res.json();
+}
+
+export async function getProjects() {
+  const res = await fetch("http://localhost:3000/v1/projects", {
+    headers: getHeaders(),
+  });
+  return res.json();
+}
+
+export async function getLocations(projectId) {
+  const res = await fetch(
+    `http://localhost:3000/v1/locations?project_id=${projectId}`,
+    { headers: getHeaders() }
+  );
+  return res.json();
+}
+
+export async function getParts(projectId) {
+  const res = await fetch(
+    `http://localhost:3000/v1/parts?project_id=${projectId}`,
+    { headers: getHeaders() }
+  );
+  return res.json();
+}
+
+export async function getAssets(partId) {
+  const res = await fetch(
+    `http://localhost:3000/v1/asset-id?part_id=${partId}`,
+    { headers: getHeaders() }
+  );
+  return res.json();
+}
+
+export async function getStaffs() {
+  const res = await fetch(
+    "http://localhost:3000/v1/users?role_id=2&is_active=true",
+    {
+      headers: getHeaders(),
+    }
+  );
 
   return res.json();
 }
