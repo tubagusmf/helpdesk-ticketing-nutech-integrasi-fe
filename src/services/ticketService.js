@@ -5,8 +5,10 @@ const getHeaders = () => ({
   Authorization: `Bearer ${localStorage.getItem("token")}`,
 });
 
-export async function getTickets() {
-  const res = await fetch(BASE_URL, {
+export async function getTickets(filters = {}) {
+  const query = new URLSearchParams(filters).toString();
+
+  const res = await fetch(`${BASE_URL}?${query}`, {
     headers: getHeaders(),
   });
 

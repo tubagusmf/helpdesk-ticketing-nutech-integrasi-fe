@@ -13,22 +13,51 @@ export default function TicketManagement() {
     { label: "Master Data", path: "/admin/master" },
   ];
 
-  const [tickets,setTickets] = useState([])
-  const [search,setSearch] = useState("")
+  const [tickets, setTickets] = useState([]);
+  const [filters, setFilters] = useState({
+    project_id: "",
+    assigned_to_id: "",
+    reporter_id: "",
+    priority: "",
+    status: "",
+  });
+  const [search, setSearch] = useState("");
+
+  const [page, setPage] = useState(1);
+  const [totalPage, setTotalPage] = useState(1);
+
+  useEffect(() => {
+    fetchTickets();
+  }, [filters, search, page]);
+
+  const fetchTickets = async () => {
+    const res = await getTickets({
+      ...filters,
+      search,
+      page,
+    });
+  
+    console.log("PAGINATION:", res);
+  
+    setTickets(res.data || []);
+    setTotalPage(res.total_page || 1);
+  };
 
   const loadTickets = async () => {
     const res = await getTickets();
   
     console.log("API RESPONSE:", res);
-    console.log("tickets type:", typeof res);
-    console.log("tickets value:", res);
   
-    setTickets(res || []);
+    setTickets(res?.data || res || []);
   };
 
   useEffect(()=>{
     loadTickets()
   },[])
+
+  useEffect(() => {
+    setPage(1);
+  }, [filters, search]);
 
   return (
     <DashboardLayout title="Manajemen Tiket" menu={menu}>
@@ -47,12 +76,39 @@ export default function TicketManagement() {
         <TicketFilter
           search={search}
           setSearch={setSearch}
+          filters={filters}
+          setFilters={setFilters}
+          tickets={tickets}
         />
 
         <TicketTable
           tickets={tickets}
           search={search}
         />
+      </div>
+
+      <div className="flex justify-center mt-6 gap-2">
+
+        <button
+          disabled={page === 1}
+          onClick={() => setPage(page - 1)}
+          className="px-3 py-1 border rounded disabled:opacity-50"
+        >
+          Prev
+        </button>
+
+        <span className="px-3 py-1">
+          Page {page} of {totalPage}
+        </span>
+
+        <button
+          disabled={page === totalPage}
+          onClick={() => setPage(page + 1)}
+          className="px-3 py-1 border rounded disabled:opacity-50"
+        >
+          Next
+        </button>
+
       </div>
 
     </DashboardLayout>

@@ -1,8 +1,6 @@
 import TicketRow from "./TicketRow"
 
-export default function TicketTable({tickets,search}){
-
-const filteredTickets = tickets.filter((ticket) => ticket.ticket_code.toLowerCase().includes(search.toLowerCase()));
+export default function TicketTable({tickets}){
 
     return(
         <div className="mb-4">
@@ -15,9 +13,9 @@ const filteredTickets = tickets.filter((ticket) => ticket.ticket_code.toLowerCas
                 <div className="col-span-1">AKSI</div>
             </div>
 
-            {filteredTickets.map((ticket) => (
+            {Array.isArray(tickets) && tickets.map((ticket) => (
                 <TicketRow key={ticket.id} ticket={ticket} />
             ))}
         </div>
-    )
+    );
 }
