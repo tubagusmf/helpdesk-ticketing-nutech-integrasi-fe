@@ -25,7 +25,7 @@ export default function SolutionTab() {
 
   const fetchData = async () => {
     const res = await getSolutions(page, search);
-    setData(res.data);
+    setData(res.data || []);
     setTotalPage(res.total_page);
   };
 
@@ -88,7 +88,7 @@ export default function SolutionTab() {
       <div className="mb-6">
         <input
           type="text"
-          placeholder="Cari data solusi..."
+          placeholder="Cari data solusi atau project..."
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
@@ -107,8 +107,17 @@ export default function SolutionTab() {
           >
             <div>
               <p className="font-medium">{item.name}</p>
+
               <p className="text-sm text-gray-500">
                 Cause: {item.cause?.name}
+              </p>
+
+              <p className="text-sm text-gray-500">
+                Part: {item.cause?.part?.name}
+              </p>
+
+              <p className="text-sm text-gray-500">
+                Project: {item.cause?.part?.project?.name}
               </p>
             </div>
 

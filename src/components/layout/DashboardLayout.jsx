@@ -106,15 +106,6 @@ export default function DashboardLayout({ title, children, menu }) {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="relative hidden sm:block">
-              <FiSearch className="absolute top-3 left-3 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Global search..."
-                className="pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-400 outline-none"
-              />
-            </div>
-
             <span className="hidden md:inline px-3 py-1 bg-green-100 text-green-600 text-sm rounded-full">
               Online
             </span>

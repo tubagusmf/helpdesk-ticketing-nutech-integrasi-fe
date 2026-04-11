@@ -16,7 +16,9 @@ export default function SolutionModal({
       setName(initialData.name);
       setSelectedCause({
         value: initialData.cause_id,
-        label: initialData.cause?.name,
+        label: `${initialData.cause?.part?.project?.name || "-"} | ${
+          initialData.cause?.part?.name || "-"
+        } | ${initialData.cause?.name || "-"}`,
       });
     } else {
       setName("");
@@ -26,29 +28,44 @@ export default function SolutionModal({
 
   if (!isOpen) return null;
 
-  const causeOptions = causes.map((p) => ({
-    value: p.id,
-    label: p.name,
-  }));
+  const groupedOptions = Object.values(
+    causes.reduce((acc, c) => {
+      const projectName = c.part?.project?.name || "Tanpa Project";
+  
+      if (!acc[projectName]) {
+        acc[projectName] = {
+          label: projectName,
+          options: [],
+        };
+      }
+  
+      acc[projectName].options.push({
+        value: c.id,
+        label: `${c.part?.name} | ${c.name}`,
+      });
+  
+      return acc;
+    }, {})
+  );
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 px-4">
       <div className="bg-white w-full max-w-md rounded-xl p-6 shadow-lg">
         <h2 className="text-lg font-semibold mb-4">
-          {initialData ? "Edit Solution" : "Tambah Solution"}
+          {initialData ? "Edit Solusi" : "Tambah Solusi"}
         </h2>
 
         <div className="space-y-4">
           <input
             type="text"
-            placeholder="Nama Solution"
+            placeholder="Nama Solusi"
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="w-full border px-3 py-2 rounded-lg"
           />
 
           <Select
-            options={causeOptions}
+            options={groupedOptions}
             value={selectedCause}
             onChange={setSelectedCause}
             placeholder="Pilih atau ketik nama penyebab..."
