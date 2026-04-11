@@ -101,3 +101,64 @@ export async function getStaffs() {
 
   return res.json();
 }
+
+export const createTicketResolution = async (ticketId, formData) => {
+  const res = await fetch(
+    `${BASE_URL}/${ticketId}/resolution`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+      body: formData,
+    }
+  );
+
+  const result = await res.json();
+
+  if (!res.ok) {
+    throw new Error(result.message || "Gagal resolve ticket");
+  }
+
+  return result;
+};
+
+export async function getCauses(partId) {
+  const res = await fetch(
+    `http://localhost:3000/v1/causes?part_id=${partId}&limit=100`,
+    {
+      headers: getHeaders(),
+    }
+  );
+
+  return res.json();
+}
+
+export async function getSolutions(causeId) {
+  const res = await fetch(
+    `http://localhost:3000/v1/solutions?cause_id=${causeId}&limit=100`,
+    {
+      headers: getHeaders(),
+    }
+  );
+
+  return res.json();
+}
+
+export async function updateTicketStatusOnly(id, status) {
+  const res = await fetch(`${BASE_URL}/${id}/status`, {
+    method: "PUT",
+    headers: getHeaders(),
+    body: JSON.stringify({
+      status: status,
+    }),
+  });
+
+  const result = await res.json();
+
+  if (!res.ok) {
+    throw new Error(result.message || "Gagal update status");
+  }
+
+  return result;
+}

@@ -10,7 +10,7 @@ import {
     getStaffs,
   } from "../../services/ticketService";
 
-export default function TicketModal({ onClose, onSuccess, user }) {
+export default function TicketModal({ onClose, onSuccess }) {
 
   const [loading, setLoading] = useState(false);
 
@@ -91,45 +91,6 @@ export default function TicketModal({ onClose, onSuccess, user }) {
     setStaffs(activeStaffs);
   };
 
-  const handleProjectChange = async (e) => {
-    const projectId = e.target.value;
-  
-    setForm({
-      ...form,
-      project_id: projectId,
-      location_id: "",
-      part_id: "",
-      asset_id: "",
-    });
-  
-    const [locRes, partRes] = await Promise.all([
-      getLocations(projectId),
-      getParts(projectId),
-    ]);
-  
-    setLocations(locRes.data || []);
-    setParts(partRes.data || []);
-    setAssets([]);
-  };
-  
-  const handleLocationChange = async (e) => {
-    const locationId = e.target.value;
-  
-    setForm({
-      ...form,
-      location_id: locationId,
-    });
-  };
-  
-  const handlePartChange = async (e) => {
-    const partId = e.target.value;
-  
-    setForm({ ...form, part_id: partId, asset_id: "" });
-  
-    const res = await getAssets(partId);
-    setAssets(res.data || []);
-  };
-
   const handleChange = (e) => {
     setForm({
       ...form,
@@ -196,115 +157,157 @@ export default function TicketModal({ onClose, onSuccess, user }) {
 
             <div className="space-y-3">
 
-              <Select
-                options={projectOptions}
-                value={selectedProject}
-                onChange={async (selected) => {
-                  setSelectedProject(selected);
-
-                  setSelectedLocation(null);
-                  setSelectedPart(null);
-                  setSelectedAsset(null);
-
-                  setForm({
-                    ...form,
-                    project_id: selected?.value || "",
-                    location_id: "",
-                    part_id: "",
-                    asset_id: "",
-                  });
-
-                  const [locRes, partRes] = await Promise.all([
-                    getLocations(selected.value),
-                    getParts(selected.value),
-                  ]);
-
-                  setLocations(locRes.data || []);
-                  setParts(partRes.data || []);
-                  setAssets([]);
-                }}
-                placeholder="Pilih atau ketik project..."
-                isSearchable
-              />
-
-              <div className="grid grid-cols-2 gap-2">
+              {/* PROJECT */}
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-gray-700">
+                  Project
+                </label>
                 <Select
-                  options={locationOptions}
-                  value={selectedLocation}
-                  onChange={(selected) => {
-                    setSelectedLocation(selected);
+                  options={projectOptions}
+                  value={selectedProject}
+                  onChange={async (selected) => {
+                    setSelectedProject(selected);
 
+                    setSelectedLocation(null);
                     setSelectedPart(null);
                     setSelectedAsset(null);
 
                     setForm({
                       ...form,
-                      location_id: selected?.value || "",
+                      project_id: selected?.value || "",
+                      location_id: "",
                       part_id: "",
                       asset_id: "",
                     });
+
+                    const [locRes, partRes] = await Promise.all([
+                      getLocations(selected.value),
+                      getParts(selected.value),
+                    ]);
+
+                    setLocations(locRes.data || []);
+                    setParts(partRes.data || []);
+                    setAssets([]);
                   }}
-                  placeholder="Pilih atau ketik lokasi..."
+                  placeholder="Pilih atau ketik project..."
                   isSearchable
-                  isDisabled={!selectedProject}
-                />
-
-                <Select
-                  options={partOptions}
-                  value={selectedPart}
-                  onChange={async (selected) => {
-                    setSelectedPart(selected);
-
-                    setSelectedAsset(null);
-
-                    setForm({
-                      ...form,
-                      part_id: selected?.value || "",
-                      asset_id: "",
-                    });
-
-                    const res = await getAssets(selected.value);
-                    setAssets(res.data || []);
-                  }}
-                  placeholder="Pilih atau ketik part..."
-                  isSearchable
-                  isDisabled={!selectedProject}
                 />
               </div>
 
-              <Select
-                options={assetOptions}
-                value={selectedAsset}
-                onChange={(selected) => {
-                  setSelectedAsset(selected);
+              {/* LOCATION & PART */}
+              <div className="grid grid-cols-2 gap-2">
 
-                  setForm({
-                    ...form,
-                    asset_id: selected?.value || "",
-                  });
-                }}
-                placeholder="Pilih atau ketik part id..."
-                isSearchable
-                isDisabled={!selectedPart}
-              />
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-gray-700">
+                    Lokasi
+                  </label>
+                  <Select
+                    options={locationOptions}
+                    value={selectedLocation}
+                    onChange={(selected) => {
+                      setSelectedLocation(selected);
 
-              <textarea
-                name="description"
-                placeholder="Deskripsi Masalah"
-                onChange={handleChange}
-                className="w-full border px-3 py-2 rounded-lg"
-              />
+                      setSelectedPart(null);
+                      setSelectedAsset(null);
 
-              {/* FILE UPLOAD */}
-              <input type="file" onChange={handleFileChange} />
+                      setForm({
+                        ...form,
+                        location_id: selected?.value || "",
+                        part_id: "",
+                        asset_id: "",
+                      });
+                    }}
+                    placeholder="Pilih atau ketik lokasi..."
+                    isSearchable
+                    isDisabled={!selectedProject}
+                  />
+                </div>
 
-              {preview && (
-                <img
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-gray-700">
+                    Perangkat
+                  </label>
+                  <Select
+                    options={partOptions}
+                    value={selectedPart}
+                    onChange={async (selected) => {
+                      setSelectedPart(selected);
+
+                      setSelectedAsset(null);
+
+                      setForm({
+                        ...form,
+                        part_id: selected?.value || "",
+                        asset_id: "",
+                      });
+
+                      const res = await getAssets(selected.value);
+                      setAssets(res.data || []);
+                    }}
+                    placeholder="Pilih atau ketik perangkat..."
+                    isSearchable
+                    isDisabled={!selectedProject}
+                  />
+                </div>
+
+              </div>
+
+              {/* ASSET */}
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-gray-700">
+                  ID / No Perangkat
+                </label>
+                <Select
+                  options={assetOptions}
+                  value={selectedAsset}
+                  onChange={(selected) => {
+                    setSelectedAsset(selected);
+
+                    setForm({
+                      ...form,
+                      asset_id: selected?.value || "",
+                    });
+                  }}
+                  placeholder="Pilih atau ketik ID perangkat..."
+                  isSearchable
+                  isDisabled={!selectedPart}
+                />
+              </div>
+
+              {/* DESCRIPTION */}
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-gray-700">
+                  Deskripsi Permasalahan
+                </label>
+                <textarea
+                  name="description"
+                  placeholder="Masukkan deskripsi masalah..."
+                  onChange={handleChange}
+                  className="w-full border px-3 py-2 rounded-lg"
+                />
+              </div>
+
+              {/* ATTACHMENT */}
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-gray-700">
+                  Bukti Foto Masalah (Opsional)
+                </label>
+
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="border px-3 py-2 rounded-lg"
+                />
+
+                {preview && (
+                  <img
                     src={preview}
                     alt="preview"
                     className="mt-2 w-32 h-32 object-cover rounded-lg border"
-                />
-              )}
+                  />
+                )}
+              </div>
 
             </div>
           </div>
@@ -318,50 +321,70 @@ export default function TicketModal({ onClose, onSuccess, user }) {
             <div className="space-y-3">
 
               {/* PELAPOR */}
-              <input
-                value={currentUser?.name || "-"}
-                disabled
-                className="w-full border px-3 py-2 rounded-lg bg-gray-100"
-              />
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-gray-700">
+                  Nama Pelapor
+                </label>
+                <input
+                  value={currentUser?.name || "-"}
+                  disabled
+                  className="w-full border px-3 py-2 rounded-lg bg-gray-100"
+                />
+              </div>
 
               {/* STATUS */}
-              <input
-                value="OPEN"
-                disabled
-                className="w-full border px-3 py-2 rounded-lg bg-gray-100"
-              />
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-gray-700">
+                  Status
+                </label>
+                <input
+                  value="OPEN"
+                  disabled
+                  className="w-full border px-3 py-2 rounded-lg bg-gray-100"
+                />
+              </div>
 
               {/* PRIORITY */}
-              <Select
-                options={priorityOptions}
-                value={priorityOptions.find(p => p.value === form.priority)}
-                onChange={(selected) => {
-                  setForm({
-                    ...form,
-                    priority: selected.value,
-                  });
-                }}
-                placeholder="Pilih priority..."
-              />
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-gray-700">
+                  Prioritas
+                </label>
+                <Select
+                  options={priorityOptions}
+                  value={priorityOptions.find(p => p.value === form.priority)}
+                  onChange={(selected) => {
+                    setForm({
+                      ...form,
+                      priority: selected.value,
+                    });
+                  }}
+                  placeholder="Pilih prioritas..."
+                />
+              </div>
 
               {/* ASSIGNED */}
-              <select
-                name="assigned_to_id"
-                value={form.assigned_to_id}
-                onChange={handleChange}
-                className="w-full border px-3 py-2 rounded-lg"
-              >
-                <option value="">Pilih Staff</option>
-                {staffs.length > 0 ? (
-                  staffs.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))
-                ) : (
-                  <option disabled>Tidak ada staff aktif</option>
-                )}
-              </select>
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-gray-700">
+                  Nama Staff
+                </label>
+                <select
+                  name="assigned_to_id"
+                  value={form.assigned_to_id}
+                  onChange={handleChange}
+                  className="w-full border px-3 py-2 rounded-lg"
+                >
+                  <option value="">Pilih Staff</option>
+                  {staffs.length > 0 ? (
+                    staffs.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))
+                  ) : (
+                    <option disabled>Tidak ada staff aktif</option>
+                  )}
+                </select>
+              </div>
 
             </div>
           </div>
