@@ -1,164 +1,124 @@
-const BASE_URL = "http://localhost:3000/v1/tickets";
+const BASE_URL = "http://localhost:3000/v1";
 
-const getHeaders = () => ({
-  "Content-Type": "application/json",
-  Authorization: `Bearer ${localStorage.getItem("token")}`,
-});
+const getHeaders = (isJSON = true) => {
+  const headers = {
+    Authorization: `Bearer ${localStorage.getItem("token")}`,
+  };
 
-export async function getTickets(filters = {}) {
-  const query = new URLSearchParams(filters).toString();
-
-  const res = await fetch(`${BASE_URL}?${query}`, {
-    headers: getHeaders(),
-  });
-
-  return res.json();
-}
-
-export async function getTicketById(id) {
-  const res = await fetch(`${BASE_URL}/${id}`, {
-    headers: getHeaders(),
-  });
-
-  return res.json();
-}
-
-export async function createTicket(data) {
-  const res = await fetch(`${BASE_URL}/create`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
-    body: data,
-  });
-
-  const result = await res.json();
-
-  if (!res.ok) {
-    throw new Error(result.message || "Gagal create ticket");
+  if (isJSON) {
+    headers["Content-Type"] = "application/json";
   }
 
-  return result;
-}
+  return headers;
+};
 
-export async function updateTicketStatus(id, data) {
-  const res = await fetch(`${BASE_URL}/update-status/${id}`, {
-    method: "PUT",
-    headers: getHeaders(),
-    body: JSON.stringify(data),
-  });
+const fetchAPI = async (url, options = {}) => {
+  const res = await fetch(url, options);
 
-  return res.json();
-}
-
-export async function deleteTicket(id) {
-  const res = await fetch(`${BASE_URL}/delete/${id}`, {
-    method: "DELETE",
-    headers: getHeaders(),
-  });
-
-  return res.json();
-}
-
-export async function getProjects() {
-  const res = await fetch("http://localhost:3000/v1/projects", {
-    headers: getHeaders(),
-  });
-  return res.json();
-}
-
-export async function getLocations(projectId) {
-  const res = await fetch(
-    `http://localhost:3000/v1/locations?project_id=${projectId}`,
-    { headers: getHeaders() }
-  );
-  return res.json();
-}
-
-export async function getParts(projectId) {
-  const res = await fetch(
-    `http://localhost:3000/v1/parts?project_id=${projectId}`,
-    { headers: getHeaders() }
-  );
-  return res.json();
-}
-
-export async function getAssets(partId) {
-  const res = await fetch(
-    `http://localhost:3000/v1/asset-id?part_id=${partId}`,
-    { headers: getHeaders() }
-  );
-  return res.json();
-}
-
-export async function getStaffs() {
-  const res = await fetch(
-    "http://localhost:3000/v1/users?role_id=2&is_active=true",
-    {
-      headers: getHeaders(),
-    }
-  );
-
-  return res.json();
-}
-
-export const createTicketResolution = async (ticketId, formData) => {
-  const res = await fetch(
-    `${BASE_URL}/${ticketId}/resolution`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-      body: formData,
-    }
-  );
-
-  const result = await res.json();
+  let result;
+  try {
+    result = await res.json();
+  } catch {
+    result = null;
+  }
 
   if (!res.ok) {
-    throw new Error(result.message || "Gagal resolve ticket");
+    throw new Error(result?.message || "Terjadi kesalahan pada server");
   }
 
   return result;
 };
 
-export async function getCauses(partId) {
-  const res = await fetch(
-    `http://localhost:3000/v1/causes?part_id=${partId}&limit=100`,
-    {
-      headers: getHeaders(),
-    }
-  );
+export const getTickets = async (filters = {}) => {
+  const query = new URLSearchParams(filters).toString();
+  return fetchAPI(`${BASE_URL}/tickets?${query}`, {
+    headers: getHeaders(),
+  });
+};
 
-  return res.json();
-}
+export const getTicketById = async (id) => {
+  return fetchAPI(`${BASE_URL}/tickets/${id}`, {
+    headers: getHeaders(),
+  });
+};
 
-export async function getSolutions(causeId) {
-  const res = await fetch(
-    `http://localhost:3000/v1/solutions?cause_id=${causeId}&limit=100`,
-    {
-      headers: getHeaders(),
-    }
-  );
+export const createTicket = async (formData) => {
+  return fetchAPI(`${BASE_URL}/tickets/create`, {
+    method: "POST",
+    headers: getHeaders(false),
+    body: formData,
+  });
+};
 
-  return res.json();
-}
-
-export async function updateTicketStatusOnly(id, status) {
-  const res = await fetch(`${BASE_URL}/${id}/status`, {
+export const updateTicketStatus = async (id, data) => {
+  return fetchAPI(`${BASE_URL}/tickets/update-status/${id}`, {
     method: "PUT",
     headers: getHeaders(),
-    body: JSON.stringify({
-      status: status,
-    }),
+    body: JSON.stringify(data),
   });
+};
 
-  const result = await res.json();
+export const updateTicketStatusOnly = async (id, status) => {
+  return fetchAPI(`${BASE_URL}/tickets/${id}/status`, {
+    method: "PUT",
+    headers: getHeaders(),
+    body: JSON.stringify({ status }),
+  });
+};
 
-  if (!res.ok) {
-    throw new Error(result.message || "Gagal update status");
-  }
+export const deleteTicket = async (id) => {
+  return fetchAPI(`${BASE_URL}/tickets/delete/${id}`, {
+    method: "DELETE",
+    headers: getHeaders(),
+  });
+};
 
-  return result;
-}
+export const createTicketResolution = async (ticketId, formData) => {
+  return fetchAPI(`${BASE_URL}/tickets/${ticketId}/resolution`, {
+    method: "POST",
+    headers: getHeaders(false),
+    body: formData,
+  });
+};
+
+export const getProjects = async () => {
+  return fetchAPI(`${BASE_URL}/projects`, {
+    headers: getHeaders(),
+  });
+};
+
+export const getLocations = async (projectId) => {
+  return fetchAPI(`${BASE_URL}/locations?project_id=${projectId}`, {
+    headers: getHeaders(),
+  });
+};
+
+export const getParts = async (projectId) => {
+  return fetchAPI(`${BASE_URL}/parts?project_id=${projectId}`, {
+    headers: getHeaders(),
+  });
+};
+
+export const getAssets = async (partId) => {
+  return fetchAPI(`${BASE_URL}/asset-id?part_id=${partId}`, {
+    headers: getHeaders(),
+  });
+};
+
+export const getStaffs = async () => {
+  return fetchAPI(`${BASE_URL}/users?role_id=2&is_active=true`, {
+    headers: getHeaders(),
+  });
+};
+
+export const getCauses = async (partId) => {
+  return fetchAPI(`${BASE_URL}/causes?part_id=${partId}&limit=100`, {
+    headers: getHeaders(),
+  });
+};
+
+export const getSolutions = async (causeId) => {
+  return fetchAPI(`${BASE_URL}/solutions?cause_id=${causeId}&limit=100`, {
+    headers: getHeaders(),
+  });
+};
