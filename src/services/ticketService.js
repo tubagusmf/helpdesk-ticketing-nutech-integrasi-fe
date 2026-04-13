@@ -122,3 +122,17 @@ export const getSolutions = async (causeId) => {
     headers: getHeaders(),
   });
 };
+
+export const getTicketComments = async (ticketId) => {
+  return fetchAPI(`${BASE_URL}/tickets/${ticketId}/comments`, {
+    headers: getHeaders(),
+  });
+};
+
+export const createTicketComment = async (ticketId, data) => {
+  return fetchAPI(`${BASE_URL}/tickets/${ticketId}/comments`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+};

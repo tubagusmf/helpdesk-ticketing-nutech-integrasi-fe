@@ -1,10 +1,12 @@
-import { FiEdit, FiEye } from "react-icons/fi";
+import { FiEdit, FiEye, FiMessageCircle } from "react-icons/fi";
 import { useState, useEffect } from "react";
 import TicketResolutionModal from "../modal/TicketResolutionModal";
+import TicketCommentModal from "../modal/TicketCommentModal";
 
 export default function TicketRow({ ticket }) {
 
     const [showResolution, setShowResolution] = useState(false);  
+    const [showComment, setShowComment] = useState(false);
 
     const priorityColor = {
       LOW: "bg-gray-400",
@@ -145,6 +147,13 @@ export default function TicketRow({ ticket }) {
               >
                 <FiEdit size={18} />
               </button>
+
+              <button
+                onClick={() => setShowComment(true)}
+                className="text-green-600"
+              >
+                <FiMessageCircle size={18} />
+              </button>
             </div>
       
           </div>
@@ -154,6 +163,13 @@ export default function TicketRow({ ticket }) {
               ticket={ticket}
               onClose={() => setShowResolution(false)}
               onSuccess={() => window.location.reload()}
+            />
+          )}
+
+          {showComment && (
+            <TicketCommentModal
+              ticket={ticket}
+              onClose={() => setShowComment(false)}
             />
           )}
         </>
