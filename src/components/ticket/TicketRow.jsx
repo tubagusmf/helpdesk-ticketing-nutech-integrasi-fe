@@ -2,11 +2,13 @@ import { FiEdit, FiEye, FiMessageCircle } from "react-icons/fi";
 import { useState, useEffect } from "react";
 import TicketResolutionModal from "../modal/TicketResolutionModal";
 import TicketCommentModal from "../modal/TicketCommentModal";
+import TicketHistoryModal from "../modal/TicketHistoryModal";
 
 export default function TicketRow({ ticket }) {
 
     const [showResolution, setShowResolution] = useState(false);  
     const [showComment, setShowComment] = useState(false);
+    const [showHistory, setShowHistory] = useState(false);
 
     const priorityColor = {
       LOW: "bg-gray-400",
@@ -137,9 +139,12 @@ export default function TicketRow({ ticket }) {
       
             {/* ACTION */}
             <div className="flex gap-3">
-              <button className="text-blue-600">
-                <FiEye size={18} />
-              </button>
+            <button
+              onClick={() => setShowHistory(true)}
+              className="text-blue-600"
+            >
+              <FiEye size={18} />
+            </button>
       
               <button
                 onClick={() => setShowResolution(true)}
@@ -170,6 +175,13 @@ export default function TicketRow({ ticket }) {
             <TicketCommentModal
               ticket={ticket}
               onClose={() => setShowComment(false)}
+            />
+          )}
+
+          {showHistory && (
+            <TicketHistoryModal
+              ticket={ticket}
+              onClose={() => setShowHistory(false)}
             />
           )}
         </>

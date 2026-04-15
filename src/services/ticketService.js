@@ -136,3 +136,9 @@ export const createTicketComment = async (ticketId, data) => {
     body: JSON.stringify(data),
   });
 };
+
+export const getTicketHistories = async (ticketId) => {
+  return fetchAPI(`${BASE_URL}/tickets/${ticketId}/history`, {
+    headers: getHeaders(),
+  });
+};
