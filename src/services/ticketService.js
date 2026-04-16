@@ -142,3 +142,25 @@ export const getTicketHistories = async (ticketId) => {
     headers: getHeaders(),
   });
 };
+
+export const exportTickets = async (filters = {}) => {
+  const cleanFilters = Object.fromEntries(
+    Object.entries(filters).filter(([_, v]) => v !== "")
+  );
+
+  const query = new URLSearchParams(cleanFilters).toString();
+
+  const res = await fetch(`${BASE_URL}/tickets/export?${query}`, {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+  });
+
+  const blob = await res.blob();
+
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+
+  a.click();
+};

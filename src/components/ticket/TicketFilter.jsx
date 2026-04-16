@@ -2,6 +2,7 @@ import { FiSearch, FiDownload, FiPlus, FiRotateCcw } from "react-icons/fi";
 import { useState, useEffect } from "react";
 import TicketModal from "../modal/TicketModal";
 import { getProjects, getStaffs } from "../../services/ticketService";
+import { exportTickets } from "../../services/ticketService";
 
 export default function TicketFilter({ search, setSearch, filters, setFilters, tickets }) {
 
@@ -56,6 +57,8 @@ export default function TicketFilter({ search, setSearch, filters, setFilters, t
       reporter_id: "",
       priority: "",
       status: "",
+      start_date: "",
+      end_date: "",
     });
   };
 
@@ -84,9 +87,12 @@ export default function TicketFilter({ search, setSearch, filters, setFilters, t
 
           <div className="flex gap-2">
 
-            <button className="p-2 border rounded-lg bg-green-50 text-green-600 hover:bg-green-100">
-              <FiDownload size={16} />
-            </button>
+          <button
+            onClick={() => exportTickets(filters)}
+            className="p-2 border rounded-lg bg-green-50 text-green-600 hover:bg-green-100"
+          >
+            <FiDownload size={16} />
+          </button>
 
             <button
               onClick={() => setOpenModal(true)}
@@ -99,7 +105,7 @@ export default function TicketFilter({ search, setSearch, filters, setFilters, t
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-8 gap-2">
           <select
             name="project_id"
             value={filters.project_id}
@@ -167,6 +173,16 @@ export default function TicketFilter({ search, setSearch, filters, setFilters, t
             <option value="RESOLVED">RESOLVED</option>
             <option value="CLOSED">CLOSED</option>
           </select>
+
+          <div className="flex flex-col">
+            <label className="text-xs text-gray-500">Dari</label>
+            <input type="date" name="start_date" value={filters.start_date} onChange={handleChange} className="border px-3 py-2 rounded-lg text-sm" />
+          </div>
+
+          <div className="flex flex-col">
+            <label className="text-xs text-gray-500">Sampai</label>
+            <input type="date" name="end_date" value={filters.end_date} onChange={handleChange} className="border px-3 py-2 rounded-lg text-sm" />
+          </div>
 
           <button onClick={handleReset} className="flex items-center justify-center gap-2 border px-3 py-2 rounded-lg text-sm bg-white hover:bg-gray-100">
             <FiRotateCcw size={14} />

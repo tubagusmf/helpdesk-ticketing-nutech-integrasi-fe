@@ -20,6 +20,8 @@ export default function TicketManagement() {
     reporter_id: "",
     priority: "",
     status: "",
+    start_date: "",
+    end_date: "",
   });
   const [search, setSearch] = useState("");
 
@@ -31,29 +33,19 @@ export default function TicketManagement() {
   }, [filters, search, page]);
 
   const fetchTickets = async () => {
-    const res = await getTickets({
-      ...filters,
-      search,
-      page,
-    });
+    const cleanFilters = Object.fromEntries(
+      Object.entries({
+        ...filters,
+        search,
+        page,
+      }).filter(([_, v]) => v !== "")
+    );
   
-    console.log("PAGINATION:", res);
+    const res = await getTickets(cleanFilters);
   
     setTickets(res.data || []);
     setTotalPage(res.total_page || 1);
   };
-
-  const loadTickets = async () => {
-    const res = await getTickets();
-  
-    console.log("API RESPONSE:", res);
-  
-    setTickets(res?.data || res || []);
-  };
-
-  useEffect(()=>{
-    loadTickets()
-  },[])
 
   useEffect(() => {
     setPage(1);
