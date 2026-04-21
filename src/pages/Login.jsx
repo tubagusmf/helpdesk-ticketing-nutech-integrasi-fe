@@ -39,9 +39,9 @@ export default function Login() {
       const decoded = jwtDecode(token);
       const roleID = decoded.role_id;
   
-      if (roleID === 1) navigate("/admin");
-      else if (roleID === 2) navigate("/staff");
-      else if (roleID === 3) navigate("/user");
+      if (roleID === 1) navigate("/admin/dashboard");
+      else if (roleID === 2) navigate("/staff/dashboard");
+      else if (roleID === 3) navigate("/user/dashboard");
       else navigate("/unauthorized");
   
     } catch (err) {

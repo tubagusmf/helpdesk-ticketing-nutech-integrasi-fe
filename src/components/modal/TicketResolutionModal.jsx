@@ -388,7 +388,7 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess }) {
             {form.status === "ONHOLD" && (
               <div className="flex flex-col col-span-2">
                 <label className="text-sm font-medium mb-1 text-gray-700">
-                  Catatan On Hold
+                  Catatan ONHOLD
                 </label>
                 <textarea
                   name="onhold_notes"

@@ -175,12 +175,12 @@ export default function TicketFilter({ search, setSearch, filters, setFilters, t
           </select>
 
           <div className="flex flex-col">
-            <label className="text-xs text-gray-500">Dari</label>
+            <label className="text-xs text-gray-500">Tanggal Awal</label>
             <input type="date" name="start_date" value={filters.start_date} onChange={handleChange} className="border px-3 py-2 rounded-lg text-sm" />
           </div>
 
           <div className="flex flex-col">
-            <label className="text-xs text-gray-500">Sampai</label>
+            <label className="text-xs text-gray-500">Tanggal Akhir</label>
             <input type="date" name="end_date" value={filters.end_date} onChange={handleChange} className="border px-3 py-2 rounded-lg text-sm" />
           </div>
 
