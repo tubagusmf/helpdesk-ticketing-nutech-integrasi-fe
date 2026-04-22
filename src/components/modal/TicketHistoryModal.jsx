@@ -29,6 +29,8 @@ export default function TicketHistoryModal({ ticket, onClose }) {
         return "🟡 Status diubah";
       case "COMMENT":
         return "💬 Komentar";
+      case "ONHOLD_NOTE":
+        return "📝 Catatan OnHold";
       default:
         return "ℹ️ Aktivitas";
     }
@@ -95,6 +97,12 @@ export default function TicketHistoryModal({ ticket, onClose }) {
 
                 {h.type === "CREATED" && (
                   <p>Tiket berhasil dibuat</p>
+                )}
+
+                {h.type === "ONHOLD_NOTE" && (
+                  <p>
+                    Notes OnHold: <b>{h.message}</b>
+                  </p>
                 )}
               </div>
             ))}

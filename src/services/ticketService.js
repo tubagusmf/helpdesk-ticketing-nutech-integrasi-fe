@@ -58,11 +58,11 @@ export const updateTicketStatus = async (id, data) => {
   });
 };
 
-export const updateTicketStatusOnly = async (id, status) => {
-  return fetchAPI(`${BASE_URL}/tickets/${id}/status`, {
+export const updateTicketStatusOnly = async (id, data) => {
+  return fetchAPI(`${BASE_URL}/tickets/update-status/${id}`, {
     method: "PUT",
     headers: getHeaders(),
-    body: JSON.stringify({ status }),
+    body: JSON.stringify(data),
   });
 };
 

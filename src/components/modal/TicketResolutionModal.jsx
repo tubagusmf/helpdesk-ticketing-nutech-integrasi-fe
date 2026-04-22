@@ -70,7 +70,10 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess }) {
       setLoading(true);
 
       if (form.status === "ONHOLD") {
-        await updateTicketStatusOnly(ticket.id, form.status);
+        await updateTicketStatusOnly(ticket.id, {
+          status: form.status,
+          onhold_notes: form.onhold_notes,
+        });
   
         alert("Ticket berhasil di ONHOLD!");
         onSuccess();
@@ -400,6 +403,7 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess }) {
             )}
 
             {/* ATTACHMENT */}
+            {form.status !== "ONHOLD" && (
             <div className="flex flex-col col-span-2">
               <label className="text-sm font-medium mb-1 text-gray-700">
                 Bukti Foto Penyelesaian (Opsional)
@@ -429,6 +433,7 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess }) {
                 />
               )}
             </div>
+          )}
 
           </div>
         </div>
