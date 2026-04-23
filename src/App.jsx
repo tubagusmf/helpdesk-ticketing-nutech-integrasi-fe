@@ -35,23 +35,23 @@ function App() {
         }
       />
 
-        <Route
-          path="/staff"
-          element={
-            <ProtectedRoute role={2}>
-              <DashboardStaff />
-            </ProtectedRoute>
-          }
-        />
+<Route
+  path="/staff/dashboard"
+  element={
+    <ProtectedRoute role={2}>
+      <DashboardStaff />
+    </ProtectedRoute>
+  }
+/>
 
-        <Route
-          path="/user"
-          element={
-            <ProtectedRoute role={3}>
-              <DashboardUser />
-            </ProtectedRoute>
-          }
-        />
+<Route
+  path="/user/dashboard"
+  element={
+    <ProtectedRoute role={3}>
+      <DashboardUser />
+    </ProtectedRoute>
+  }
+/>
 
         <Route
           path="/admin/master"

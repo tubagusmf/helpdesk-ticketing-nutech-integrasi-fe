@@ -6,7 +6,7 @@ import {
   getStatusDistribution,
   getPriorityDistribution,
   getVolumePerProject,
-} from "../services/dashboardAdminService";
+} from "../services/dashboardService";
 import { PieChart, Pie, Cell, Tooltip } from "recharts";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { getProjects, getParts } from "../services/ticketService";
@@ -17,7 +17,7 @@ export default function DashboardAdmin() {
 
   const menu = [
     { label: "Dashboard", path: "/admin/dashboard" },
-    { label: "Data Ticket", path: "/admin/tickets" },
+    { label: "Manajemen Tiket", path: "/admin/tickets" },
     { label: "Manajemen User", path: "/admin/users" },
     { label: "Master Data", path: "/admin/master" },
   ];
@@ -237,33 +237,33 @@ export default function DashboardAdmin() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-      <SummaryCard
-        title="Total Ticket"
-        value={summary.total_ticket || 0}
-        subtitle="Semua tiket"
-        color="text-blue-600"
-      />
+        <SummaryCard
+          title="Total Ticket"
+          value={summary.total_ticket || 0}
+          subtitle="Semua tiket"
+          color="text-blue-600"
+        />
 
-      <SummaryCard
-        title="SLA Breach (Open)"
-        value={summary.sla_breach || 0}
-        subtitle="Melewati batas waktu"
-        color="text-red-600"
-      />
+        <SummaryCard
+          title="SLA Breach (Open)"
+          value={summary.sla_breach || 0}
+          subtitle="Melewati batas waktu"
+          color="text-red-600"
+        />
 
-      <SummaryCard
-        title="Ticket Selesai"
-        value={summary.ticket_selesai || 0}
-        subtitle="Resolved + Closed"
-        color="text-green-600"
-      />
+        <SummaryCard
+          title="Ticket Selesai"
+          value={summary.ticket_selesai || 0}
+          subtitle="Resolved + Closed"
+          color="text-green-600"
+        />
 
-      <SummaryCard
-        title="Rata-rata Solusi"
-        value={formatHoursToHM(summary.avg_resolution_time)}
-        subtitle="Waktu penanganan"
-        color="text-purple-600"
-      />
+        <SummaryCard
+          title="Rata-rata Solusi"
+          value={formatHoursToHM(summary.avg_resolution_time)}
+          subtitle="Waktu penanganan"
+          color="text-purple-600"
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -274,7 +274,7 @@ export default function DashboardAdmin() {
           <PieChart
             width={200}
             height={200}
-            key={JSON.stringify(pieData)} // 🔥 trigger animasi ulang
+            key={JSON.stringify(pieData)}
           >
             <Pie
               data={pieData}
