@@ -1,22 +1,43 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { FiLogOut, FiSearch, FiMenu, FiX } from "react-icons/fi";
+import { FiLogOut, FiBell, FiMenu, FiX } from "react-icons/fi";
 
 export default function DashboardLayout({ title, children, menu }) {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+  const [openNotif, setOpenNotif] = useState(false);
+  const [openProfile, setOpenProfile] = useState(false);
+
+  const notifRef = useRef(null);
+  const profileRef = useRef(null);
 
   const handleLogout = () => {
     logout();
     navigate("/");
   };
 
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        setOpenNotif(false);
+      }
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setOpenProfile(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
     <div className="h-screen flex bg-gray-100 overflow-hidden">
 
-      {/* ================= OVERLAY (Mobile & Tablet) ================= */}
+      {/* OVERLAY */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/40 z-40 lg:hidden"
@@ -24,26 +45,13 @@ export default function DashboardLayout({ title, children, menu }) {
         />
       )}
 
-      {/* ================= SIDEBAR ================= */}
-      <aside
-        className={`
-          fixed lg:static
-          top-0 left-0 z-50
-          h-full w-64 bg-white shadow-md
-          transform transition-transform duration-300
-          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
-          lg:translate-x-0
-        `}
-      >
-        <div className="p-6 border-b flex justify-between items-center">
-          <h2 className="text-xl font-bold text-orange-600">
-            Helpdesk Center
-          </h2>
+      {/* SIDEBAR */}
+      <aside className={`fixed lg:static top-0 left-0 z-50 h-full w-64 bg-white shadow-md transform transition-transform duration-300
+        ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}>
 
-          <button
-            className="lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          >
+        <div className="p-6 border-b flex justify-between items-center">
+          <h2 className="text-xl font-bold text-orange-600">Helpdesk Center</h2>
+          <button className="lg:hidden" onClick={() => setSidebarOpen(false)}>
             <FiX size={22} />
           </button>
         </div>
@@ -58,25 +66,21 @@ export default function DashboardLayout({ title, children, menu }) {
             </div>
 
             <div>
-              <p className="font-semibold text-gray-800">
-                {user?.name || "User Name"}
-              </p>
-              <p className="text-xs text-gray-500 uppercase">
-                {user?.role || "Role"}
-              </p>
+              <p className="font-semibold text-gray-800">{user?.name}</p>
+              <p className="text-xs text-gray-500 uppercase">{user?.role}</p>
             </div>
           </div>
         </div>
 
-        <nav className="p-4 space-y-2 overflow-y-auto">
-          {menu.map((item, index) => (
+        <nav className="p-4 space-y-2">
+          {menu.map((item, i) => (
             <button
-              key={index}
+              key={i}
               onClick={() => {
                 navigate(item.path);
                 setSidebarOpen(false);
               }}
-              className="w-full text-left px-4 py-2 rounded hover:bg-orange-50 hover:text-orange-600 transition"
+              className="w-full text-left px-4 py-2 rounded hover:bg-orange-50 hover:text-orange-600"
             >
               {item.label}
             </button>
@@ -84,39 +88,84 @@ export default function DashboardLayout({ title, children, menu }) {
         </nav>
       </aside>
 
-      {/* ================= MAIN CONTENT ================= */}
+      {/* MAIN */}
       <div className="flex-1 flex flex-col">
 
         {/* HEADER */}
         <header className="bg-white shadow px-4 md:px-6 py-4 flex justify-between items-center">
 
+          {/* LEFT */}
           <div className="flex items-center gap-3">
-
-            {/* Hamburger (hidden on laptop/pc) */}
-            <button
-              className="lg:hidden"
-              onClick={() => setSidebarOpen(true)}
-            >
+            <button className="lg:hidden" onClick={() => setSidebarOpen(true)}>
               <FiMenu size={22} />
             </button>
-
-            <h1 className="text-lg md:text-xl font-semibold">
-              {title}
-            </h1>
+            <h1 className="text-lg md:text-xl font-semibold">{title}</h1>
           </div>
 
+          {/* RIGHT */}
           <div className="flex items-center gap-4">
-            <span className="hidden md:inline px-3 py-1 bg-green-100 text-green-600 text-sm rounded-full">
-              Online
-            </span>
 
+            {/* ONLINE STATUS */}
             <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
+              onClick={() => setIsOnline(!isOnline)}
+              title={isOnline ? "Klik untuk offline" : "Klik untuk online"}
+              className={`flex items-center gap-2 px-3 py-1 text-sm rounded-full
+                ${isOnline ? "bg-green-100 text-green-600" : "bg-gray-200 text-gray-600"}`}
             >
-              <FiLogOut />
-              <span className="hidden sm:inline">Logout</span>
+              <span className={`w-2 h-2 rounded-full ${isOnline ? "bg-green-500" : "bg-gray-500"}`} />
+              {isOnline ? "Online" : "Offline"}
             </button>
+
+            {/* NOTIF */}
+            <div className="relative" ref={notifRef}>
+              <button
+                onClick={() => {
+                  setOpenNotif(!openNotif);
+                  setOpenProfile(false);
+                }}
+                className="p-2 rounded-full hover:bg-gray-100 relative"
+              >
+                <FiBell size={20} />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+              </button>
+
+              {openNotif && (
+                <div className="absolute right-0 mt-3 w-80 bg-white shadow-lg rounded-xl border z-50">
+                  <div className="p-4 border-b font-semibold">Notifikasi</div>
+                  <div className="p-6 text-center text-gray-400 text-sm">
+                    <FiBell size={28} className="mx-auto mb-2" />
+                    Tidak ada notifikasi baru.
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* PROFILE */}
+            <div className="relative" ref={profileRef}>
+              <button
+                onClick={() => {
+                  setOpenProfile(!openProfile);
+                  setOpenNotif(false);
+                }}
+              >
+                <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center">
+                  {user?.name?.charAt(0)}
+                </div>
+              </button>
+
+              {openProfile && (
+                <div className="absolute right-0 mt-2 w-40 bg-white border rounded-lg shadow z-50">
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-red-50 hover:text-red-600 flex items-center gap-2"
+                  >
+                    <FiLogOut size={16} />
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+
           </div>
         </header>
 
