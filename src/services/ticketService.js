@@ -164,3 +164,9 @@ export const exportTickets = async (filters = {}) => {
 
   a.click();
 };
+
+export const getTicketResolution = async (ticketId) => {
+  return fetchAPI(`${BASE_URL}/tickets/${ticketId}/resolution`, {
+    headers: getHeaders(),
+  });
+};

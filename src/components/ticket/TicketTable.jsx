@@ -1,6 +1,6 @@
 import TicketRow from "./TicketRow"
 
-export default function TicketTable({tickets}){
+export default function TicketTable({tickets, role}){
 
     return(
         <div className="mb-4">
@@ -14,7 +14,7 @@ export default function TicketTable({tickets}){
             </div>
 
             {Array.isArray(tickets) && tickets.map((ticket) => (
-                <TicketRow key={ticket.id} ticket={ticket} />
+                <TicketRow key={ticket.id} ticket={ticket} role={role} />
             ))}
         </div>
     );

@@ -4,7 +4,7 @@ import TicketResolutionModal from "../modal/TicketResolutionModal";
 import TicketCommentModal from "../modal/TicketCommentModal";
 import TicketHistoryModal from "../modal/TicketHistoryModal";
 
-export default function TicketRow({ ticket }) {
+export default function TicketRow({ ticket, role }) {
 
     const [showResolution, setShowResolution] = useState(false);  
     const [showComment, setShowComment] = useState(false);
@@ -139,18 +139,13 @@ export default function TicketRow({ ticket }) {
       
             {/* ACTION */}
             <div className="flex gap-3">
-            <button
-              onClick={() => setShowHistory(true)}
-              className="text-blue-600"
-            >
-              <FiEye size={18} />
-            </button>
-      
+
+              {/* SEMUA ROLE */}
               <button
-                onClick={() => setShowResolution(true)}
-                className="text-orange-600"
+                onClick={() => setShowHistory(true)}
+                className="text-blue-600"
               >
-                <FiEdit size={18} />
+                <FiEye size={18} />
               </button>
 
               <button
@@ -159,6 +154,27 @@ export default function TicketRow({ ticket }) {
               >
                 <FiMessageCircle size={18} />
               </button>
+
+              {/* STAFF + ADMIN */}
+              {["STAFF", "ADMINISTRATOR"].includes(role) && (
+                <button
+                  onClick={() => setShowResolution(true)}
+                  className="text-orange-600"
+                >
+                  <FiEdit size={18} />
+                </button>
+              )}
+
+              {/* USER */}
+              {role === "USER" && ticket.status === "RESOLVED" && (
+                <button
+                  onClick={() => setShowResolution(true)}
+                  className="text-orange-600"
+                >
+                  <FiEdit size={18} />
+                </button>
+              )}
+
             </div>
       
           </div>
@@ -166,6 +182,7 @@ export default function TicketRow({ ticket }) {
           {showResolution && (
             <TicketResolutionModal
               ticket={ticket}
+              role={role}
               onClose={() => setShowResolution(false)}
               onSuccess={() => window.location.reload()}
             />

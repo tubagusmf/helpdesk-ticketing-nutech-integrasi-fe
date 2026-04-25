@@ -20,9 +20,6 @@ export default function TicketFilter({ search, setSearch, filters, setFilters, t
       const projectRes = await getProjects();
       const staffRes = await getStaffs();
   
-      console.log("PROJECT:", projectRes);
-      console.log("STAFF:", staffRes);
-  
       setProjects(projectRes?.data || projectRes || []);
       setStaffs(staffRes?.data || staffRes || []);
       setReporters(staffRes?.data || staffRes || []);

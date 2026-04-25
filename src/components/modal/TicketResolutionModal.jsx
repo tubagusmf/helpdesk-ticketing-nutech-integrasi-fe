@@ -1,16 +1,23 @@
 import { useState, useEffect } from "react";
-import { getCauses, getSolutions, updateTicketStatusOnly, createTicketResolution } from "../../services/ticketService";
+import { getCauses, getSolutions, updateTicketStatusOnly, createTicketResolution, getTicketResolution  } from "../../services/ticketService";
 import Select from "react-select";
 
-export default function TicketResolutionModal({ ticket, onClose, onSuccess }) {
+export default function TicketResolutionModal({ ticket, onClose, onSuccess, role }) {
 
-  console.log("IMAGE URL:", ticket.attachment_url);
   const [loading, setLoading] = useState(false);
   const [causes, setCauses] = useState([]);
   const [solutions, setSolutions] = useState([]);
   const [selectedCause, setSelectedCause] = useState(null);
   const [selectedSolution, setSelectedSolution] = useState(null);
   const [preview, setPreview] = useState(null);
+  const [resolution, setResolution] = useState(null);
+  const isLocked = ["RESOLVED", "CLOSED"].includes(ticket.status);  
+  const normalizedRole = role?.toLowerCase();
+
+  const isUser = normalizedRole === "user";
+  const isLockedForAdmin = ["RESOLVED", "CLOSED"].includes(ticket.status);
+
+  const isReadOnly = isUser || isLockedForAdmin;
 
   const getNowLocal = () => {
     const now = new Date();
@@ -28,21 +35,76 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess }) {
   });
 
   useEffect(() => {
-    if (ticket?.part_id) {
-      fetchCauses();
+    if (ticket?.attachment_url) {
+      setPreview(ticket.attachment_url);
     }
-  }, [ticket.part_id]);
+  }, [ticket]);
 
   useEffect(() => {
-    if (ticket?.attachment_url) {
-      console.log("IMAGE URL:", ticket.attachment_url);
+    if (ticket?.id) {
+      fetchResolution();
     }
   }, [ticket]);
   
-  const fetchCauses = async () => {
-    const res = await getCauses(ticket.part_id);
-    console.log("CAUSES:", res);
-    setCauses(res.data || []);
+  const fetchResolution = async () => {
+    try {
+      const res = await getTicketResolution(ticket.id);
+      if (!res) return;
+  
+      const data = res;
+      setResolution(data);
+  
+      const partId = ticket.part_id || ticket.part?.id;
+  
+      if (!partId) {
+        console.warn("PART ID NULL");
+        return;
+      }
+  
+      const causeRes = await getCauses(partId);  
+      const causeList = causeRes.data || [];
+      setCauses(causeList);
+  
+      const foundCause = causeList.find(
+        (c) => String(c.id) === String(data.cause_id)
+      );
+  
+      if (foundCause) {
+        const causeOption = {
+          value: foundCause.id,
+          label: foundCause.name,
+        };
+  
+        setSelectedCause(causeOption);
+  
+        const solRes = await getSolutions(foundCause.id);
+  
+        const solList = solRes.data || [];
+        setSolutions(solList);
+  
+        const foundSolution = solList.find(
+          (s) => String(s.id) === String(data.solution_id)
+        );
+  
+        if (foundSolution) {
+          setSelectedSolution({
+            value: foundSolution.id,
+            label: foundSolution.name,
+          });
+        }
+      }
+  
+      setForm((prev) => ({
+        ...prev,
+        cause: data.cause_id || "",
+        solution: data.solution_id || "",
+        notes: data.resolution_notes || "",
+        resolution_time: formatDatetimeLocal(data.completion_time),
+        status: ticket.status,
+      }));
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const [attachment, setAttachment] = useState(null);
@@ -120,6 +182,56 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess }) {
     { value: "RESOLVED", label: "RESOLVED" },
     { value: "ONHOLD", label: "ONHOLD" },
   ];
+
+  const handleCloseAsUser = async () => {
+    try {
+      setLoading(true);
+  
+      await updateTicketStatusOnly(ticket.id, {
+        status: "CLOSED",
+      });
+  
+      alert("Ticket berhasil di CLOSED!");
+      onSuccess();
+      onClose();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDatetimeLocal = (isoString) => {
+    if (!isoString) return getNowLocal();
+  
+    const date = new Date(isoString);
+    date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  
+    return date.toISOString().slice(0, 16);
+  };
+
+  const getFileExtension = (url) => {
+    const parts = url.split(".");
+    return parts.length > 1 ? parts.pop().split("?")[0] : "jpg";
+  };
+  
+  const handleDownloadImage = async (url) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const ext = getFileExtension(url);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `ticket-${ticket.ticket_code}.${ext}`;
+  
+      link.click();
+  
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error("Download gagal:", err);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
@@ -236,7 +348,7 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess }) {
           {/* RIGHT */}
           <div className="border rounded-xl p-4">
             <h3 className="text-sm font-semibold mb-3 text-gray-600">
-              META DATA
+              User Pelapor
             </h3>
 
             <div className="space-y-3">
@@ -261,6 +373,7 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess }) {
                 <Select
                   options={statusOptions}
                   value={statusOptions.find(s => s.value === form.status)}
+                  isDisabled={isReadOnly}
                   onChange={(selected) => {
                     const newStatus = selected.value;
                   
@@ -331,6 +444,7 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess }) {
               <Select
                 options={causeOptions}
                 value={selectedCause}
+                isDisabled={isReadOnly}
                 onChange={async (selected) => {
                   setSelectedCause(selected);
                   setSelectedSolution(null);
@@ -367,7 +481,7 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess }) {
                 }}
                 placeholder="Pilih atau ketik solusi..."
                 isSearchable
-                isDisabled={!selectedCause}
+                isDisabled={isReadOnly}
               />
             </div>
 
@@ -382,6 +496,7 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess }) {
                 value={form.resolution_time}
                 onChange={handleChange}
                 className="border px-3 py-2 rounded-lg"
+                disabled={isReadOnly}
               />
             </div>
 
@@ -402,41 +517,75 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess }) {
               </div>
             )}
 
-            {/* ATTACHMENT */}
-            {form.status !== "ONHOLD" && (
-            <div className="flex flex-col col-span-2">
-              <label className="text-sm font-medium mb-1 text-gray-700">
-                Bukti Foto Penyelesaian (Opsional)
-              </label>
+            {/* UPLOAD */}
+            {form.status !== "ONHOLD" && !isLocked && (
+              <div className="flex flex-col col-span-2">
+                <label className="text-sm font-medium mb-1 text-gray-700">
+                  Bukti Foto Penyelesaian (Opsional)
+                </label>
 
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  handleFileChange(e);
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    handleFileChange(e);
 
-                  const file = e.target.files[0];
-                  if (file) {
-                    const previewUrl = URL.createObjectURL(file);
-                    setPreview(previewUrl);
-                  }
-                }}
-                className="border px-3 py-2 rounded-lg"
-              />
-
-              {/* PREVIEW IMAGE */}
-              {preview && (
-                <img
-                  src={preview}
-                  alt="preview"
-                  className="mt-3 w-40 h-40 object-cover rounded-lg border"
+                    const file = e.target.files[0];
+                    if (file) {
+                      const previewUrl = URL.createObjectURL(file);
+                      setPreview(previewUrl);
+                    }
+                  }}
+                  className="border px-3 py-2 rounded-lg"
                 />
-              )}
-            </div>
-          )}
+
+                {preview && (
+                  <img
+                    src={preview}
+                    alt="preview"
+                    className="mt-3 w-40 h-40 object-cover rounded-lg border"
+                  />
+                )}
+              </div>
+            )}
+
+            {resolution?.attachment_url && (
+              <div className="flex flex-col col-span-2">
+                <label className="text-sm font-medium mb-2 text-gray-700">
+                  Bukti Foto Penyelesaian
+                </label>
+
+                <div className="flex items-start gap-4">
+                  <img
+                    src={
+                      resolution.attachment_url.startsWith("http")
+                        ? resolution.attachment_url
+                        : `http://localhost:3000/${resolution.attachment_url}`
+                    }
+                    alt="resolution"
+                    className="w-40 h-40 object-cover rounded-lg border"
+                  />
+
+                  <button
+                    onClick={() =>
+                      handleDownloadImage(resolution.attachment_url)
+                    }
+                    className="h-fit px-3 py-2 bg-orange-600 text-white rounded-lg text-sm"
+                  >
+                    Unduh Gambar
+                  </button>
+                </div>
+              </div>
+            )}
 
           </div>
         </div>
+
+        {isLockedForAdmin && (
+          <p className="text-sm text-gray-500 mt-4 text-right">
+            Ticket sudah selesai, data tidak dapat diubah
+          </p>
+        )}
 
         {/* FOOTER */}
         <div className="flex justify-end gap-2 mt-6">
@@ -444,16 +593,28 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess }) {
             Batal
           </button>
 
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className={`px-4 py-2 rounded-lg text-white ${
-              loading ? "bg-gray-400" : "bg-blue-600"
-            }`}
-          >
-            {loading ? "Menyimpan..." : "Simpan Perubahan"}
-            
-          </button>
+          {/* USER CLOSE TICKET */}
+          {isUser && ticket.status === "RESOLVED" && (
+            <button
+              onClick={handleCloseAsUser}
+              className="px-4 py-2 rounded-lg bg-green-600 text-white"
+            >
+              Close Ticket
+            </button>
+          )}
+
+          {/* ADMIN SAVE TICKET */}
+          {!isUser && !isLockedForAdmin && (
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className={`px-4 py-2 rounded-lg text-white ${
+                loading ? "bg-gray-400" : "bg-blue-600"
+              }`}
+            >
+              {loading ? "Menyimpan..." : "Simpan Perubahan"}
+            </button>
+          )}
         </div>
 
       </div>

@@ -4,7 +4,7 @@ import SummaryCard from "../components/dashboard/SummaryCard";
 export default function DashboardStaff() {
   const menu = [
     { label: "Dashboard", path: "/staff/dashboard" },
-    { label: "Data Ticket", path: "/staff/tickets" },
+    { label: "Manajemen Tiket", path: "/staff/tickets" },
   ];
 
   return (

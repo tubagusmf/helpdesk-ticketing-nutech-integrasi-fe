@@ -10,7 +10,7 @@ import {
     getStaffs,
   } from "../../services/ticketService";
 
-export default function TicketModal({ onClose, onSuccess }) {
+export default function TicketModal({ onClose, onSuccess, role }) {
 
   const [loading, setLoading] = useState(false);
 
@@ -363,28 +363,26 @@ export default function TicketModal({ onClose, onSuccess }) {
               </div>
 
               {/* ASSIGNED */}
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-700">
-                  Nama Staff
-                </label>
-                <select
-                  name="assigned_to_id"
-                  value={form.assigned_to_id}
-                  onChange={handleChange}
-                  className="w-full border px-3 py-2 rounded-lg"
-                >
-                  <option value="">Pilih Staff</option>
-                  {staffs.length > 0 ? (
-                    staffs.map((s) => (
+              {role !== "user" && (
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-gray-700">
+                    Nama Staff
+                  </label>
+                  <select
+                    name="assigned_to_id"
+                    value={form.assigned_to_id}
+                    onChange={handleChange}
+                    className="w-full border px-3 py-2 rounded-lg"
+                  >
+                    <option value="">Pilih Staff</option>
+                    {staffs.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.name}
                       </option>
-                    ))
-                  ) : (
-                    <option disabled>Tidak ada staff aktif</option>
-                  )}
-                </select>
-              </div>
+                    ))}
+                  </select>
+                </div>
+              )}
 
             </div>
           </div>

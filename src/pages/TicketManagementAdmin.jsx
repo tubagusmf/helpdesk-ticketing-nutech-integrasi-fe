@@ -3,12 +3,13 @@ import DashboardLayout from "../components/layout/DashboardLayout";
 import TicketTable from "../components/ticket/TicketTable";
 import TicketFilter from "../components/ticket/TicketFilter";
 import { getTickets } from "../services/ticketService";
+import { jwtDecode } from "jwt-decode";
 
-export default function TicketManagement() {
+export default function TicketManagementAdmin() {
 
   const menu = [
     { label: "Dashboard", path: "/admin/dashboard" },
-    { label: "Data Ticket", path: "/admin/tickets" },
+    { label: "Manajemen Tiket", path: "/admin/tickets" },
     { label: "Manajemen User", path: "/admin/users" },
     { label: "Master Data", path: "/admin/master" },
   ];
@@ -27,6 +28,11 @@ export default function TicketManagement() {
 
   const [page, setPage] = useState(1);
   const [totalPage, setTotalPage] = useState(1);
+
+  const token = localStorage.getItem("token");
+  const currentUser = token ? jwtDecode(token) : null;
+
+  const role = currentUser?.role;
 
   useEffect(() => {
     fetchTickets();
@@ -76,6 +82,7 @@ export default function TicketManagement() {
         <TicketTable
           tickets={tickets}
           search={search}
+          role={role}
         />
       </div>
 

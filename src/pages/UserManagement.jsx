@@ -8,7 +8,7 @@ import { getProjects } from "../services/projectService";
 export default function UserManagement() {
   const menu = [
     { label: "Dashboard", path: "/admin/dashboard" },
-    { label: "Data Ticket", path: "/admin/tickets" },
+    { label: "Manajemen Tiket", path: "/admin/tickets" },
     { label: "Manajemen User", path: "/admin/users" },
     { label: "Master Data", path: "/admin/master" },
   ];

@@ -6,9 +6,9 @@ import DashboardUser from "./pages/DashboardUser";
 import Unauthorized from "./pages/Unauthorized";
 import MasterDataAdmin from "./pages/MasterDataAdmin";
 import UserManagement from "./pages/UserManagement";
-
 import ProtectedRoute from "./components/ProtectedRoute";
-import TicketManagement from "./pages/TicketManagement";
+import TicketManagementAdmin from "./pages/TicketManagementAdmin";
+import TicketManagementUser from "./pages/TicketManagementUser";
 
 function App() {
   return (
@@ -26,32 +26,23 @@ function App() {
           }
         />
 
-      <Route
-        path="/admin/users"
-        element={
-          <ProtectedRoute role={1}>
-            <UserManagement />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute role={1}>
+              <UserManagement />
+            </ProtectedRoute>
+          }
+        />
 
-<Route
-  path="/staff/dashboard"
-  element={
-    <ProtectedRoute role={2}>
-      <DashboardStaff />
-    </ProtectedRoute>
-  }
-/>
-
-<Route
-  path="/user/dashboard"
-  element={
-    <ProtectedRoute role={3}>
-      <DashboardUser />
-    </ProtectedRoute>
-  }
-/>
+        <Route
+          path="/staff/dashboard"
+          element={
+            <ProtectedRoute role={2}>
+              <DashboardStaff />
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="/admin/master"
@@ -66,7 +57,25 @@ function App() {
           path="/admin/tickets"
           element={
             <ProtectedRoute role={1}>
-              <TicketManagement />
+              <TicketManagementAdmin />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/user/dashboard"
+          element={
+            <ProtectedRoute role={3}>
+              <DashboardUser />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/user/tickets"
+          element={
+            <ProtectedRoute role={3}>
+              <TicketManagementUser />
             </ProtectedRoute>
           }
         />
