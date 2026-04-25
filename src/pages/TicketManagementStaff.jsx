@@ -5,13 +5,11 @@ import TicketFilter from "../components/ticket/TicketFilter";
 import { getTickets } from "../services/ticketService";
 import { jwtDecode } from "jwt-decode";
 
-export default function TicketManagementAdmin() {
+export default function TicketManagementStaff() {
 
   const menu = [
-    { label: "Dashboard", path: "/admin/dashboard" },
-    { label: "Manajemen Tiket", path: "/admin/tickets" },
-    { label: "Manajemen User", path: "/admin/users" },
-    { label: "Master Data", path: "/admin/master" },
+    { label: "Dashboard", path: "/staff/dashboard" },
+    { label: "Manajemen Tiket", path: "/staff/tickets" },
   ];
 
   const [tickets, setTickets] = useState([]);
@@ -35,39 +33,42 @@ export default function TicketManagementAdmin() {
 
   useEffect(() => {
     fetchTickets();
-  }, [filters, search, page]);
+  }, [page, filters, search]);
 
   const fetchTickets = async () => {
-    const cleanFilters = Object.fromEntries(
-      Object.entries({
-        ...filters,
-        search,
-        page,
-      }).filter(([_, v]) => v !== "")
-    );
+    try {
+      const cleanFilters = Object.fromEntries(
+        Object.entries({
+          ...filters,
+          search,
+          page,
+          assigned_to_id: currentUser?.user_id
+        }).filter(([_, v]) => v !== "")
+      );
   
-    const res = await getTickets(cleanFilters);
+      const res = await getTickets(cleanFilters);
   
-    setTickets(res.data || []);
-    setTotalPage(res.total_page || 1);
+      setTickets(res.data || []);
+      setTotalPage(res.total_page || 1);
+    } catch (err) {
+      console.error("Fetch tickets error:", err);
+    }
   };
-
-  useEffect(() => {
-    setPage(1);
-  }, [filters, search]);
 
   return (
     <DashboardLayout title="Manajemen Tiket" menu={menu}>
 
       <div className="bg-white p-6 rounded-xl shadow">
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold">
-            Daftar Tiket Aduan
-          </h2>
 
-          <p className="text-gray-500 text-sm">
-            Manajemen tiket helpdesk
-          </p>
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h2 className="text-xl font-semibold">
+              Tiket Assigned ke Saya
+            </h2>
+            <p className="text-gray-500 text-sm">
+              Manajemen tiket helpdesk
+            </p>
+          </div>
         </div>
 
         <TicketFilter
@@ -84,14 +85,16 @@ export default function TicketManagementAdmin() {
           search={search}
           role={role}
         />
+
       </div>
 
+      {/* PAGINATION */}
       <div className="flex justify-center mt-6 gap-2">
 
         <button
           disabled={page === 1}
           onClick={() => setPage(page - 1)}
-          className="px-3 py-1 border rounded disabled:opacity-50"
+          className="px-3 py-1 border rounded"
         >
           Prev
         </button>
@@ -103,7 +106,7 @@ export default function TicketManagementAdmin() {
         <button
           disabled={page === totalPage}
           onClick={() => setPage(page + 1)}
-          className="px-3 py-1 border rounded disabled:opacity-50"
+          className="px-3 py-1 border rounded"
         >
           Next
         </button>
@@ -111,5 +114,5 @@ export default function TicketManagementAdmin() {
       </div>
 
     </DashboardLayout>
-  )
+  );
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import TicketTable from "../components/ticket/TicketTable";
 import TicketModal from "../components/modal/TicketModal";
+import TicketFilter from "../components/ticket/TicketFilter";
 import { getTickets } from "../services/ticketService";
 import { jwtDecode } from "jwt-decode";
 
@@ -9,32 +10,51 @@ export default function TicketManagementUser() {
 
   const menu = [
     { label: "Dashboard", path: "/user/dashboard" },
-    { label: "Tiket Saya", path: "/user/tickets" },
+    { label: "Manajemen Tiket", path: "/user/tickets" },
   ];
 
   const [tickets, setTickets] = useState([]);
   const [showModal, setShowModal] = useState(false);
-
+  const [filters, setFilters] = useState({
+    project_id: "",
+    assigned_to_id: "",
+    reporter_id: "",
+    priority: "",
+    status: "",
+    start_date: "",
+    end_date: "",
+  });
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [totalPage, setTotalPage] = useState(1);
 
   const token = localStorage.getItem("token");
   const currentUser = token ? jwtDecode(token) : null;
 
-  const role = currentUser?.role; // atau role_name tergantung payload
+  const role = currentUser?.role;
 
   useEffect(() => {
     fetchTickets();
-  }, [page]);
+  }, [page, filters, search]);
 
   const fetchTickets = async () => {
-    const res = await getTickets({
-      reporter_id: currentUser?.user_id,
-      page,
-    });
-
-    setTickets(res.data || []);
-    setTotalPage(res.total_page || 1);
+    try {
+      const cleanFilters = Object.fromEntries(
+        Object.entries({
+          ...filters,
+          search,
+          page,
+          reporter_id: currentUser?.user_id,
+        }).filter(([_, v]) => v !== "")
+      );
+  
+      const res = await getTickets(cleanFilters);
+  
+      setTickets(res.data || []);
+      setTotalPage(res.total_page || 1);
+    } catch (err) {
+      console.error("Fetch tickets error:", err);
+    }
   };
 
   return (
@@ -51,18 +71,20 @@ export default function TicketManagementUser() {
               Manajemen tiket helpdesk
             </p>
           </div>
-
-          {/* BUTTON BUAT TIKET */}
-          <button
-            onClick={() => setShowModal(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg"
-          >
-            + Buat Tiket
-          </button>
         </div>
+
+        <TicketFilter
+          search={search}
+          setSearch={setSearch}
+          filters={filters}
+          setFilters={setFilters}
+          tickets={tickets}
+          role={role}
+        />
 
         <TicketTable
           tickets={tickets}
+          search={search}
           role={role}
         />
 

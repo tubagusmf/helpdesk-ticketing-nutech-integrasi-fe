@@ -4,7 +4,7 @@ import TicketModal from "../modal/TicketModal";
 import { getProjects, getStaffs } from "../../services/ticketService";
 import { exportTickets } from "../../services/ticketService";
 
-export default function TicketFilter({ search, setSearch, filters, setFilters, tickets }) {
+export default function TicketFilter({ search, setSearch, filters, setFilters, tickets, role }) {
 
   const [openModal, setOpenModal] = useState(false);
   const [projects, setProjects] = useState([]);
@@ -84,25 +84,33 @@ export default function TicketFilter({ search, setSearch, filters, setFilters, t
 
           <div className="flex gap-2">
 
-          <button
-            onClick={() => exportTickets(filters)}
-            className="p-2 border rounded-lg bg-green-50 text-green-600 hover:bg-green-100"
-          >
-            <FiDownload size={16} />
-          </button>
+            <button
+              onClick={() => exportTickets(filters)}
+              className="p-2 border rounded-lg bg-green-50 text-green-600 hover:bg-green-100"
+            >
+              <FiDownload size={16} />
+            </button>
 
+            {["USER", "ADMINISTRATOR"].includes(role) && (
             <button
               onClick={() => setOpenModal(true)}
-              className="flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-700"
+              className="flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm"
             >
               <FiPlus size={16} />
               Buat Tiket
             </button>
+          )}
 
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-8 gap-2">
+        <div
+          className={`grid gap-2 ${
+            role === "ADMINISTRATOR"
+              ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-8"
+              : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-6"
+          }`}
+        >
           <select
             name="project_id"
             value={filters.project_id}
@@ -117,33 +125,30 @@ export default function TicketFilter({ search, setSearch, filters, setFilters, t
             ))}
           </select>
 
-          <select
-            name="assigned_to_id"
-            value={filters.assigned_to_id}
-            onChange={handleChange}
-            className="border bg-white px-3 py-2 rounded-lg text-sm"
-          >
-            <option value="">Semua Staff</option>
-            {staffs.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
+          {role === "ADMINISTRATOR" && (
+            <select
+              name="assigned_to_id"
+              value={filters.assigned_to_id}
+              onChange={handleChange}
+              className="border bg-white px-3 py-2 rounded-lg text-sm"
+            >
+              <option value="">Semua Staff</option>
+              {staffs.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          )}
 
-          <select
-            name="reporter_id"
-            value={filters.reporter_id}
-            onChange={handleChange}
-            className="border bg-white px-3 py-2 rounded-lg text-sm"
-          >
-            <option value="">Semua Pelapor</option>
-            {reporterOptions.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
-              </option>
-            ))}
-          </select>
+          {role === "ADMINISTRATOR" && (
+            <select name="reporter_id" value={filters.reporter_id} onChange={handleChange} className="border px-3 py-2 rounded-lg text-sm">
+              <option value="">Semua Pelapor</option>
+              {reporterOptions.map(r => (
+                <option key={r.id} value={r.id}>{r.name}</option>
+              ))}
+            </select>
+          )}
 
           <select
             name="priority"

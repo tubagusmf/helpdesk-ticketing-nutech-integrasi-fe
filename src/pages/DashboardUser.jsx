@@ -206,10 +206,10 @@ export default function DashboardUser() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        <SummaryCard title="Ticket Saya" value={summary.total_ticket || 0} />
-        <SummaryCard title="Open" value={statusData.open || 0} />
-        <SummaryCard title="In Progress" value={statusData.in_progress || 0} />
-        <SummaryCard title="Selesai"
+        <SummaryCard title="Assigned Ticket" color="text-blue-600" value={summary.total_ticket || 0} />
+        <SummaryCard title="Open" color="text-red-600" value={statusData.open || 0} />
+        <SummaryCard title="In Progress" color="text-yellow-600" value={statusData.in_progress || 0} />
+        <SummaryCard title="Resolved" color="text-green-600"
           value={(statusData.resolved || 0) + (statusData.closed || 0)}
         />
       </div>

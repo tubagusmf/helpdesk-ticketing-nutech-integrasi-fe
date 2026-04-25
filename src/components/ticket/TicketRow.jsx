@@ -140,40 +140,35 @@ export default function TicketRow({ ticket, role }) {
             {/* ACTION */}
             <div className="flex gap-3">
 
-              {/* SEMUA ROLE */}
+            {/* VIEW */}
+            <button onClick={() => setShowHistory(true)} className="text-blue-600">
+              <FiEye size={18} />
+            </button>
+
+            {/* COMMENT */}
+            <button onClick={() => setShowComment(true)} className="text-green-600">
+              <FiMessageCircle size={18} />
+            </button>
+
+            {/* STAFF + ADMIN */}
+            {["STAFF", "ADMINISTRATOR"].includes(role) && (
               <button
-                onClick={() => setShowHistory(true)}
-                className="text-blue-600"
+                onClick={() => setShowResolution(true)}
+                className="text-orange-600"
               >
-                <FiEye size={18} />
+                <FiEdit size={18} />
               </button>
+            )}
 
+            {/* USER hanya kalau sudah resolved */}
+            {role === "USER" && ticket.status === "RESOLVED" && (
               <button
-                onClick={() => setShowComment(true)}
-                className="text-green-600"
+                onClick={() => setShowResolution(true)}
+                className="text-orange-600"
               >
-                <FiMessageCircle size={18} />
+                <FiEdit size={18} />
               </button>
-
-              {/* STAFF + ADMIN */}
-              {["STAFF", "ADMINISTRATOR"].includes(role) && (
-                <button
-                  onClick={() => setShowResolution(true)}
-                  className="text-orange-600"
-                >
-                  <FiEdit size={18} />
-                </button>
-              )}
-
-              {/* USER */}
-              {role === "USER" && ticket.status === "RESOLVED" && (
-                <button
-                  onClick={() => setShowResolution(true)}
-                  className="text-orange-600"
-                >
-                  <FiEdit size={18} />
-                </button>
-              )}
+            )}
 
             </div>
       

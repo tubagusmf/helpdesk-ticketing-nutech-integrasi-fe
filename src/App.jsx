@@ -9,6 +9,7 @@ import UserManagement from "./pages/UserManagement";
 import ProtectedRoute from "./components/ProtectedRoute";
 import TicketManagementAdmin from "./pages/TicketManagementAdmin";
 import TicketManagementUser from "./pages/TicketManagementUser";
+import TicketManagementStaff from "./pages/TicketManagementStaff";
 
 function App() {
   return (
@@ -76,6 +77,15 @@ function App() {
           element={
             <ProtectedRoute role={3}>
               <TicketManagementUser />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/staff/tickets"
+          element={
+            <ProtectedRoute role={2}>
+              <TicketManagementStaff />
             </ProtectedRoute>
           }
         />

@@ -355,7 +355,7 @@ export default function DashboardAdmin() {
                 width={260}
                 height={200}
                 data={mergedVolumeData}
-                key={JSON.stringify(mergedVolumeData)} // 🔥 penting
+                key={JSON.stringify(mergedVolumeData)}
               >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="project" tick={{ fontSize: 10 }} />
