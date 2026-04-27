@@ -52,3 +52,13 @@ export const updateOnlineStatus = async (isOnline) => {
 
   return res.json();
 };
+
+export const getOnlineStatus = async () => {
+  const res = await fetch(`${BASE_URL}/me`, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+
+  const data = await res.json();
+  return data.data.is_online;
+};

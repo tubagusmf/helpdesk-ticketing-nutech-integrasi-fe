@@ -2,32 +2,51 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { FiLogOut, FiBell, FiMenu, FiX } from "react-icons/fi";
-import { updateOnlineStatus } from "../../services/userService";
+import { updateOnlineStatus, getOnlineStatus } from "../../services/userService";
 
 export default function DashboardLayout({ title, children, menu }) {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
+  const [isOnline, setIsOnline] = useState(null);
   const [openNotif, setOpenNotif] = useState(false);
   const [openProfile, setOpenProfile] = useState(false);
 
   const notifRef = useRef(null);
   const profileRef = useRef(null);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await updateOnlineStatus(false);
+    } catch (err) {
+      console.error(err);
+    }
+  
     logout();
     navigate("/");
   };
 
   useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const status = await getOnlineStatus();
+        setIsOnline(status);
+      } catch (err) {
+        console.error("Gagal fetch status:", err);
+      }
+    };
+  
+    fetchStatus();
+  }, []);
+
+  useEffect(() => {
     const interval = setInterval(() => {
-      updateOnlineStatus(isOnline);
+      updateOnlineStatus(true);
     }, 30000);
   
     return () => clearInterval(interval);
-  }, [isOnline]);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
