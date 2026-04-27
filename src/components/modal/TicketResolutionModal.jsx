@@ -44,16 +44,10 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
     if (ticket?.id) {
       fetchResolution();
     }
-  }, [ticket]);
+  }, [ticket?.id]);
   
   const fetchResolution = async () => {
     try {
-      const res = await getTicketResolution(ticket.id);
-      if (!res) return;
-  
-      const data = res;
-      setResolution(data);
-  
       const partId = ticket.part_id || ticket.part?.id;
   
       if (!partId) {
@@ -61,9 +55,18 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
         return;
       }
   
-      const causeRes = await getCauses(partId);  
+      const causeRes = await getCauses(partId);
       const causeList = causeRes.data || [];
       setCauses(causeList);
+  
+      const res = await getTicketResolution(ticket.id);
+      const data = res; // ⬅️ bukan res.data
+  
+      if (!data) {
+        return;
+      }
+  
+      setResolution(data);
   
       const foundCause = causeList.find(
         (c) => String(c.id) === String(data.cause_id)
@@ -78,7 +81,6 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
         setSelectedCause(causeOption);
   
         const solRes = await getSolutions(foundCause.id);
-  
         const solList = solRes.data || [];
         setSolutions(solList);
   
@@ -92,6 +94,7 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
             label: foundSolution.name,
           });
         }
+        
       }
   
       setForm((prev) => ({
@@ -102,6 +105,7 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
         resolution_time: formatDatetimeLocal(data.completion_time),
         status: ticket.status,
       }));
+  
     } catch (err) {
       console.error(err);
     }
@@ -156,10 +160,11 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
       }
   
       await createTicketResolution(ticket.id, formData);
+
+      await fetchResolution();
   
       alert("Ticket berhasil di resolve!");
       onSuccess();
-      onClose();
   
     } catch (err) {
       alert(err.message);

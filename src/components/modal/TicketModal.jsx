@@ -11,7 +11,6 @@ import {
   } from "../../services/ticketService";
 
 export default function TicketModal({ onClose, onSuccess, role }) {
-
   const [loading, setLoading] = useState(false);
 
   const [projects, setProjects] = useState([]);
@@ -34,6 +33,8 @@ export default function TicketModal({ onClose, onSuccess, role }) {
   if (token) {
     currentUser = jwtDecode(token);
   }
+
+  const userRole = currentUser?.role;
 
   const projectOptions = projects.map(p => ({
     value: p.id,
@@ -116,7 +117,9 @@ export default function TicketModal({ onClose, onSuccess, role }) {
       const formData = new FormData();
   
       Object.keys(form).forEach((key) => {
-        formData.append(key, form[key]);
+        if (form[key] !== "" && form[key] !== null) {
+          formData.append(key, form[key]);
+        }
       });
   
       if (attachment) {
@@ -125,7 +128,11 @@ export default function TicketModal({ onClose, onSuccess, role }) {
   
       const res = await createTicket(formData);
   
-      alert(res.message);
+      if (!res.assigned) {
+        alert("⏳ Menunggu staff online\nTiket kamu tetap tersimpan.");
+      } else {
+        alert("✅ Tiket berhasil di assign ke staff");
+      }
       onSuccess();
       onClose();
   
@@ -136,6 +143,8 @@ export default function TicketModal({ onClose, onSuccess, role }) {
       setLoading(false);
     }
   };
+
+  
 
   return (
     <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
@@ -363,7 +372,7 @@ export default function TicketModal({ onClose, onSuccess, role }) {
               </div>
 
               {/* ASSIGNED */}
-              {role !== "user" && (
+              {userRole?.toLowerCase() === "administrator" && (
                 <div className="flex flex-col">
                   <label className="text-sm font-medium text-gray-700">
                     Nama Staff

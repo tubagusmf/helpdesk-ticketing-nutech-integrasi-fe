@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { FiLogOut, FiBell, FiMenu, FiX } from "react-icons/fi";
+import { updateOnlineStatus } from "../../services/userService";
 
 export default function DashboardLayout({ title, children, menu }) {
   const { logout, user } = useAuth();
@@ -19,6 +20,14 @@ export default function DashboardLayout({ title, children, menu }) {
     logout();
     navigate("/");
   };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      updateOnlineStatus(isOnline);
+    }, 30000);
+  
+    return () => clearInterval(interval);
+  }, [isOnline]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -62,7 +71,10 @@ export default function DashboardLayout({ title, children, menu }) {
               <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-white font-semibold">
                 {user?.name?.charAt(0)?.toUpperCase()}
               </div>
-              <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></span>
+              <span
+                className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-white rounded-full
+                  ${isOnline ? "bg-green-500" : "bg-gray-400"}`}
+              />
             </div>
 
             <div>
@@ -107,7 +119,16 @@ export default function DashboardLayout({ title, children, menu }) {
 
             {/* ONLINE STATUS */}
             <button
-              onClick={() => setIsOnline(!isOnline)}
+              onClick={async () => {
+                const newStatus = !isOnline;
+                setIsOnline(newStatus);
+              
+                try {
+                  await updateOnlineStatus(newStatus);
+                } catch (err) {
+                  console.error(err);
+                }
+              }}
               title={isOnline ? "Klik untuk offline" : "Klik untuk online"}
               className={`flex items-center gap-2 px-3 py-1 text-sm rounded-full
                 ${isOnline ? "bg-green-100 text-green-600" : "bg-gray-200 text-gray-600"}`}

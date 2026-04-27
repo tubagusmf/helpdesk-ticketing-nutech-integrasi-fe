@@ -42,3 +42,13 @@ export async function deleteUser(id) {
 
   return res.json();
 }
+
+export const updateOnlineStatus = async (isOnline) => {
+  const res = await fetch(`${BASE_URL}/online-status`, {
+    method: "PUT",
+    headers: getHeaders(),
+    body: JSON.stringify({ is_online: isOnline }),
+  });
+
+  return res.json();
+};
