@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { FiLogOut, FiBell, FiMenu, FiX } from "react-icons/fi";
-import { updateOnlineStatus, getOnlineStatus } from "../../services/userService";
+import { updateOnlineStatus, getCurrentUser } from "../../services/userService";
+import { jwtDecode } from "jwt-decode";
 
 export default function DashboardLayout({ title, children, menu }) {
   const { logout, user } = useAuth();
@@ -30,8 +31,8 @@ export default function DashboardLayout({ title, children, menu }) {
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const status = await getOnlineStatus();
-        setIsOnline(status);
+        const userData = await getCurrentUser();
+        setIsOnline(userData.is_online);
       } catch (err) {
         console.error("Gagal fetch status:", err);
       }
@@ -42,7 +43,23 @@ export default function DashboardLayout({ title, children, menu }) {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      updateOnlineStatus(true);
+      const token = localStorage.getItem("token");
+      if (!token) return;
+  
+      try {
+        const decoded = jwtDecode(token);
+        const now = Date.now() / 1000;
+  
+        if (decoded.exp < now) {
+          updateOnlineStatus(false);
+          localStorage.removeItem("token");
+          return;
+        }
+  
+        updateOnlineStatus(true);
+      } catch (err) {
+        console.error("Token error:", err);
+      }
     }, 30000);
   
     return () => clearInterval(interval);

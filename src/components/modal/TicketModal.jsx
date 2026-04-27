@@ -3,12 +3,12 @@ import { jwtDecode } from "jwt-decode";
 import Select from "react-select";
 import {
     createTicket,
-    getProjects,
     getLocations,
     getParts,
     getAssets,
     getStaffs,
   } from "../../services/ticketService";
+import { getCurrentUser } from "../../services/userService";
 
 export default function TicketModal({ onClose, onSuccess, role }) {
   const [loading, setLoading] = useState(false);
@@ -79,8 +79,9 @@ export default function TicketModal({ onClose, onSuccess, role }) {
   }, []);
   
   const fetchProjects = async () => {
-    const res = await getProjects();
-    setProjects(res.data || []);
+    const user = await getCurrentUser();
+  
+    setProjects(user.projects || []);
   };
   
   const fetchStaffs = async () => {
@@ -143,8 +144,6 @@ export default function TicketModal({ onClose, onSuccess, role }) {
       setLoading(false);
     }
   };
-
-  
 
   return (
     <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
@@ -372,7 +371,7 @@ export default function TicketModal({ onClose, onSuccess, role }) {
               </div>
 
               {/* ASSIGNED */}
-              {userRole?.toLowerCase() === "administrator" && (
+              {/* {userRole?.toLowerCase() === "administrator" && (
                 <div className="flex flex-col">
                   <label className="text-sm font-medium text-gray-700">
                     Nama Staff
@@ -391,7 +390,7 @@ export default function TicketModal({ onClose, onSuccess, role }) {
                     ))}
                   </select>
                 </div>
-              )}
+              )} */}
 
             </div>
           </div>

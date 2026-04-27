@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { useEffect } from "react";
+import { updateOnlineStatus } from "../services/userService";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -36,13 +37,14 @@ export default function Login() {
   
       login(token);
   
+      await updateOnlineStatus(true);
+  
       const decoded = jwtDecode(token);
       const roleID = decoded.role_id;
   
       if (roleID === 1) navigate("/admin/dashboard");
       else if (roleID === 2) navigate("/staff/dashboard");
       else if (roleID === 3) navigate("/user/dashboard");
-      else navigate("/unauthorized");
   
     } catch (err) {
       setError(
