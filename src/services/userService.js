@@ -62,3 +62,14 @@ export const getCurrentUser = async () => {
   const data = await res.json();
   return data.data;
 };
+
+export const forceOffline = async (userId) => {
+  const res = await fetch(`${BASE_URL}/force-offline/${userId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  return res.json();
+};

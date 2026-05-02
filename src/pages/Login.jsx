@@ -18,9 +18,9 @@ export default function Login() {
 
   useEffect(() => {
     if (user) {
-      if (user.role_id === 1) navigate("/admin");
-      else if (user.role_id === 2) navigate("/staff");
-      else if (user.role_id === 3) navigate("/user");
+      if (user.role_id === 1) navigate("/admin/dashboard");
+      else if (user.role_id === 2) navigate("/staff/dashboard");
+      else if (user.role_id === 3) navigate("/user/dashboard");
     }
   }, [user, navigate]);
 

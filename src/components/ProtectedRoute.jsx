@@ -9,11 +9,11 @@ export default function ProtectedRoute({ children, role }) {
   }
 
   if (!user) {
-    return <Navigate to="/" />;
+    return <Navigate to="/" replace />;
   }
 
   if (role && user.role_id !== role) {
-    return <Navigate to="/unauthorized" />;
+    return <Navigate to="/unauthorized" replace />;
   }
 
   return children;

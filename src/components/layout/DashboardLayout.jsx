@@ -3,7 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { FiLogOut, FiBell, FiMenu, FiX } from "react-icons/fi";
 import { updateOnlineStatus, getCurrentUser } from "../../services/userService";
-import { jwtDecode } from "jwt-decode";
+import { isTokenExpired } from "../../utils/auth";
 
 export default function DashboardLayout({ title, children, menu }) {
   const { logout, user } = useAuth();
@@ -19,13 +19,19 @@ export default function DashboardLayout({ title, children, menu }) {
 
   const handleLogout = async () => {
     try {
-      await updateOnlineStatus(false);
-    } catch (err) {
-      console.error(err);
-    }
+      const token = localStorage.getItem("token");
   
-    logout();
-    navigate("/");
+      await fetch("http://localhost:3000/v1/users/logout", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ token }),
+      });
+    } catch (err) {}
+  
+    logout(); 
+    navigate("/"); 
   };
 
   useEffect(() => {
@@ -43,23 +49,10 @@ export default function DashboardLayout({ title, children, menu }) {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-  
-      try {
-        const decoded = jwtDecode(token);
-        const now = Date.now() / 1000;
-  
-        if (decoded.exp < now) {
-          updateOnlineStatus(false);
-          localStorage.removeItem("token");
-          return;
-        }
-  
-        updateOnlineStatus(true);
-      } catch (err) {
-        console.error("Token error:", err);
-      }
+      fetch(`${BASE_URL}/heartbeat`, {
+        method: "PUT",
+        headers: getHeaders(),
+      });
     }, 30000);
   
     return () => clearInterval(interval);
@@ -77,6 +70,37 @@ export default function DashboardLayout({ title, children, menu }) {
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const handleUnload = () => {
+      const token = localStorage.getItem("token");
+  
+      if (!token) return;
+  
+      navigator.sendBeacon(
+        `${BASE_URL}/logout`,
+        JSON.stringify({ 
+          token: localStorage.getItem("token"),
+         })
+      );
+    };
+  
+    window.addEventListener("beforeunload", handleUnload);
+  
+    return () => {
+      window.removeEventListener("beforeunload", handleUnload);
+    };
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (isTokenExpired()) {
+        logout();
+      }
+    }, 10000);
+  
+    return () => clearInterval(interval);
   }, []);
 
   return (

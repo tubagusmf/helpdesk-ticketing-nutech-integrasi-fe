@@ -17,7 +17,14 @@ export function AuthProvider({ children }) {
         const currentTime = Date.now() / 1000;
   
         if (decoded.exp < currentTime) {
-          console.log("TOKEN EXPIRED");
+          fetch("http://localhost:3000/v1/users/logout", {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ token }),
+          });
+        
           localStorage.removeItem("token");
           setUser(null);
         } else {
@@ -39,7 +46,23 @@ export function AuthProvider({ children }) {
     setUser(decoded);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    const token = localStorage.getItem("token");
+  
+    if (token) {
+      try {
+        await fetch("http://localhost:3000/v1/users/logout", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ token }),
+        });
+      } catch (err) {
+        console.error("Logout API error:", err);
+      }
+    }
+  
     localStorage.removeItem("token");
     setUser(null);
   };

@@ -44,3 +44,15 @@ export function logout() {
   localStorage.removeItem("token");
   window.location.href = "/";
 }
+
+export function isTokenExpired() {
+  const token = getToken();
+  if (!token) return true;
+
+  try {
+    const decoded = jwtDecode(token);
+    return decoded.exp < Date.now() / 1000;
+  } catch {
+    return true;
+  }
+}
