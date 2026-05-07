@@ -4,15 +4,10 @@ import TicketTable from "../components/ticket/TicketTable";
 import TicketFilter from "../components/ticket/TicketFilter";
 import { getTickets } from "../services/ticketService";
 import { jwtDecode } from "jwt-decode";
+import { navigationMenu } from "../constants/navigation";
 
 export default function TicketManagementAdmin() {
-
-  const menu = [
-    { label: "Dashboard", path: "/admin/dashboard" },
-    { label: "Manajemen Tiket", path: "/admin/tickets" },
-    { label: "Manajemen User", path: "/admin/users" },
-    { label: "Master Data", path: "/admin/master" },
-  ];
+  const menu = navigationMenu.administrator;
 
   const [tickets, setTickets] = useState([]);
   const [filters, setFilters] = useState({

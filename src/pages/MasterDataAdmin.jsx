@@ -5,16 +5,11 @@ import PartTab from "../components/master/PartTab";
 import AssetIDTab from "../components/master/AssetIDTab";
 import CauseTab from "../components/master/CauseTab";
 import SolutionTab from "../components/master/SolutionTab";
+import { navigationMenu } from "../constants/navigation";
 import { useState } from "react";
 
 export default function MasterDataAdmin() {
-  const menu = [
-    { label: "Dashboard", path: "/admin/dashboard" },
-    { label: "Manajemen Tiket", path: "/admin/tickets" },
-    { label: "Manajemen User", path: "/admin/users" },
-    { label: "Master Data", path: "/admin/master" },
-  ];
-
+  const menu = navigationMenu.administrator;
   const tabs = ["Project", "Location", "Part", "Asset ID", "Cause", "Solution"];
   const [activeTab, setActiveTab] = useState("Project");
 

@@ -10,18 +10,12 @@ import {
 import { PieChart, Pie, Cell, Tooltip } from "recharts";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { getProjects, getParts } from "../services/ticketService";
+import { navigationMenu } from "../constants/navigation";
 
 export default function DashboardAdmin() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  const menu = [
-    { label: "Dashboard", path: "/admin/dashboard" },
-    { label: "Manajemen Tiket", path: "/admin/tickets" },
-    { label: "Manajemen User", path: "/admin/users" },
-    { label: "Master Data", path: "/admin/master" },
-  ];
-
+  const menu = navigationMenu.administrator;
   const [summary, setSummary] = useState({});
   const [statusData, setStatusData] = useState({});
   const [priorityData, setPriorityData] = useState([]);

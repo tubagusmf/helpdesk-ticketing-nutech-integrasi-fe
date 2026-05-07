@@ -5,13 +5,10 @@ import TicketModal from "../components/modal/TicketModal";
 import TicketFilter from "../components/ticket/TicketFilter";
 import { getTickets } from "../services/ticketService";
 import { jwtDecode } from "jwt-decode";
+import { navigationMenu } from "../constants/navigation";
 
 export default function TicketManagementUser() {
-
-  const menu = [
-    { label: "Dashboard", path: "/user/dashboard" },
-    { label: "Manajemen Tiket", path: "/user/tickets" },
-  ];
+  const menu = navigationMenu.user;
 
   const [tickets, setTickets] = useState([]);
   const [showModal, setShowModal] = useState(false);

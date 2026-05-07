@@ -14,20 +14,15 @@ import {
 } from "recharts";
 
 import { getProjects, getParts } from "../services/ticketService";
+import { navigationMenu } from "../constants/navigation";
 
 export default function DashboardUser() {
-
-  const menu = [
-    { label: "Dashboard", path: "/user/dashboard" },
-    { label: "Manajemen Tiket", path: "/user/tickets" },
-  ];
-
+  const menu = navigationMenu.user;
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState({});
   const [statusData, setStatusData] = useState({});
   const [priorityData, setPriorityData] = useState([]);
   const [volumeData, setVolumeData] = useState([]);
-
   const [projects, setProjects] = useState([]);
   const [parts, setParts] = useState([]);
   const [animateBar, setAnimateBar] = useState(false);

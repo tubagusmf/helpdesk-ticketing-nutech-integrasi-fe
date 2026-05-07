@@ -4,15 +4,10 @@ import { getUsers, deleteUser } from "../services/userService";
 import UserTab from "../components/users/UserTab";
 import UserModal from "../components/modal/UserModal";
 import { getProjects } from "../services/projectService";
+import { navigationMenu } from "../constants/navigation";
 
 export default function UserManagement() {
-  const menu = [
-    { label: "Dashboard", path: "/admin/dashboard" },
-    { label: "Manajemen Tiket", path: "/admin/tickets" },
-    { label: "Manajemen User", path: "/admin/users" },
-    { label: "Master Data", path: "/admin/master" },
-  ];
-
+  const menu = navigationMenu.administrator;
   const [users, setUsers] = useState([]);
   const [openModal, setOpenModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);

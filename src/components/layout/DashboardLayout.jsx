@@ -115,8 +115,11 @@ export default function DashboardLayout({ title, children, menu }) {
       )}
 
       {/* SIDEBAR */}
-      <aside className={`fixed lg:static top-0 left-0 z-50 h-full w-64 bg-white shadow-md transform transition-transform duration-300
-        ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}>
+      <aside
+        className={`fixed lg:static top-0 left-0 z-50 h-full w-64 bg-white shadow-md
+        transform transition-transform duration-300 flex flex-col
+        ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
+      >
 
         <div className="p-6 border-b flex justify-between items-center">
           <h2 className="text-xl font-bold text-orange-600">Helpdesk Center</h2>
@@ -144,20 +147,37 @@ export default function DashboardLayout({ title, children, menu }) {
           </div>
         </div>
 
-        <nav className="p-4 space-y-2">
-          {menu.map((item, i) => (
-            <button
-              key={i}
-              onClick={() => {
-                navigate(item.path);
-                setSidebarOpen(false);
-              }}
-              className="w-full text-left px-4 py-2 rounded hover:bg-orange-50 hover:text-orange-600"
-            >
-              {item.label}
-            </button>
-          ))}
+        <nav className="flex-1 p-4 space-y-2">
+          {menu.map((item, i) => {
+            const Icon = item.icon;
+
+            return (
+              <button
+                key={i}
+                onClick={() => {
+                  navigate(item.path);
+                  setSidebarOpen(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg
+                hover:bg-orange-50 hover:text-orange-600 transition-all duration-200"
+              >
+                <Icon size={18} />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
         </nav>
+
+        <div className="p-4 border-t">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg
+            text-red-500 hover:bg-red-50 transition-all duration-200"
+          >
+            <FiLogOut size={18} />
+            <span>Keluar</span>
+          </button>
+        </div>
       </aside>
 
       {/* MAIN */}
@@ -253,6 +273,16 @@ export default function DashboardLayout({ title, children, menu }) {
         <main className="p-4 md:p-6 flex-1 overflow-y-auto">
           {children}
         </main>
+
+        <footer className="bg-white border-t px-6 py-4 text-sm text-gray-500 flex flex-col md:flex-row items-center justify-between">
+          <p>
+            © 2026 Helpdesk Center
+          </p>
+
+          <p className="mt-2 md:mt-0">
+            Version 1.0.0
+          </p>
+        </footer>
       </div>
     </div>
   );
