@@ -30,15 +30,21 @@ export default function ProjectTab() {
     fetchData();
   }, [page, search]);
 
-  const handleSubmit = async (name) => {
-    if (!name) return;
-
+  const handleSubmit = async (name, codePrefix) => {
+    if (!name || !codePrefix) return;
+  
     if (selectedData) {
-      await updateProject(selectedData.id, { name });
+      await updateProject(selectedData.id, {
+        name,
+        code_prefix: codePrefix,
+      });
     } else {
-      await createProject({ name });
+      await createProject({
+        name,
+        code_prefix: codePrefix,
+      });
     }
-
+  
     setIsModalOpen(false);
     setSelectedData(null);
     fetchData();
@@ -88,7 +94,12 @@ export default function ProjectTab() {
             key={item.id}
             className="flex justify-between items-center p-3 border rounded-lg hover:bg-gray-50"
           >
-            <span>{item.name}</span>
+            <div>
+              <p className="font-medium">{item.name}</p>
+              <p className="text-sm text-gray-500">
+                Code: {item.code_prefix}
+              </p>
+            </div>
 
             <div className="flex gap-4 items-center">
               <button

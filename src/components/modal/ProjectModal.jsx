@@ -6,15 +6,21 @@ export default function ProjectModal({
   onSubmit,
   initialData,
 }) {
+
   const [name, setName] = useState("");
+  const [codePrefix, setCodePrefix] = useState("");
 
   useEffect(() => {
     if (initialData) {
       setName(initialData.name);
+      setCodePrefix(initialData.code_prefix || "");
     } else {
       setName("");
+      setCodePrefix("");
     }
   }, [initialData]);
+
+  console.log(initialData);
 
   if (!isOpen) return null;
 
@@ -42,6 +48,22 @@ export default function ProjectModal({
           />
         </div>
 
+        <div className="p-5">
+          <label className="text-sm font-semibold text-gray-600">
+            CODE PREFIX
+          </label>
+          <input
+            type="text"
+            placeholder="Contoh: KAI, LRT, ASDP"
+            value={codePrefix}
+            onChange={(e) => setCodePrefix(e.target.value.toUpperCase())}
+            className="w-full mt-2 border p-2 rounded-lg"
+          />
+          <p className="text-xs text-gray-400 mt-1">
+            Akan digunakan untuk nomor tiket (contoh: KAI-20260101-0001)
+          </p>
+        </div>
+
         <div className="flex justify-end gap-3 p-5 border-t">
           <button
             onClick={onClose}
@@ -51,7 +73,7 @@ export default function ProjectModal({
           </button>
 
           <button
-            onClick={() => onSubmit(name)}
+            onClick={() => onSubmit(name, codePrefix)}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
           >
             Simpan Data
