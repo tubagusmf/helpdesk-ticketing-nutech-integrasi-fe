@@ -10,10 +10,12 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import TicketManagementAdmin from "./pages/TicketManagementAdmin";
 import TicketManagementUser from "./pages/TicketManagementUser";
 import TicketManagementStaff from "./pages/TicketManagementStaff";
+import { Toaster } from "react-hot-toast";
 
 function App() {
   return (
     <BrowserRouter>
+    <Toaster position="top-right" />
       <Routes>
 
         <Route path="/" element={<Login />} />

@@ -29,8 +29,6 @@ export default function UserManagement() {
   const loadUsers = async () => {
     const res = await getUsers(page, search);
   
-    console.log("API USERS:", res);
-  
     setUsers(res.data || []);
     setTotalPage(res.total_page || 1);
   };

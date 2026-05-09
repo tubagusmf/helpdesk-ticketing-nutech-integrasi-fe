@@ -130,7 +130,7 @@ export default function TicketModal({ onClose, onSuccess, role }) {
       const res = await createTicket(formData);
   
       if (!res.assigned) {
-        alert("⏳ Menunggu staff online\nTiket kamu tetap tersimpan.");
+        alert("⏳ Tiket berhasil dibuat.\nSistem sedang mencari staff yang tersedia.");
       } else {
         alert("✅ Tiket berhasil di assign ke staff");
       }

@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { FiLogOut, FiBell, FiMenu, FiX } from "react-icons/fi";
 import { updateOnlineStatus, getCurrentUser } from "../../services/userService";
 import { isTokenExpired } from "../../utils/auth";
+import { getNotifications, getUnreadCount, markNotificationRead } from "../../services/notificationService";
+import toast from "react-hot-toast";
 
 export default function DashboardLayout({ title, children, menu }) {
   const { logout, user } = useAuth();
@@ -13,9 +15,14 @@ export default function DashboardLayout({ title, children, menu }) {
   const [isOnline, setIsOnline] = useState(null);
   const [openNotif, setOpenNotif] = useState(false);
   const [openProfile, setOpenProfile] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loadingNotif, setLoadingNotif] = useState(false);
 
   const notifRef = useRef(null);
   const profileRef = useRef(null);
+  const prevUnreadRef = useRef(0);
+  const audioRef = useRef(null);
 
   const handleLogout = async () => {
     try {
@@ -102,6 +109,114 @@ export default function DashboardLayout({ title, children, menu }) {
   
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    fetchNotifications();
+  
+    const interval = setInterval(() => {
+      fetchNotifications();
+    }, 10000);
+  
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const requestPermission = async () => {
+      if ("Notification" in window) {
+        const permission = await Notification.requestPermission();
+  
+        console.log("Notification permission:", permission);
+      }
+    };
+  
+    requestPermission();
+  }, []);
+
+  useEffect(() => {
+    audioRef.current = new Audio("/sounds/bell.wav");
+  
+    audioRef.current.preload = "auto";
+  }, []);
+
+  const showBrowserNotification = (notif) => {
+    if (Notification.permission === "granted") {
+      new Notification(notif.title, {
+        body: notif.message,
+        icon: "/vite.svg",
+      });
+    }
+  };
+
+  const fetchNotifications = async () => {
+    try {
+      setLoadingNotif(true);
+  
+      const [notifData, unreadData] = await Promise.all([
+        getNotifications(),
+        getUnreadCount(),
+      ]);
+  
+      const unread = unreadData || 0;
+      const safeNotif = notifData || [];
+  
+      console.log("Unread:", unread);
+      console.log("Prev:", prevUnreadRef.current);
+      console.log("Notif:", safeNotif);
+  
+      if (unread > prevUnreadRef.current) {
+        const latestNotif = safeNotif[0];
+  
+        if (latestNotif) {
+          playNotificationSound();
+  
+          showBrowserNotification(latestNotif);
+  
+          toast.success(latestNotif.title, {
+            duration: 4000,
+          });
+        }
+      }
+  
+      prevUnreadRef.current = unread;
+  
+      setNotifications(safeNotif);
+      setUnreadCount(unread);
+    } catch (err) {
+      console.error("Failed fetch notification:", err);
+    } finally {
+      setLoadingNotif(false);
+    }
+  };
+
+  const handleReadNotification = async (id) => {
+    try {
+      await markNotificationRead(id);
+  
+      setNotifications((prev) =>
+        prev.map((item) =>
+          item.id === id
+            ? { ...item, is_read: true }
+            : item
+        )
+      );
+  
+      setUnreadCount((prev) => Math.max(prev - 1, 0));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const playNotificationSound = async () => {
+    try {
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+  
+        await audioRef.current.play();
+      }
+    } catch (err) {
+      console.log("Audio blocked:", err);
+    }
+  };
 
   return (
     <div className="h-screen flex bg-gray-100 overflow-hidden">
@@ -227,15 +342,77 @@ export default function DashboardLayout({ title, children, menu }) {
                 className="p-2 rounded-full hover:bg-gray-100 relative"
               >
                 <FiBell size={20} />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                {unreadCount > 0 && (
+                  <span
+                    className="
+                      absolute -top-1 -right-1
+                      min-w-[18px] h-[18px]
+                      px-1
+                      flex items-center justify-center
+                      text-[10px]
+                      rounded-full
+                      bg-red-500 text-white font-semibold
+                    "
+                  >
+                    {unreadCount}
+                  </span>
+                )}
               </button>
 
               {openNotif && (
-                <div className="absolute right-0 mt-3 w-80 bg-white shadow-lg rounded-xl border z-50">
-                  <div className="p-4 border-b font-semibold">Notifikasi</div>
-                  <div className="p-6 text-center text-gray-400 text-sm">
-                    <FiBell size={28} className="mx-auto mb-2" />
-                    Tidak ada notifikasi baru.
+                <div className="absolute right-0 mt-3 w-96 bg-white shadow-lg rounded-xl border z-50 overflow-hidden">
+                  
+                  <div className="p-4 border-b font-semibold flex items-center justify-between">
+                    <span>Notifikasi</span>
+
+                    <span className="text-xs text-gray-500">
+                      {unreadCount} unread
+                    </span>
+                  </div>
+
+                  <div className="max-h-[400px] overflow-y-auto">
+                    {loadingNotif ? (
+                      <div className="p-6 text-center text-gray-400 text-sm">
+                        Loading...
+                      </div>
+                    ) : notifications?.length === 0 ? (
+                      <div className="p-6 text-center text-gray-400 text-sm">
+                        <FiBell size={28} className="mx-auto mb-2" />
+                        Tidak ada notifikasi.
+                      </div>
+                    ) : (
+                      notifications?.map((notif) => (
+                        <button
+                          key={notif.id}
+                          onClick={() => handleReadNotification(notif.id)}
+                          className={`
+                            w-full text-left p-4 border-b hover:bg-gray-50 transition
+                            ${!notif.is_read ? "bg-orange-50" : ""}
+                          `}
+                        >
+                          <div className="flex justify-between items-start gap-3">
+
+                            <div className="flex-1">
+                              <p className="font-semibold text-sm text-gray-800">
+                                {notif.title}
+                              </p>
+
+                              <p className="text-sm text-gray-600 mt-1">
+                                {notif.message}
+                              </p>
+
+                              <p className="text-xs text-gray-400 mt-2">
+                                {new Date(notif.created_at).toLocaleString()}
+                              </p>
+                            </div>
+
+                            {!notif.is_read && (
+                              <span className="w-2 h-2 rounded-full bg-orange-500 mt-2"></span>
+                            )}
+                          </div>
+                        </button>
+                      ))
+                    )}
                   </div>
                 </div>
               )}
