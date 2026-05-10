@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import TicketResolutionModal from "../modal/TicketResolutionModal";
 import TicketCommentModal from "../modal/TicketCommentModal";
 import TicketHistoryModal from "../modal/TicketHistoryModal";
+import { markTicketCommentsAsRead } from "../../services/ticketService";
 
 export default function TicketRow({ ticket, role }) {
 
@@ -23,6 +24,19 @@ export default function TicketRow({ ticket, role }) {
       ONHOLD: "bg-blue-100 text-blue-600",
       RESOLVED: "bg-green-100 text-green-600",
       CLOSED: "bg-gray-200 text-gray-600",
+    };
+
+    const handleOpenComment = async () => {
+      try {
+        await markTicketCommentsAsRead(ticket.id);
+    
+        ticket.unread_comment_count = 0;
+    
+      } catch (err) {
+        console.error(err);
+      }
+    
+      setShowComment(true);
     };
 
     const parseLocalDate = (dateString) => {
@@ -146,8 +160,17 @@ export default function TicketRow({ ticket, role }) {
             </button>
 
             {/* COMMENT */}
-            <button onClick={() => setShowComment(true)} className="text-green-600">
+            <button
+              onClick={handleOpenComment}
+              className="text-green-600 relative"
+            >
               <FiMessageCircle size={18} />
+
+              {ticket.unread_comment_count > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center">
+                  {ticket.unread_comment_count}
+                </span>
+              )}
             </button>
 
             {/* STAFF + ADMIN */}

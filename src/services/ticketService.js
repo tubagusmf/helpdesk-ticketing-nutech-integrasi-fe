@@ -170,3 +170,10 @@ export const getTicketResolution = async (ticketId) => {
     headers: getHeaders(),
   });
 };
+
+export const markTicketCommentsAsRead = async (ticketId) => {
+  return fetchAPI(`${BASE_URL}/tickets/${ticketId}/comments/read`, {
+    method: "PUT",
+    headers: getHeaders(),
+  });
+};
