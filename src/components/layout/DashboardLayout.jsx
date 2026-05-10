@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { FiLogOut, FiBell, FiMenu, FiX } from "react-icons/fi";
 import { updateOnlineStatus, getCurrentUser } from "../../services/userService";
 import { isTokenExpired } from "../../utils/auth";
-import { getNotifications, getUnreadCount, markNotificationRead } from "../../services/notificationService";
+import { getNotifications, getUnreadCount, markNotificationRead, deleteNotification } from "../../services/notificationService";
 import toast from "react-hot-toast";
 
 export default function DashboardLayout({ title, children, menu }) {
@@ -159,10 +159,6 @@ export default function DashboardLayout({ title, children, menu }) {
       const unread = unreadData || 0;
       const safeNotif = notifData || [];
   
-      console.log("Unread:", unread);
-      console.log("Prev:", prevUnreadRef.current);
-      console.log("Notif:", safeNotif);
-  
       if (unread > prevUnreadRef.current) {
         const latestNotif = safeNotif[0];
   
@@ -171,8 +167,42 @@ export default function DashboardLayout({ title, children, menu }) {
   
           showBrowserNotification(latestNotif);
   
-          toast.success(latestNotif.title, {
-            duration: 4000,
+          toast.dismiss();
+
+          toast.custom((t) => (
+            <div
+              className={`
+                max-w-sm w-full bg-white shadow-lg rounded-xl border p-4
+                flex items-start gap-3
+                ${t.visible ? "animate-enter" : "animate-leave"}
+              `}
+            >
+              {/* ICON */}
+              <div className="mt-1 text-green-500">
+                ✅
+              </div>
+          
+              {/* CONTENT */}
+              <div className="flex-1">
+                <p className="font-semibold text-gray-800">
+                  {latestNotif.title}
+                </p>
+          
+                <p className="text-sm text-gray-600 mt-1">
+                  {latestNotif.message}
+                </p>
+              </div>
+          
+              {/* CLOSE BUTTON */}
+              <button
+                onClick={() => toast.dismiss(t.id)}
+                className="text-gray-400 hover:text-red-500 transition"
+              >
+                ✕
+              </button>
+            </div>
+          ), {
+            duration: 5000,
           });
         }
       }
@@ -201,6 +231,22 @@ export default function DashboardLayout({ title, children, menu }) {
       );
   
       setUnreadCount((prev) => Math.max(prev - 1, 0));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteNotification = async (id) => {
+    try {
+      await deleteNotification(id);
+  
+      setNotifications((prev) =>
+        prev.filter((item) => item.id !== id)
+      );
+  
+      setUnreadCount((prev) =>
+        Math.max(prev - 1, 0)
+      );
     } catch (err) {
       console.error(err);
     }
@@ -366,7 +412,7 @@ export default function DashboardLayout({ title, children, menu }) {
                     <span>Notifikasi</span>
 
                     <span className="text-xs text-gray-500">
-                      {unreadCount} unread
+                      {unreadCount} Belum dibaca
                     </span>
                   </div>
 
@@ -391,7 +437,6 @@ export default function DashboardLayout({ title, children, menu }) {
                           `}
                         >
                           <div className="flex justify-between items-start gap-3">
-
                             <div className="flex-1">
                               <p className="font-semibold text-sm text-gray-800">
                                 {notif.title}
@@ -406,9 +451,26 @@ export default function DashboardLayout({ title, children, menu }) {
                               </p>
                             </div>
 
-                            {!notif.is_read && (
-                              <span className="w-2 h-2 rounded-full bg-orange-500 mt-2"></span>
-                            )}
+                            <div className="flex items-start gap-2">
+
+                              {!notif.is_read && (
+                                <span className="w-2 h-2 rounded-full bg-orange-500 mt-2"></span>
+                              )}
+
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteNotification(notif.id);
+                                }}
+                                className="
+                                  text-gray-400
+                                  hover:text-red-500
+                                  transition
+                                "
+                              >
+                                <FiX size={14} />
+                              </button>
+                            </div>
                           </div>
                         </button>
                       ))
@@ -453,7 +515,7 @@ export default function DashboardLayout({ title, children, menu }) {
 
         <footer className="bg-white border-t px-6 py-4 text-sm text-gray-500 flex flex-col md:flex-row items-center justify-between">
           <p>
-            © 2026 Helpdesk Center
+            © 2026 Helpdesk CCIT Nutech Integrasi
           </p>
 
           <p className="mt-2 md:mt-0">
