@@ -173,7 +173,6 @@ export default function TicketRow({ ticket, role }) {
               )}
             </button>
 
-            {/* STAFF + ADMIN */}
             {["STAFF", "ADMINISTRATOR"].includes(role) && (
               <button
                 onClick={() => setShowResolution(true)}
@@ -183,7 +182,6 @@ export default function TicketRow({ ticket, role }) {
               </button>
             )}
 
-            {/* USER hanya kalau sudah resolved */}
             {role === "USER" && ticket.status === "RESOLVED" && (
               <button
                 onClick={() => setShowResolution(true)}

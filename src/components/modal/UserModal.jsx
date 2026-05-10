@@ -29,7 +29,7 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
       ]
     },
     2: {
-      title: "Staff / Teknisi",
+      title: "Staff / CCIT",
       code: "STAFF",
       desc: "Fokus pada penyelesaian tiket.",
       permissions: [
@@ -71,6 +71,22 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
     }
   };
 
+  const toggleAllProjects = () => {
+    if (allSelected) {
+      setForm({
+        ...form,
+        projects: []
+      });
+    } else {
+      setForm({
+        ...form,
+        projects: projects.map((p) => ({
+          id: p.id
+        }))
+      });
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -94,7 +110,9 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
     }
   };
 
-  const selectedRole = roleInfo[form.role_id];
+  const allSelected =
+    projects.length > 0 &&
+    form.projects.length === projects.length;
 
   return (
 
@@ -165,7 +183,6 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
 
           </div>
 
-
           {/* ROLE */}
           <div>
 
@@ -201,21 +218,54 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
               ))}
 
             </div>
-
           </div>
-
 
           {/* PROJECT ACCESS */}
           {(form.role_id === 2 || form.role_id === 3) && (
 
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
 
-            <div className="font-semibold mb-3">
-                Project Access
-            </div>
+              <div className="font-semibold mb-3">
+                  Project Access
+              </div>
 
-            <div className="grid grid-cols-2 gap-3">
+              <label className="flex items-center gap-2 text-sm font-medium mb-4">
 
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={toggleAllProjects}
+                />
+                Semua Project
+              </label>
+
+              <div className="grid grid-cols-2 gap-3">
+                {projects.map((project) => {
+
+                  const checked = form.projects.some(
+                    p => p.id === project.id
+                  )
+
+                  return (
+                    <label
+                      key={project.id}
+                      className="flex items-center gap-2 text-sm"
+                    >
+
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleProject(project.id)}
+                      />
+
+                      {project.name}
+
+                    </label>
+                  )
+                })}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 {projects.map((project) => {
 
                 const checked = form.projects.some(p => p.id === project.id)
@@ -236,17 +286,13 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
 
                     </label>
                 )
-
                 })}
+              </div>
 
+              <p className="text-xs text-gray-500 mt-2">
+                  Pilih project yang dapat diakses oleh user ini.
+              </p>
             </div>
-
-            <p className="text-xs text-gray-500 mt-2">
-                Pilih project yang dapat diakses oleh user ini.
-            </p>
-
-            </div>
-
             )}
 
 
@@ -279,7 +325,6 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
             )}
 
         </form>
-
 
         {/* FOOTER */}
         <div className="border-t p-4">
