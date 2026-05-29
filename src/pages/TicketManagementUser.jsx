@@ -6,6 +6,7 @@ import TicketFilter from "../components/ticket/TicketFilter";
 import { getTickets } from "../services/ticketService";
 import { jwtDecode } from "jwt-decode";
 import { navigationMenu } from "../constants/navigation";
+import useTicketSocket from "../hooks/useTicketSocket";
 
 export default function TicketManagementUser() {
   const menu = navigationMenu.user;
@@ -54,6 +55,58 @@ export default function TicketManagementUser() {
     }
   };
 
+  useTicketSocket({
+
+    onNewTicket: (ticket) => {
+  
+      console.log(
+        "CURRENT USER",
+        currentUser?.user_id
+      );
+  
+      console.log(
+        "TICKET REPORTER",
+        ticket.reporter_id
+      );
+  
+      console.log(ticket);
+  
+      if (
+        ticket.reporter_id === currentUser?.user_id
+      ) {
+  
+        console.log("MATCHED REPORTER");
+  
+        setTickets((prev) => {
+  
+          const exists = prev.some(
+            (t) => t.id === ticket.id
+          );
+  
+          if (exists) return prev;
+  
+          return [ticket, ...prev];
+        });
+      }
+    },
+  
+    onStatusUpdate: (data) => {
+  
+      setTickets((prev) =>
+        prev.map((ticket) =>
+          ticket.id === data.ticket_id
+            ? {
+                ...ticket,
+                status: data.status,
+              }
+            : ticket
+        )
+      );
+  
+    },
+  
+  });
+  
   return (
     <DashboardLayout title="Tiket Manajemen" menu={menu}>
 
@@ -116,7 +169,6 @@ export default function TicketManagementUser() {
       {showModal && (
         <TicketModal
           onClose={() => setShowModal(false)}
-          onSuccess={fetchTickets}
         />
       )}
 

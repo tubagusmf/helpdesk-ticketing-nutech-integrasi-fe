@@ -5,6 +5,7 @@ import TicketFilter from "../components/ticket/TicketFilter";
 import { getTickets } from "../services/ticketService";
 import { jwtDecode } from "jwt-decode";
 import { navigationMenu } from "../constants/navigation";
+import useTicketSocket from "../hooks/useTicketSocket";
 
 export default function TicketManagementAdmin() {
   const menu = navigationMenu.administrator;
@@ -50,6 +51,39 @@ export default function TicketManagementAdmin() {
   useEffect(() => {
     setPage(1);
   }, [filters, search]);
+
+  useTicketSocket({
+
+    onNewTicket: (ticket) => {
+  
+      setTickets((prev) => {
+
+        const exists = prev.some(
+          (t) => t.id === ticket.id
+        );
+      
+        if (exists) return prev;
+      
+        return [ticket, ...prev];
+      });
+  
+    },
+  
+    onStatusUpdate: (data) => {
+  
+      setTickets((prev) =>
+        prev.map((ticket) =>
+          ticket.id === data.ticket_id
+            ? {
+                ...ticket,
+                status: data.status,
+              }
+            : ticket
+        )
+      );
+  
+    },
+  });
 
   return (
     <DashboardLayout title="Manajemen Tiket" menu={menu}>

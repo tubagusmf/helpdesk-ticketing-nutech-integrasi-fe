@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { getCauses, getSolutions, updateTicketStatusOnly, createTicketResolution, getTicketResolution  } from "../../services/ticketService";
 import Select from "react-select";
+import useTicketSocket from "../../hooks/useTicketSocket";  
 
 export default function TicketResolutionModal({ ticket, onClose, onSuccess, role }) {
 
@@ -11,14 +12,6 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
   const [selectedSolution, setSelectedSolution] = useState(null);
   const [preview, setPreview] = useState(null);
   const [resolution, setResolution] = useState(null);
-  const isLocked = ["RESOLVED", "CLOSED"].includes(ticket.status);  
-  const normalizedRole = role?.toLowerCase();
-
-  const isUser = normalizedRole === "user";
-  const isLockedForAdmin = ["RESOLVED", "CLOSED"].includes(ticket.status);
-
-  const isReadOnly = isUser || isLockedForAdmin;
-
   const getNowLocal = () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
@@ -31,8 +24,17 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
     resolution_time: getNowLocal(),
     notes: "",
     onhold_notes: "",
-    status: "RESOLVED",
+    status: ticket?.status || "OPEN",
   });
+  const isLocked = ["RESOLVED", "CLOSED"].includes(ticket.status); 
+  const normalizedRole = role?.toLowerCase();
+
+  const isUser = normalizedRole === "user";
+  const isLockedForAdmin = ["RESOLVED", "CLOSED"].includes(ticket.status);
+
+  const isReadOnly = isUser || isLockedForAdmin;
+
+  
 
   useEffect(() => {
     if (ticket?.attachment_url) {
@@ -60,7 +62,7 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
       setCauses(causeList);
   
       const res = await getTicketResolution(ticket.id);
-      const data = res; // ⬅️ bukan res.data
+      const data = res;
   
       if (!data) {
         return;
@@ -238,6 +240,18 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
     }
   };
 
+  useTicketSocket({
+    onStatusUpdate: (data) => {
+  
+      if (data.id !== ticket.id) return;
+  
+      setForm((prev) => ({
+        ...prev,
+        status: data.status,
+      }));
+    },
+  });
+
   return (
     <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
 
@@ -377,6 +391,7 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
                 </label>
                 <Select
                   options={statusOptions}
+                  placeholder="Pilih Status"
                   value={statusOptions.find(s => s.value === form.status)}
                   isDisabled={isReadOnly}
                   onChange={(selected) => {

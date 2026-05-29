@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { createTicketComment, getTicketComments } from "../../services/ticketService";
+import useTicketSocket from "../../hooks/useTicketSocket";
 
 export default function TicketCommentModal({ ticket, onClose }) {
   const [comments, setComments] = useState([]);
@@ -10,21 +11,11 @@ export default function TicketCommentModal({ ticket, onClose }) {
   const isClosed = ticket.status === "CLOSED";
 
   useEffect(() => {
-    fetchComments();
   }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [comments]);
-
-  const fetchComments = async () => {
-    try {
-      const res = await getTicketComments(ticket.id);
-      setComments(res.data || []);
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   const handleSubmit = async () => {
     if (!message.trim()) return alert("Komentar tidak boleh kosong");
@@ -37,13 +28,21 @@ export default function TicketCommentModal({ ticket, onClose }) {
       });
 
       setMessage("");
-      fetchComments();
     } catch (err) {
       alert(err.message);
     } finally {
       setLoading(false);
     }
   };
+
+  useTicketSocket({
+    onNewComment: (data) => {
+  
+      if (data.ticket_id !== ticket.id) return;
+  
+      setComments((prev) => [...prev, data]);
+    },
+  });
 
   return (
     <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">

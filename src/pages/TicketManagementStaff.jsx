@@ -5,6 +5,7 @@ import TicketFilter from "../components/ticket/TicketFilter";
 import { getTickets } from "../services/ticketService";
 import { jwtDecode } from "jwt-decode";
 import { navigationMenu } from "../constants/navigation";
+import useTicketSocket from "../hooks/useTicketSocket";
 
 export default function TicketManagementStaff() {
   const menu = navigationMenu.staff;
@@ -51,6 +52,65 @@ export default function TicketManagementStaff() {
       console.error("Fetch tickets error:", err);
     }
   };
+
+  useTicketSocket({
+
+    onNewTicket: (ticket) => {
+  
+      console.log(
+        "CURRENT STAFF",
+        currentUser?.user_id
+      );
+  
+      console.log(
+        "TICKET ASSIGNED",
+        ticket.assigned_to_id
+      );
+  
+      console.log(ticket);
+  
+      if (
+        Number(ticket.assigned_to_id) ===
+        Number(currentUser?.user_id)
+      ) {
+  
+        console.log("MATCHED STAFF");
+  
+        setTickets((prev) => {
+  
+          const exists = prev.some(
+            (t) => t.id === ticket.id
+          );
+  
+          if (exists) {
+            return prev.map((t) =>
+              t.id === ticket.id
+                ? ticket
+                : t
+            );
+          }
+  
+          return [ticket, ...prev];
+        });
+      }
+    },
+  
+    onStatusUpdate: (data) => {
+  
+      setTickets((prev) =>
+        prev.map((ticket) =>
+          ticket.id === data.ticket_id
+            ? {
+                ...ticket,
+                status: data.status,
+              }
+            : ticket
+        )
+      );
+  
+    },
+  
+  });
 
   return (
     <DashboardLayout title="Manajemen Tiket" menu={menu}>

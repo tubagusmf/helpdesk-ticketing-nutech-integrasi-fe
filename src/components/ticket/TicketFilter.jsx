@@ -197,7 +197,6 @@ export default function TicketFilter({ search, setSearch, filters, setFilters, t
       {openModal && (
         <TicketModal
           onClose={() => setOpenModal(false)}
-          onSuccess={() => window.location.reload()}
         />
       )}
     </>

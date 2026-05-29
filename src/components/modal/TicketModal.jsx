@@ -10,7 +10,7 @@ import {
   } from "../../services/ticketService";
 import { getCurrentUser } from "../../services/userService";
 
-export default function TicketModal({ onClose, onSuccess, role }) {
+export default function TicketModal({ onClose, role }) {
   const [loading, setLoading] = useState(false);
 
   const [projects, setProjects] = useState([]);
@@ -134,7 +134,6 @@ export default function TicketModal({ onClose, onSuccess, role }) {
       } else {
         alert("✅ Tiket berhasil di assign ke staff");
       }
-      onSuccess();
       onClose();
   
     } catch (err) {
@@ -369,29 +368,6 @@ export default function TicketModal({ onClose, onSuccess, role }) {
                   placeholder="Pilih prioritas..."
                 />
               </div>
-
-              {/* ASSIGNED */}
-              {/* {userRole?.toLowerCase() === "administrator" && (
-                <div className="flex flex-col">
-                  <label className="text-sm font-medium text-gray-700">
-                    Nama Staff
-                  </label>
-                  <select
-                    name="assigned_to_id"
-                    value={form.assigned_to_id}
-                    onChange={handleChange}
-                    className="w-full border px-3 py-2 rounded-lg"
-                  >
-                    <option value="">Pilih Staff</option>
-                    {staffs.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )} */}
-
             </div>
           </div>
         </div>

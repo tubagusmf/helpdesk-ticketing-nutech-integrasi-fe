@@ -6,6 +6,7 @@ import { updateOnlineStatus, getCurrentUser } from "../../services/userService";
 import { isTokenExpired } from "../../utils/auth";
 import { getNotifications, getUnreadCount, markNotificationRead, deleteNotification } from "../../services/notificationService";
 import toast from "react-hot-toast";
+import useTicketSocket from "../../hooks/useTicketSocket";
 
 export default function DashboardLayout({ title, children, menu }) {
   const { logout, user } = useAuth();
@@ -263,6 +264,24 @@ export default function DashboardLayout({ title, children, menu }) {
       console.log("Audio blocked:", err);
     }
   };
+
+  useTicketSocket({
+    onNotification: (notif) => {
+  
+      setNotifications((prev) => [
+        notif,
+        ...prev,
+      ]);
+  
+      setUnreadCount((prev) => prev + 1);
+  
+      playNotificationSound();
+  
+      showBrowserNotification(notif);
+  
+    },
+  
+  });
 
   return (
     <div className="h-screen flex bg-gray-100 overflow-hidden">

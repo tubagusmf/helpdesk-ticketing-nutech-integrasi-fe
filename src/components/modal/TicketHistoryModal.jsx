@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getTicketHistories } from "../../services/ticketService";
+import useTicketSocket from "../../hooks/useTicketSocket";  
 
 export default function TicketHistoryModal({ ticket, onClose }) {
   const [histories, setHistories] = useState([]);
@@ -11,13 +12,9 @@ export default function TicketHistoryModal({ ticket, onClose }) {
   const fetchHistories = async () => {
     try {
       const res = await getTicketHistories(ticket.id);
-  
-      console.log("🔥 FULL RESPONSE:", res);
-      console.log("🔥 HISTORY DATA:", res.data);
-  
       setHistories(res.data || []);
     } catch (err) {
-      console.error("❌ ERROR FETCH HISTORY:", err);
+      console.error("ERROR FETCH HISTORY:", err);
     }
   };
 
@@ -35,6 +32,21 @@ export default function TicketHistoryModal({ ticket, onClose }) {
         return "ℹ️ Aktivitas";
     }
   };
+
+  useTicketSocket({
+    onTicketHistory: (data) => {
+  
+      if (data.ticket_id !== ticket.id) return;
+  
+      setHistories((prev) => {
+        const exists = prev.some((x) => x.id === data.id);
+      
+        if (exists) return prev;
+      
+        return [data, ...prev];
+      });
+    },
+  });
 
   return (
     <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
