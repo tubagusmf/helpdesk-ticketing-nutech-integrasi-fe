@@ -10,7 +10,17 @@ export default function TicketCommentModal({ ticket, onClose }) {
   const bottomRef = useRef(null);
   const isClosed = ticket.status === "CLOSED";
 
+  const fetchComments = async () => {
+    try {
+      const res = await getTicketComments(ticket.id);
+      setComments(res.data || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
+    fetchComments();
   }, []);
 
   useEffect(() => {
@@ -37,10 +47,18 @@ export default function TicketCommentModal({ ticket, onClose }) {
 
   useTicketSocket({
     onNewComment: (data) => {
-  
       if (data.ticket_id !== ticket.id) return;
-  
-      setComments((prev) => [...prev, data]);
+    
+      setComments((prev) => {
+    
+        const exists = prev.some((c) => c.id === data.id);
+    
+        if (exists) {
+          return prev;
+        }
+    
+        return [...prev, data];
+      });
     },
   });
 
