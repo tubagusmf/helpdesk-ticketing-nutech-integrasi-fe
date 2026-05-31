@@ -37,9 +37,14 @@ export default function useTicketSocket({
           onNotification?.(message.data);
           break;
 
-        case "TICKET_HISTORY":
-          onTicketHistory?.(message.data);
-          break;
+          case "TICKET_HISTORY":
+            console.log(
+              "[WS HISTORY RECEIVED]",
+              message.data
+            );
+      
+            onTicketHistory?.(message.data);
+            break;
 
         default:
           break;

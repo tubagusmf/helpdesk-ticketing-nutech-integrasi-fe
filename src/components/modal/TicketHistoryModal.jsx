@@ -7,7 +7,7 @@ export default function TicketHistoryModal({ ticket, onClose }) {
 
   useEffect(() => {
     fetchHistories();
-  }, []);
+  }, [ticket.id]);
 
   const fetchHistories = async () => {
     try {
@@ -35,14 +35,18 @@ export default function TicketHistoryModal({ ticket, onClose }) {
 
   useTicketSocket({
     onTicketHistory: (data) => {
-  
       if (data.ticket_id !== ticket.id) return;
   
       setHistories((prev) => {
-        const exists = prev.some((x) => x.id === data.id);
-      
-        if (exists) return prev;
-      
+  
+        const exists = prev.some(
+          (h) => h.id === data.id
+        );
+  
+        if (exists) {
+          return prev;
+        }
+  
         return [data, ...prev];
       });
     },
