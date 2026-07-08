@@ -7,6 +7,7 @@ import { isTokenExpired } from "../../utils/auth";
 import { getNotifications, getUnreadCount, markNotificationRead, deleteNotification } from "../../services/notificationService";
 import toast from "react-hot-toast";
 import useTicketSocket from "../../hooks/useTicketSocket";
+import { NavLink } from "react-router-dom";
 
 export default function DashboardLayout({ title, children, menu }) {
   const { logout, user } = useAuth();
@@ -332,18 +333,21 @@ export default function DashboardLayout({ title, children, menu }) {
             const Icon = item.icon;
 
             return (
-              <button
+              <NavLink
                 key={i}
-                onClick={() => {
-                  navigate(item.path);
-                  setSidebarOpen(false);
-                }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg
-                hover:bg-orange-50 hover:text-orange-600 transition-all duration-200"
+                to={item.path}
+                onClick={() => setSidebarOpen(false)}
+                className={({ isActive }) =>
+                  `w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                    isActive
+                      ? "bg-orange-100 text-orange-600"
+                      : "hover:bg-orange-50 hover:text-orange-600"
+                  }`
+                }
               >
                 <Icon size={18} />
                 <span>{item.label}</span>
-              </button>
+              </NavLink>
             );
           })}
         </nav>

@@ -26,26 +26,26 @@ export default function Login() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-  
+
     try {
       const res = await API.post("/users/login", {
         email,
         password,
       });
-  
+
       const token = res.data.token;
-  
+
       login(token);
-  
+
       await updateOnlineStatus(true);
-  
+
       const decoded = jwtDecode(token);
       const roleID = decoded.role_id;
-  
+
       if (roleID === 1) navigate("/admin/dashboard");
       else if (roleID === 2) navigate("/staff/dashboard");
       else if (roleID === 3) navigate("/user/dashboard");
-  
+
     } catch (err) {
       setError(
         err.response?.data?.message || "Login gagal, periksa email/password"
@@ -56,28 +56,28 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-200">
       <div className="bg-white w-[420px] rounded-xl shadow-lg p-8">
-  
+
         <div className="flex justify-center mb-6">
           <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center">
             <span className="text-3xl font-bold text-orange-600">CCIT</span>
           </div>
         </div>
-  
+
         <h1 className="text-center text-xl font-semibold text-gray-800">
           Helpdesk Center
         </h1>
         <p className="text-center text-sm text-gray-500 italic mb-6">
           Professional Ticketing System
         </p>
-  
+
         {error && (
           <div className="bg-red-100 text-red-600 p-2 rounded mb-4 text-sm">
             {error}
           </div>
         )}
-  
+
         <form onSubmit={handleLogin}>
-  
+
           <label
             htmlFor="email"
             className="block text-xs font-semibold text-gray-500 mb-1 cursor-pointer"
@@ -92,7 +92,7 @@ export default function Login() {
             onChange={(e) => setEmail(e.target.value)}
             required
           />
-  
+
           <div className="mb-6">
             <label
               htmlFor="password"
@@ -120,7 +120,7 @@ export default function Login() {
               </button>
             </div>
           </div>
-  
+
           <button
             type="submit"
             className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 rounded-lg transition duration-200 shadow-md"
@@ -128,9 +128,9 @@ export default function Login() {
             LOGIN
           </button>
         </form>
-  
+
         <div className="border-t my-6"></div>
-  
+
         <p className="text-center text-xs text-gray-400 font-semibold mb-2">
           BELUM PUNYA AKUN?
         </p>
