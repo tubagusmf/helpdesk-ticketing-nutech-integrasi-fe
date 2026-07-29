@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { FiLogOut, FiBell, FiMenu, FiX } from "react-icons/fi";
+import { FiLogOut, FiBell, FiMenu, FiX, FiUser } from "react-icons/fi";
 import { updateOnlineStatus, getCurrentUser } from "../../services/userService";
 import { isTokenExpired } from "../../utils/auth";
 import { getNotifications, getUnreadCount, markNotificationRead, deleteNotification } from "../../services/notificationService";
@@ -518,6 +518,16 @@ export default function DashboardLayout({ title, children, menu }) {
 
               {openProfile && (
                 <div className="absolute right-0 mt-2 w-40 bg-white border rounded-lg shadow z-50">
+                  <button
+                      onClick={() => {
+                          navigate("/profile");
+                          setOpenProfile(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 hover:text-orange-600 flex items-center gap-2"
+                  >
+                      <FiUser size={16} />
+                      Profil
+                  </button>
                   <button
                     onClick={handleLogout}
                     className="w-full text-left px-4 py-2 text-sm hover:bg-red-50 hover:text-red-600 flex items-center gap-2"

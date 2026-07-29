@@ -10,6 +10,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import TicketManagementAdmin from "./pages/TicketManagementAdmin";
 import TicketManagementUser from "./pages/TicketManagementUser";
 import TicketManagementStaff from "./pages/TicketManagementStaff";
+import Profile from "./pages/Profile";
 import { Toaster } from "react-hot-toast";
 
 function App() {
@@ -88,6 +89,15 @@ function App() {
           element={
             <ProtectedRoute role={2}>
               <TicketManagementStaff />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
             </ProtectedRoute>
           }
         />

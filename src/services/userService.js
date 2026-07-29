@@ -73,3 +73,22 @@ export const forceOffline = async (userId) => {
 
   return res.json();
 };
+
+export const getProfile = async () => {
+  const res = await fetch(`${BASE_URL}/profile`, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+
+  return res.json();
+};
+
+export const updateProfile = async (data) => {
+  const res = await fetch(`${BASE_URL}/profile`, {
+    method: "PUT",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+
+  return res.json();
+};
