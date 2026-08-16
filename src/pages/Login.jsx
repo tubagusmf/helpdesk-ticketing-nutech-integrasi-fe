@@ -48,7 +48,7 @@ export default function Login() {
 
     } catch (err) {
       setError(
-        err.response?.data?.message || "Login gagal, periksa email/password"
+        err.response?.data?.message || "Gagal koneksi ke server."
       );
     }
   };

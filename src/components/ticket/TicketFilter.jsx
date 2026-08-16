@@ -85,7 +85,10 @@ export default function TicketFilter({ search, setSearch, filters, setFilters, t
           <div className="flex gap-2">
 
             <button
-              onClick={() => exportTickets(filters)}
+              onClick={() => exportTickets({
+                ...filters,
+                search,
+              })}
               className="p-2 border rounded-lg bg-green-50 text-green-600 hover:bg-green-100"
             >
               <FiDownload size={16} />
