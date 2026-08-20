@@ -9,7 +9,6 @@ import useTicketSocket from "../hooks/useTicketSocket";
 
 export default function TicketManagementStaff() {
   const menu = navigationMenu.staff;
-
   const [tickets, setTickets] = useState([]);
   const [filters, setFilters] = useState({
     project_id: "",
@@ -23,15 +22,22 @@ export default function TicketManagementStaff() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [totalPage, setTotalPage] = useState(1);
-
   const token = localStorage.getItem("token");
   const currentUser = token ? jwtDecode(token) : null;
-
   const role = currentUser?.role;
 
   useEffect(() => {
     fetchTickets();
   }, [page, filters, search]);
+
+  const sortTicketsByNewest = (tickets) => {
+    return [...tickets].sort((a, b) => {
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
+
+      return dateB - dateA;
+    });
+  };
 
   const fetchTickets = async () => {
     try {
@@ -40,13 +46,14 @@ export default function TicketManagementStaff() {
           ...filters,
           search,
           page,
-          assigned_to_id: currentUser?.user_id
+          assigned_to_id: currentUser?.user_id,
         }).filter(([_, v]) => v !== "")
       );
-  
+
       const res = await getTickets(cleanFilters);
-  
-      setTickets(res.data || []);
+      const data = res.data || [];
+
+      setTickets(sortTicketsByNewest(data));
       setTotalPage(res.total_page || 1);
     } catch (err) {
       console.error("Fetch tickets error:", err);
@@ -54,49 +61,42 @@ export default function TicketManagementStaff() {
   };
 
   useTicketSocket({
-
     onNewTicket: (ticket) => {
-  
-      console.log(
-        "CURRENT STAFF",
-        currentUser?.user_id
-      );
-  
-      console.log(
-        "TICKET ASSIGNED",
-        ticket.assigned_to_id
-      );
-  
-      console.log(ticket);
-  
+      console.log("[WS] NEW_TICKET:", ticket);
+
       if (
-        Number(ticket.assigned_to_id) ===
+        Number(ticket.assigned_to_id) !==
         Number(currentUser?.user_id)
       ) {
-  
-        console.log("MATCHED STAFF");
-  
-        setTickets((prev) => {
-  
-          const exists = prev.some(
-            (t) => t.id === ticket.id
-          );
-  
-          if (exists) {
-            return prev.map((t) =>
-              t.id === ticket.id
-                ? ticket
-                : t
-            );
-          }
-  
-          return [ticket, ...prev];
-        });
+        return;
       }
+
+      setTickets((prev) => {
+        const exists = prev.some(
+          (t) => t.id === ticket.id
+        );
+
+        if (exists) {
+          return sortTicketsByNewest(
+            prev.map((t) =>
+              t.id === ticket.id
+                ? {
+                    ...t,
+                    ...ticket,
+                  }
+                : t
+            )
+          );
+        }
+
+        return sortTicketsByNewest([
+          ticket,
+          ...prev,
+        ]);
+      });
     },
-  
+
     onStatusUpdate: (data) => {
-  
       setTickets((prev) =>
         prev.map((ticket) =>
           ticket.id === data.ticket_id
@@ -107,9 +107,7 @@ export default function TicketManagementStaff() {
             : ticket
         )
       );
-  
     },
-  
   });
 
   return (

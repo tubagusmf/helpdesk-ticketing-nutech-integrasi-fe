@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import TicketTable from "../components/ticket/TicketTable";
 import TicketFilter from "../components/ticket/TicketFilter";
@@ -9,7 +9,6 @@ import useTicketSocket from "../hooks/useTicketSocket";
 
 export default function TicketManagementAdmin() {
   const menu = navigationMenu.administrator;
-
   const [tickets, setTickets] = useState([]);
   const [filters, setFilters] = useState({
     project_id: "",
@@ -20,60 +19,78 @@ export default function TicketManagementAdmin() {
     start_date: "",
     end_date: "",
   });
+
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [totalPage, setTotalPage] = useState(1);
 
   const token = localStorage.getItem("token");
   const currentUser = token ? jwtDecode(token) : null;
-
   const role = currentUser?.role;
+
+  const fetchTickets = useCallback(async () => {
+    try {
+      const cleanFilters = Object.fromEntries(
+        Object.entries({
+          ...filters,
+          search,
+          page,
+        }).filter(([_, value]) => value !== "")
+      );
+
+      const res = await getTickets(cleanFilters);
+
+      setTickets(res.data || []);
+      setTotalPage(res.total_page || 1);
+    } catch (err) {
+      console.error("Failed to fetch tickets:", err);
+    }
+  }, [filters, search, page]);
 
   useEffect(() => {
     fetchTickets();
-  }, [filters, search, page]);
-
-  const fetchTickets = async () => {
-    const cleanFilters = Object.fromEntries(
-      Object.entries({
-        ...filters,
-        search,
-        page,
-      }).filter(([_, v]) => v !== "")
-    );
-  
-    const res = await getTickets(cleanFilters);
-  
-    setTickets(res.data || []);
-    setTotalPage(res.total_page || 1);
-  };
+  }, [fetchTickets]);
 
   useEffect(() => {
     setPage(1);
   }, [filters, search]);
 
   useTicketSocket({
+    onNewTicket: (newTicket) => {
+      console.log("[WS] NEW_TICKET:", newTicket);
 
-    onNewTicket: (ticket) => {
-  
       setTickets((prev) => {
-
+        // Hindari duplicate
         const exists = prev.some(
-          (t) => t.id === ticket.id
+          (ticket) => ticket.id === newTicket.id
         );
-      
-        if (exists) return prev;
-      
-        return [ticket, ...prev];
+
+        if (exists) {
+          return prev;
+        }
+
+        return [newTicket, ...prev];
       });
-  
     },
-  
-    onStatusUpdate: (data) => {
-  
+
+    onTicketUpdated: (updatedTicket) => {
+      console.log("[WS] TICKET_UPDATED:", updatedTicket);
+
       setTickets((prev) =>
         prev.map((ticket) =>
-          ticket.id === data.ticket_id
+          ticket.id === updatedTicket.id
+            ? updatedTicket
+            : ticket
+        )
+      );
+    },
+
+    onStatusUpdate: (data) => {
+      console.log("[WS] TICKET_STATUS_UPDATED:", data);
+
+      setTickets((prev) =>
+        prev.map((ticket) =>
+          ticket.id === data.id
             ? {
                 ...ticket,
                 status: data.status,
@@ -81,13 +98,26 @@ export default function TicketManagementAdmin() {
             : ticket
         )
       );
-  
+    },
+
+    onNewComment: (data) => {
+      console.log("[WS] NEW_COMMENT:", data);
+    },
+
+    onNotification: (data) => {
+      console.log("[WS] NEW_NOTIFICATION:", data);
+    },
+
+    onTicketHistory: (data) => {
+      console.log("[WS] TICKET_HISTORY:", data);
     },
   });
 
   return (
-    <DashboardLayout title="Manajemen Tiket" menu={menu}>
-
+    <DashboardLayout
+      title="Manajemen Tiket"
+      menu={menu}
+    >
       <div className="bg-white p-6 rounded-xl shadow">
         <div className="mb-6">
           <h2 className="text-xl font-semibold">
@@ -116,7 +146,6 @@ export default function TicketManagementAdmin() {
       </div>
 
       <div className="flex justify-center mt-6 gap-2">
-
         <button
           disabled={page === 1}
           onClick={() => setPage(page - 1)}
@@ -136,9 +165,7 @@ export default function TicketManagementAdmin() {
         >
           Next
         </button>
-
       </div>
-
     </DashboardLayout>
-  )
+  );
 }
