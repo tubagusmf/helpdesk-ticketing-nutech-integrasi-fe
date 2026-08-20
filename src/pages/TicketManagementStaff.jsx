@@ -60,46 +60,56 @@ export default function TicketManagementStaff() {
     }
   };
 
+  const handleRealtimeTicket = (ticket) => {
+    if (
+      Number(ticket.assigned_to_id) !==
+      Number(currentUser?.user_id)
+    ) {
+      return;
+    }
+
+    setTickets((prev) => {
+      const exists = prev.some(
+        (t) => Number(t.id) === Number(ticket.id)
+      );
+
+      if (exists) {
+        return sortTicketsByNewest(
+          prev.map((t) =>
+            Number(t.id) === Number(ticket.id)
+              ? {
+                  ...t,
+                  ...ticket,
+                }
+              : t
+          )
+        );
+      }
+
+      return sortTicketsByNewest([
+        ticket,
+        ...prev,
+      ]);
+    });
+  };
+
   useTicketSocket({
     onNewTicket: (ticket) => {
       console.log("[WS] NEW_TICKET:", ticket);
 
-      if (
-        Number(ticket.assigned_to_id) !==
-        Number(currentUser?.user_id)
-      ) {
-        return;
-      }
+      handleRealtimeTicket(ticket);
+    },
 
-      setTickets((prev) => {
-        const exists = prev.some(
-          (t) => t.id === ticket.id
-        );
+    onTicketUpdated: (ticket) => {
+      console.log("[WS] TICKET_UPDATED:", ticket);
 
-        if (exists) {
-          return sortTicketsByNewest(
-            prev.map((t) =>
-              t.id === ticket.id
-                ? {
-                    ...t,
-                    ...ticket,
-                  }
-                : t
-            )
-          );
-        }
-
-        return sortTicketsByNewest([
-          ticket,
-          ...prev,
-        ]);
-      });
+      handleRealtimeTicket(ticket);
     },
 
     onStatusUpdate: (data) => {
       setTickets((prev) =>
         prev.map((ticket) =>
-          ticket.id === data.ticket_id
+          Number(ticket.id) === Number(data.ticket_id)
             ? {
                 ...ticket,
                 status: data.status,

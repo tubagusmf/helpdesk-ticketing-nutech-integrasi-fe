@@ -60,7 +60,6 @@ export default function TicketManagementAdmin() {
       console.log("[WS] NEW_TICKET:", newTicket);
 
       setTickets((prev) => {
-        // Hindari duplicate
         const exists = prev.some(
           (ticket) => ticket.id === newTicket.id
         );
