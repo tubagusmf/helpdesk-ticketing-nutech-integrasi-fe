@@ -88,7 +88,7 @@ export const getProjects = async () => {
 };
 
 export const getLocations = async (projectId) => {
-  return fetchAPI(`${BASE_URL}/locations?project_id=${projectId}`, {
+  return fetchAPI(`${BASE_URL}/locations/project/${projectId}`, {
     headers: getHeaders(),
   });
 };
@@ -100,7 +100,7 @@ export const getParts = async (projectId) => {
 };
 
 export const getAssets = async (partId) => {
-  return fetchAPI(`${BASE_URL}/asset-id?part_id=${partId}`, {
+  return fetchAPI(`${BASE_URL}/asset-id/part/${partId}`, {
     headers: getHeaders(),
   });
 };
