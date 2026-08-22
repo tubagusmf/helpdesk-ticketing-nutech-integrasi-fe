@@ -57,28 +57,11 @@ export default function TicketManagementUser() {
 
   useTicketSocket({
 
-    onNewTicket: (ticket) => {
-  
-      console.log(
-        "CURRENT USER",
-        currentUser?.user_id
-      );
-  
-      console.log(
-        "TICKET REPORTER",
-        ticket.reporter_id
-      );
-  
-      console.log(ticket);
-  
+    onNewTicket: (ticket) => {  
       if (
         ticket.reporter_id === currentUser?.user_id
       ) {
-  
-        console.log("MATCHED REPORTER");
-  
         setTickets((prev) => {
-  
           const exists = prev.some(
             (t) => t.id === ticket.id
           );
@@ -90,21 +73,23 @@ export default function TicketManagementUser() {
       }
     },
   
-    onStatusUpdate: (data) => {
-  
+    onStatusUpdate: (updatedTicket) => {
+      console.log(
+        "[WS] TICKET_STATUS_UPDATED:",
+        updatedTicket
+      );
+    
       setTickets((prev) =>
         prev.map((ticket) =>
-          ticket.id === data.ticket_id
+          Number(ticket.id) === Number(updatedTicket.id)
             ? {
                 ...ticket,
-                status: data.status,
+                ...updatedTicket,
               }
             : ticket
         )
       );
-  
     },
-  
   });
   
   return (

@@ -96,23 +96,26 @@ export default function TicketManagementStaff() {
   useTicketSocket({
     onNewTicket: (ticket) => {
       console.log("[WS] NEW_TICKET:", ticket);
-
       handleRealtimeTicket(ticket);
     },
 
     onTicketUpdated: (ticket) => {
       console.log("[WS] TICKET_UPDATED:", ticket);
-
       handleRealtimeTicket(ticket);
     },
 
-    onStatusUpdate: (data) => {
+    onStatusUpdate: (updatedTicket) => {
+      console.log(
+        "[WS] TICKET_STATUS_UPDATED:",
+        updatedTicket
+      );
+    
       setTickets((prev) =>
         prev.map((ticket) =>
-          Number(ticket.id) === Number(data.ticket_id)
+          Number(ticket.id) === Number(updatedTicket.id)
             ? {
                 ...ticket,
-                status: data.status,
+                ...updatedTicket,
               }
             : ticket
         )

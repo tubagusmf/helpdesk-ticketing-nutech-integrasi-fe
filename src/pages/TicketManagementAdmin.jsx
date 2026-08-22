@@ -84,15 +84,18 @@ export default function TicketManagementAdmin() {
       );
     },
 
-    onStatusUpdate: (data) => {
-      console.log("[WS] TICKET_STATUS_UPDATED:", data);
-
+    onStatusUpdate: (updatedTicket) => {
+      console.log(
+        "[WS] TICKET_STATUS_UPDATED:",
+        updatedTicket
+      );
+    
       setTickets((prev) =>
         prev.map((ticket) =>
-          ticket.id === data.id
+          Number(ticket.id) === Number(updatedTicket.id)
             ? {
                 ...ticket,
-                status: data.status,
+                ...updatedTicket,
               }
             : ticket
         )
