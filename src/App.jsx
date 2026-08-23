@@ -1,8 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
-import DashboardAdmin from "./pages/DashboardAdmin";
-import DashboardStaff from "./pages/DashboardStaff";
-import DashboardUser from "./pages/DashboardUser";
+import Dashboard from "./pages/Dashboard";
 import Unauthorized from "./pages/Unauthorized";
 import MasterDataAdmin from "./pages/MasterDataAdmin";
 import UserManagement from "./pages/UserManagement";
@@ -25,7 +23,7 @@ function App() {
           path="/admin/dashboard"
           element={
             <ProtectedRoute role={1}>
-              <DashboardAdmin />
+              <Dashboard />
             </ProtectedRoute>
           }
         />
@@ -43,7 +41,7 @@ function App() {
           path="/staff/dashboard"
           element={
             <ProtectedRoute role={2}>
-              <DashboardStaff />
+              <Dashboard />
             </ProtectedRoute>
           }
         />
@@ -70,7 +68,7 @@ function App() {
           path="/user/dashboard"
           element={
             <ProtectedRoute role={3}>
-              <DashboardUser />
+              <Dashboard />
             </ProtectedRoute>
           }
         />
