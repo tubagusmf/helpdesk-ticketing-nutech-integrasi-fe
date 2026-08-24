@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 import { getCauses, getSolutions, updateTicketStatusOnly, createTicketResolution, getTicketResolution  } from "../../services/ticketService";
 import Select from "react-select";
 import useTicketSocket from "../../hooks/useTicketSocket";  
+import { ROLE } from "../../constants/role";
 
 export default function TicketResolutionModal({ ticket, onClose, onSuccess, role }) {
-
   const [loading, setLoading] = useState(false);
   const [causes, setCauses] = useState([]);
   const [solutions, setSolutions] = useState([]);
@@ -27,14 +27,14 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
     status: ticket?.status || "OPEN",
   });
   const isLocked = ["RESOLVED", "CLOSED"].includes(ticket.status); 
-  const normalizedRole = role?.toLowerCase();
+  const isUser = Number(role) === ROLE.USER;
 
-  const isUser = normalizedRole === "user";
-  const isLockedForAdmin = ["RESOLVED", "CLOSED"].includes(ticket.status);
+  const isLockedForAdmin = [
+    "RESOLVED",
+    "CLOSED",
+  ].includes(ticket.status);
 
   const isReadOnly = isUser || isLockedForAdmin;
-
-  
 
   useEffect(() => {
     if (ticket?.attachment_url) {
@@ -47,6 +47,22 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
       fetchResolution();
     }
   }, [ticket?.id]);
+
+  const formatDatetimeLocal = (dateString) => {
+    if (!dateString) return "";
+
+    const date = new Date(dateString);
+
+    if (Number.isNaN(date.getTime())) {
+      return "";
+    }
+
+    date.setMinutes(
+      date.getMinutes() - date.getTimezoneOffset()
+    );
+
+    return date.toISOString().slice(0, 16);
+  };
   
   const fetchResolution = async () => {
     try {
@@ -128,6 +144,10 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
 
   const handleSubmit = async () => {
     try {
+      if (isUser) {
+        return;
+      }
+
       if (form.status === "RESOLVED") {
         if (!form.cause || !form.solution) {
           alert("Cause dan Solution wajib diisi!");
@@ -192,12 +212,20 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
 
   const handleCloseAsUser = async () => {
     try {
+      if (!isUser) {
+        return;
+      }
+
+      if (ticket.status !== "RESOLVED") {
+        return;
+      }
+
       setLoading(true);
-  
+
       await updateTicketStatusOnly(ticket.id, {
         status: "CLOSED",
       });
-  
+
       alert("Ticket berhasil di CLOSED!");
       onSuccess();
       onClose();
@@ -206,15 +234,6 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
     } finally {
       setLoading(false);
     }
-  };
-
-  const formatDatetimeLocal = (isoString) => {
-    if (!isoString) return getNowLocal();
-  
-    const date = new Date(isoString);
-    date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
-  
-    return date.toISOString().slice(0, 16);
   };
 
   const getFileExtension = (url) => {
@@ -532,6 +551,7 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
                   name="onhold_notes"
                   value={form.onhold_notes || ""}
                   onChange={handleChange}
+                  disabled={isReadOnly}
                   className="border px-3 py-2 rounded-lg"
                 />
               </div>

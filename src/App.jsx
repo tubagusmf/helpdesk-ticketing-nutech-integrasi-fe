@@ -5,9 +5,7 @@ import Unauthorized from "./pages/Unauthorized";
 import MasterDataAdmin from "./pages/MasterDataAdmin";
 import UserManagement from "./pages/UserManagement";
 import ProtectedRoute from "./components/ProtectedRoute";
-import TicketManagementAdmin from "./pages/TicketManagementAdmin";
-import TicketManagementUser from "./pages/TicketManagementUser";
-import TicketManagementStaff from "./pages/TicketManagementStaff";
+import TicketManagement from "./pages/TicketManagement";
 import Profile from "./pages/Profile";
 import { Toaster } from "react-hot-toast";
 
@@ -59,7 +57,7 @@ function App() {
           path="/admin/tickets"
           element={
             <ProtectedRoute role={1}>
-              <TicketManagementAdmin />
+              <TicketManagement />
             </ProtectedRoute>
           }
         />
@@ -77,7 +75,7 @@ function App() {
           path="/user/tickets"
           element={
             <ProtectedRoute role={3}>
-              <TicketManagementUser />
+              <TicketManagement />
             </ProtectedRoute>
           }
         />
@@ -86,7 +84,7 @@ function App() {
           path="/staff/tickets"
           element={
             <ProtectedRoute role={2}>
-              <TicketManagementStaff />
+              <TicketManagement />
             </ProtectedRoute>
           }
         />

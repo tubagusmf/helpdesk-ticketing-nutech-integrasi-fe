@@ -4,9 +4,9 @@ import TicketResolutionModal from "../modal/TicketResolutionModal";
 import TicketCommentModal from "../modal/TicketCommentModal";
 import TicketHistoryModal from "../modal/TicketHistoryModal";
 import { markTicketCommentsAsRead } from "../../services/ticketService";
+import { ROLE } from "../../constants/role";
 
 export default function TicketRow({ ticket, role }) {
-
     const [showResolution, setShowResolution] = useState(false);  
     const [showComment, setShowComment] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
@@ -173,19 +173,23 @@ export default function TicketRow({ ticket, role }) {
               )}
             </button>
 
-            {["STAFF", "ADMINISTRATOR"].includes(role) && (
+            {/* RESOLUTION - ADMINISTRATOR & STAFF */}
+            {[ROLE.ADMINISTRATOR, ROLE.STAFF].includes(role) && (
               <button
                 onClick={() => setShowResolution(true)}
                 className="text-orange-600"
+                title="Resolution Ticket"
               >
                 <FiEdit size={18} />
               </button>
             )}
 
-            {role === "USER" && ticket.status === "RESOLVED" && (
+            {/* RESOLUTION - USER / REPORTER */}
+            {role === ROLE.USER && ticket.status === "RESOLVED" && (
               <button
                 onClick={() => setShowResolution(true)}
                 className="text-orange-600"
+                title="Resolution Ticket"
               >
                 <FiEdit size={18} />
               </button>
