@@ -549,7 +549,7 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
                 </label>
                 <textarea
                   name="onhold_notes"
-                  value={form.onhold_notes || ""}
+                  value={ticket.onhold_notes || form.onhold_notes}
                   onChange={handleChange}
                   disabled={isReadOnly}
                   className="border px-3 py-2 rounded-lg"

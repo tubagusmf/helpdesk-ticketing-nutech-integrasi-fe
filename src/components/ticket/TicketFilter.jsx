@@ -174,7 +174,7 @@ export default function TicketFilter({ search, setSearch, filters, setFilters, t
           >
             <option value="">Semua Status</option>
             <option value="OPEN">OPEN</option>
-            <option value="IN_PROGRESS">IN PROGRESS</option>
+            <option value="ONHOLD">ONHOLD</option>
             <option value="RESOLVED">RESOLVED</option>
             <option value="CLOSED">CLOSED</option>
           </select>
