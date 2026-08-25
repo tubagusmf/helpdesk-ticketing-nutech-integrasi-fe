@@ -3,7 +3,6 @@ import { createUser, updateUser } from "../../services/userService";
 import { Eye, EyeOff } from "lucide-react";
 
 export default function UserModal({ user, onClose, reload, projects = [] }) {
-
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -49,6 +48,17 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
         "Melihat Status Tiket Sendiri",
         "Memberikan Komentar",
         "Upload Lampiran"
+      ]
+    },
+    4: {
+      title: "Executive",
+      code: "EXECUTIVE",
+      desc: "Melihat tiket dan dashboard sesuai project.",
+      permissions: [
+        "Melihat Tiket Sesuai Project",
+        "Melihat Dashboard Tiket",
+        "Melihat Detail Tiket",
+        "Tidak Dapat Mengelola Tiket (Hanya View)",
       ]
     }
   };
@@ -190,7 +200,7 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
               PENGATURAN PRIVILEGE (HAK AKSES)
             </h3>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
 
               {Object.entries(roleInfo).map(([id, role]) => (
 
@@ -221,7 +231,7 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
           </div>
 
           {/* PROJECT ACCESS */}
-          {(form.role_id === 2 || form.role_id === 3) && (
+          {(form.role_id === 2 || form.role_id === 3 || form.role_id === 4) && (
 
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
 
@@ -265,30 +275,6 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
                 })}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                {projects.map((project) => {
-
-                const checked = form.projects.some(p => p.id === project.id)
-
-                return (
-                    <label
-                    key={project.id}
-                    className="flex items-center gap-2 text-sm"
-                    >
-
-                    <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleProject(project.id)}
-                    />
-
-                    {project.name}
-
-                    </label>
-                )
-                })}
-              </div>
-
               <p className="text-xs text-gray-500 mt-2">
                   Pilih project yang dapat diakses oleh user ini.
               </p>
@@ -322,6 +308,14 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
             <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-sm">
                 User dapat membuat dan melihat tiket pada project yang dipilih.
             </div>
+            )}
+
+            {form.role_id === 4 && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm">
+                Executive hanya dapat melihat tiket dan dashboard
+                pada project yang dipilih. Executive tidak dapat
+                membuat, mengubah, atau menghapus tiket.
+              </div>
             )}
 
         </form>

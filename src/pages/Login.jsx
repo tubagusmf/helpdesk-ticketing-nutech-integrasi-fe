@@ -21,6 +21,7 @@ export default function Login() {
       if (user.role_id === 1) navigate("/admin/dashboard");
       else if (user.role_id === 2) navigate("/staff/dashboard");
       else if (user.role_id === 3) navigate("/user/dashboard");
+      else if (user.role_id === 4) navigate("/executive/dashboard");
     }
   }, [user, navigate]);
 
@@ -45,6 +46,7 @@ export default function Login() {
       if (roleID === 1) navigate("/admin/dashboard");
       else if (roleID === 2) navigate("/staff/dashboard");
       else if (roleID === 3) navigate("/user/dashboard");
+      else if (roleID === 4) navigate("/executive/dashboard");
 
     } catch (err) {
       setError(

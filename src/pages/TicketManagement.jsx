@@ -45,6 +45,8 @@ export default function TicketManagement() {
           ? 2
           : rawRole === "USER"
           ? 3
+          : rawRole === "EXECUTIVE"
+          ? 4
           : Number(rawRole)
         )
         : Number(rawRole);
@@ -54,7 +56,9 @@ export default function TicketManagement() {
         ? navigationMenu.administrator
         : role === 2
         ? navigationMenu.staff
-        : navigationMenu.user;
+        : role === 3
+        ? navigationMenu.user
+         : navigationMenu.executive;
 
   const fetchTickets = useCallback(async () => {
     try {

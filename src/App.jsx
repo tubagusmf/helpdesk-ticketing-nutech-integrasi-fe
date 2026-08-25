@@ -98,6 +98,24 @@ function App() {
           }
         />
 
+        <Route
+          path="/executive/dashboard"
+          element={
+            <ProtectedRoute role={4}>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/executive/tickets"
+          element={
+            <ProtectedRoute role={4}>
+              <TicketManagement />
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="/unauthorized" element={<Unauthorized />} />
 
       </Routes>

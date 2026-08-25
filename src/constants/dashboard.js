@@ -18,4 +18,10 @@ export const dashboardConfig = {
     menu: navigationMenu.user,
     summaryType: "user",
   },
+
+  EXECUTIVE: {
+    title: "Executive Dashboard",
+    menu: navigationMenu.executive,
+    summaryType: "executive",
+  },
 };

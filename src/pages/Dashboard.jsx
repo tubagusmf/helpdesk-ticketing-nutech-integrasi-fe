@@ -310,6 +310,40 @@ export default function Dashboard() {
         color: "text-green-600",
       },
     ],
+
+    EXECUTIVE: [
+      {
+        title: "Total Ticket",
+        value: summary.total_ticket || 0,
+        subtitle: "Ticket pada project Anda",
+        color: "text-blue-600",
+      },
+
+      {
+        title: "SLA Breach",
+        value: summary.sla_breach || 0,
+        subtitle: "Melewati batas waktu",
+        color: "text-red-600",
+      },
+
+      {
+        title: "Ticket Selesai",
+        value:
+          (statusData.resolved || 0) +
+          (statusData.closed || 0),
+        subtitle: "Resolved + Closed",
+        color: "text-green-600",
+      },
+
+      {
+        title: "Rata-rata Solusi",
+        value: formatHoursToHM(
+          summary.avg_resolution_time
+        ),
+        subtitle: "Waktu penanganan",
+        color: "text-purple-600",
+      },
+    ],
   };
 
   if (!config) {
