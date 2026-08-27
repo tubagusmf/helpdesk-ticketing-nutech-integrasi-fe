@@ -3,12 +3,14 @@ import SummaryCard from "../components/dashboard/SummaryCard";
 import { useEffect, useMemo, useState } from "react";
 import { jwtDecode } from "jwt-decode";
 import { dashboardConfig } from "../constants/dashboard";
+import { getParts } from "../services/ticketService";
 
 import {
   getDashboardSummary,
   getStatusDistribution,
   getPriorityDistribution,
   getVolumePerProject,
+  getDashboardProjects, 
 } from "../services/dashboardService";
 
 import {
@@ -22,8 +24,6 @@ import {
   YAxis,
   CartesianGrid,
 } from "recharts";
-
-import { getProjects, getParts } from "../services/ticketService";
 
 const EMPTY_FILTERS = {
   project_id: "",
@@ -152,14 +152,14 @@ export default function Dashboard() {
         getStatusDistribution(appliedFilters),
         getPriorityDistribution(appliedFilters),
         getVolumePerProject(appliedFilters),
-        getProjects(),
+        getDashboardProjects(),
       ]);
 
       setSummary(summaryRes);
       setStatusData(statusRes);
       setPriorityData(priorityRes || []);
       setVolumeData(volumeRes || []);
-      setProjects(projectsRes.data || []);
+      setProjects(projectsRes || []);
     } catch (err) {
       console.error("Dashboard error:", err);
       setError(err.message);

@@ -53,3 +53,9 @@ export const getVolumePerProject = async (filters = {}) => {
     headers: getHeaders(),
   });
 };
+
+export const getDashboardProjects = async () => {
+  return fetchAPI(`${BASE_URL}/dashboard/projects`, {
+    headers: getHeaders(),
+  });
+};
