@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import TicketModal from "../modal/TicketModal";
 import { getProjects, getStaffs } from "../../services/ticketService";
 import { exportTickets } from "../../services/ticketService";
+import { ROLE } from "../../constants/role";
 
 export default function TicketFilter({ search, setSearch, filters, setFilters, tickets, role }) {
 
@@ -94,7 +95,7 @@ export default function TicketFilter({ search, setSearch, filters, setFilters, t
               <FiDownload size={16} />
             </button>
 
-            {["USER", "ADMINISTRATOR"].includes(role) && (
+            {[ROLE.USER, ROLE.ADMINISTRATOR].includes(role) && (
             <button
               onClick={() => setOpenModal(true)}
               className="flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm"
@@ -109,7 +110,7 @@ export default function TicketFilter({ search, setSearch, filters, setFilters, t
 
         <div
           className={`grid gap-2 ${
-            role === "ADMINISTRATOR"
+            role === ROLE.ADMINISTRATOR
               ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-8"
               : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-6"
           }`}
@@ -128,7 +129,7 @@ export default function TicketFilter({ search, setSearch, filters, setFilters, t
             ))}
           </select>
 
-          {role === "ADMINISTRATOR" && (
+          {role === ROLE.ADMINISTRATOR && (
             <select
               name="assigned_to_id"
               value={filters.assigned_to_id}
@@ -144,7 +145,7 @@ export default function TicketFilter({ search, setSearch, filters, setFilters, t
             </select>
           )}
 
-          {role === "ADMINISTRATOR" && (
+          {role === ROLE.ADMINISTRATOR && (
             <select name="reporter_id" value={filters.reporter_id} onChange={handleChange} className="border px-3 py-2 rounded-lg text-sm">
               <option value="">Semua Pelapor</option>
               {reporterOptions.map(r => (

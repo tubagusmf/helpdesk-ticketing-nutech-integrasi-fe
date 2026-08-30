@@ -37,19 +37,19 @@ export default function TicketManagement() {
     currentUser?.role;
 
   const role =
-    typeof rawRole === "string"
-      ? (
+  typeof rawRole === "string"
+    ? (
         rawRole === "ADMINISTRATOR"
-          ? 1
+          ? ROLE.ADMINISTRATOR
           : rawRole === "STAFF"
-          ? 2
+          ? ROLE.STAFF
           : rawRole === "USER"
-          ? 3
+          ? ROLE.USER
           : rawRole === "EXECUTIVE"
-          ? 4
+          ? ROLE.EXECUTIVE
           : Number(rawRole)
-        )
-        : Number(rawRole);
+      )
+    : Number(rawRole);
 
   const menu =
     role === 1
