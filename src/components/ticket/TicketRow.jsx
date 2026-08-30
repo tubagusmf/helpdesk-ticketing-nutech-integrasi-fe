@@ -160,18 +160,21 @@ export default function TicketRow({ ticket, role }) {
             </button>
 
             {/* COMMENT */}
-            <button
-              onClick={handleOpenComment}
-              className="text-green-600 relative"
-            >
-              <FiMessageCircle size={18} />
+            {role !== ROLE.EXECUTIVE && (
+              <button
+                onClick={handleOpenComment}
+                className="text-green-600 relative"
+                title="Comment"
+              >
+                <FiMessageCircle size={18} />
 
-              {ticket.unread_comment_count > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center">
-                  {ticket.unread_comment_count}
-                </span>
-              )}
-            </button>
+                {ticket.unread_comment_count > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center">
+                    {ticket.unread_comment_count}
+                  </span>
+                )}
+              </button>
+            )}
 
             {/* RESOLUTION - ADMINISTRATOR & STAFF */}
             {[ROLE.ADMINISTRATOR, ROLE.STAFF].includes(role) && (
