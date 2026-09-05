@@ -15,6 +15,7 @@ export default function UserManagement() {
   const [page, setPage] = useState(1);
   const [totalPage, setTotalPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [limit, setLimit] = useState(10);
 
   const loadProjects = async () => {
     const res = await getProjects()
@@ -27,7 +28,7 @@ export default function UserManagement() {
   },[])
   
   const loadUsers = async () => {
-    const res = await getUsers(page, search);
+    const res = await getUsers(page, search, limit);
   
     setUsers(res.data || []);
     setTotalPage(res.total_page || 1);
@@ -35,7 +36,7 @@ export default function UserManagement() {
 
   useEffect(() => {
     loadUsers();
-  }, [page, search]);
+  }, [page, search, limit]);
 
   const handleDelete = async (id) => {
     try {
@@ -75,10 +76,12 @@ export default function UserManagement() {
         <UserTab
           users={users}
           page={page}
+          limit={limit}
           totalPage={totalPage}
           search={search}
           setSearch={setSearch}
           setPage={setPage}
+          setLimit={setLimit}
           onEdit={(user) => {
             setSelectedUser(user);
             setOpenModal(true);

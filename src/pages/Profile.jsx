@@ -10,6 +10,7 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { user } = useAuth();
+  const role = user?.role_id;
   const [showPassword, setShowPassword] = useState({
     current: false,
     new: false,
@@ -18,10 +19,12 @@ export default function Profile() {
 
   const menu =
   user?.role?.toLowerCase() === "administrator"
-    ? navigationMenu.administrator
-    : user?.role?.toLowerCase() === "staff"
-    ? navigationMenu.staff
-    : navigationMenu.user;
+  ? navigationMenu.administrator
+  : role === 2
+  ? navigationMenu.staff
+  : role === 3
+  ? navigationMenu.user
+   : navigationMenu.executive;
 
   const [form, setForm] = useState({
     name: "",

@@ -5,10 +5,18 @@ const getHeaders = () => ({
   Authorization: `Bearer ${localStorage.getItem("token")}`,
 });
 
-export async function getUsers(page = 1, search = "") {
+export async function getUsers(page = 1, search = "", limit = 10) {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    name: search,
+    limit: limit.toString(),
+  });
+
   const res = await fetch(
-    `${BASE_URL}?page=${page}&name=${search}`,
-    { headers: getHeaders() }
+    `${BASE_URL}?${params.toString()}`,
+    {
+      headers: getHeaders(),
+    }
   );
 
   return res.json();

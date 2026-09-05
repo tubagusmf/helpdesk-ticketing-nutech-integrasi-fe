@@ -1,14 +1,16 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FiEdit2, FiTrash2 } from "react-icons/fi";
 import DeleteConfirmModal from "../../components/modal/DeleteConfirmModal";
 
 export default function UserTab({
   users,
   page,
+  limit,
   totalPage,
   search,
   setSearch,
   setPage,
+  setLimit,
   onEdit,
   onDelete
 }) {
@@ -144,27 +146,51 @@ export default function UserTab({
           </tbody>
         </table>
 
-        <div className="flex justify-center mt-6 gap-2">
+        <div className="flex justify-between items-center mt-6">
 
-          <button
-            disabled={page === 1}
-            onClick={() => setPage(page - 1)}
-            className="px-3 py-1 border rounded disabled:opacity-50"
-          >
-            Prev
-          </button>
+          {/* Rows per page */}
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <span>Rows per page:</span>
 
-          <span className="px-3 py-1">
-            Page {page} of {totalPage}
-          </span>
+            <select
+              value={limit}
+              onChange={(e) => {
+                setLimit(Number(e.target.value));
+                setPage(1);
+              }}
+              className="border border-gray-300 rounded-md px-2 py-1
+                        focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+            </select>
+          </div>
 
-          <button
-            disabled={page === totalPage}
-            onClick={() => setPage(page + 1)}
-            className="px-3 py-1 border rounded disabled:opacity-50"
-          >
-            Next
-          </button>
+          {/* Pagination */}
+          <div className="flex items-center gap-2">
+
+            <button
+              disabled={page === 1}
+              onClick={() => setPage(page - 1)}
+              className="px-3 py-1 border rounded disabled:opacity-50"
+            >
+              Prev
+            </button>
+
+            <span className="px-3 py-1 text-sm">
+              Page {page} of {totalPage}
+            </span>
+
+            <button
+              disabled={page === totalPage}
+              onClick={() => setPage(page + 1)}
+              className="px-3 py-1 border rounded disabled:opacity-50"
+            >
+              Next
+            </button>
+
+          </div>
 
         </div>
 
