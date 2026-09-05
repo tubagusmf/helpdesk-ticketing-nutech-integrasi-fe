@@ -26,6 +26,7 @@ export default function TicketManagement() {
   const [page, setPage] = useState(1);
   const [totalPage, setTotalPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
+  const [limit, setLimit] = useState(10);
 
   const token = localStorage.getItem("token");
   const currentUser = token ? jwtDecode(token) : null;
@@ -66,6 +67,7 @@ export default function TicketManagement() {
         ...filters,
         search,
         page,
+        limit,
       };
 
       if (role === 2) {
@@ -98,7 +100,7 @@ export default function TicketManagement() {
     } catch (err) {
       console.error("[TICKET] Fetch error:", err);
     }
-  }, [filters, search, page, role, userId]);
+  }, [filters, search, page, limit, role, userId]);
 
   useEffect(() => {
     fetchTickets();
@@ -106,7 +108,7 @@ export default function TicketManagement() {
 
   useEffect(() => {
     setPage(1);
-  }, [filters, search]);
+  }, [filters, search, limit]);
 
   const handleRealtimeTicket = useCallback(
     (ticket) => {
@@ -144,10 +146,11 @@ export default function TicketManagement() {
               (a, b) =>
                 new Date(b.created_at).getTime() -
                 new Date(a.created_at).getTime()
-            );
+            )
+            .slice(0, limit);
         }
 
-        return [ticket, ...prev];
+        return [ticket, ...prev].slice(0, limit);
       });
     },
     [role, userId]
@@ -247,26 +250,50 @@ export default function TicketManagement() {
         />
       </div>
 
-      <div className="flex justify-center mt-6 gap-2">
-        <button
-          disabled={page === 1}
-          onClick={() => setPage((prev) => prev - 1)}
-          className="px-3 py-1 border rounded disabled:opacity-50"
-        >
-          Prev
-        </button>
+      <div className="flex justify-between items-center mt-6">
 
-        <span className="px-3 py-1">
-          Page {page} of {totalPage}
-        </span>
+        {/* Rows per page */}
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <span>Rows per page:</span>
 
-        <button
-          disabled={page === totalPage}
-          onClick={() => setPage((prev) => prev + 1)}
-          className="px-3 py-1 border rounded disabled:opacity-50"
-        >
-          Next
-        </button>
+          <select
+            value={limit}
+            onChange={(e) => {
+              setLimit(Number(e.target.value));
+              setPage(1);
+            }}
+            className="border border-gray-300 rounded-md px-2 py-1
+                      focus:outline-none focus:ring-2 focus:ring-orange-400"
+          >
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+          </select>
+        </div>
+
+        {/* Pagination */}
+        <div className="flex items-center gap-2">
+          <button
+            disabled={page === 1}
+            onClick={() => setPage((prev) => prev - 1)}
+            className="px-3 py-1 border rounded disabled:opacity-50"
+          >
+            Prev
+          </button>
+
+          <span className="px-3 py-1 text-sm">
+            Page {page} of {totalPage}
+          </span>
+
+          <button
+            disabled={page === totalPage}
+            onClick={() => setPage((prev) => prev + 1)}
+            className="px-3 py-1 border rounded disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+
       </div>
 
       {showModal && (
