@@ -53,13 +53,17 @@ export default function TicketManagement() {
     : Number(rawRole);
 
   const menu =
-    role === 1
-        ? navigationMenu.administrator
-        : role === 2
-        ? navigationMenu.staff
-        : role === 3
-        ? navigationMenu.user
-         : navigationMenu.executive;
+    role === ROLE.ADMINISTRATOR
+      ? navigationMenu.administrator
+      : role === ROLE.STAFF
+      ? navigationMenu.staff
+      : role === ROLE.USER
+      ? navigationMenu.user
+      : role === ROLE.EXECUTIVE
+      ? navigationMenu.executive
+      : role === ROLE.ENGINEER
+      ? navigationMenu.engineer
+      : [];
 
   const fetchTickets = useCallback(async () => {
     try {
@@ -113,14 +117,13 @@ export default function TicketManagement() {
   const handleRealtimeTicket = useCallback(
     (ticket) => {
       // STAFF
-      if (role === 2) {
+      if (role === ROLE.STAFF || role === ROLE.ENGINEER) {
         if (Number(ticket.assigned_to_id) !== userId) {
           return;
         }
       }
 
-      // USER
-      if (role === 3) {
+      if (role === ROLE.USER) {
         if (Number(ticket.reporter_id) !== userId) {
           return;
         }
@@ -214,7 +217,7 @@ export default function TicketManagement() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h2 className="text-xl font-semibold">
-              {role === 2
+              {role === ROLE.STAFF || role === ROLE.ENGINEER
                 ? "Tiket Assigned ke Saya"
                 : "Daftar Tiket Aduan"}
             </h2>
@@ -223,15 +226,6 @@ export default function TicketManagement() {
               Manajemen tiket helpdesk
             </p>
           </div>
-
-          {(role === ROLE.ADMINISTRATOR || role === ROLE.USER) && (
-            <button
-                onClick={() => setShowModal(true)}
-                className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg"
-            >
-                Buat Tiket
-            </button>
-         )}
         </div>
 
         <TicketFilter

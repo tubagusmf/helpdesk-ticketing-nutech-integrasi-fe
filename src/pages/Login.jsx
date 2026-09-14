@@ -22,6 +22,7 @@ export default function Login() {
       else if (user.role_id === 2) navigate("/staff/dashboard");
       else if (user.role_id === 3) navigate("/user/dashboard");
       else if (user.role_id === 4) navigate("/executive/dashboard");
+      else if (user.role_id === 5) navigate("/engineer/dashboard");
     }
   }, [user, navigate]);
 
@@ -47,6 +48,7 @@ export default function Login() {
       else if (roleID === 2) navigate("/staff/dashboard");
       else if (roleID === 3) navigate("/user/dashboard");
       else if (roleID === 4) navigate("/executive/dashboard");
+      else if (roleID === 5) navigate("/engineer/dashboard");
 
     } catch (err) {
       setError(

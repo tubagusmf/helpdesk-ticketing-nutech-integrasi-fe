@@ -116,6 +116,24 @@ function App() {
           }
         />
 
+        <Route
+          path="/engineer/dashboard"
+          element={
+            <ProtectedRoute role={5}>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/engineer/tickets"
+          element={
+            <ProtectedRoute role={5}>
+              <TicketManagement />
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="/unauthorized" element={<Unauthorized />} />
 
       </Routes>

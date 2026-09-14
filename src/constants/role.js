@@ -3,4 +3,5 @@ export const ROLE = {
   STAFF: 2,
   USER: 3,
   EXECUTIVE: 4,
+  ENGINEER: 5,
 };

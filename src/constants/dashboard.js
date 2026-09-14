@@ -24,4 +24,10 @@ export const dashboardConfig = {
     menu: navigationMenu.executive,
     summaryType: "executive",
   },
+
+  ENGINEER: {
+    title: "Engineer Dashboard",
+    menu: navigationMenu.engineer,
+    summaryType: "engineer",
+  },
 };

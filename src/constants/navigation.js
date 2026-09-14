@@ -67,4 +67,17 @@ export const navigationMenu = {
       icon: FiFileText,
     },
   ],
+
+  engineer: [
+    {
+      label: "Dashboard",
+      path: "/engineer/dashboard",
+      icon: FiGrid,
+    },
+    {
+      label: "Data Tiket",
+      path: "/engineer/tickets",
+      icon: FiFileText,
+    },
+  ],
 };

@@ -18,13 +18,17 @@ export default function Profile() {
   });
 
   const menu =
-  user?.role?.toLowerCase() === "administrator"
-  ? navigationMenu.administrator
-  : role === 2
-  ? navigationMenu.staff
-  : role === 3
-  ? navigationMenu.user
-   : navigationMenu.executive;
+    role === 1
+      ? navigationMenu.administrator
+      : role === 2
+      ? navigationMenu.staff
+      : role === 3
+      ? navigationMenu.user
+      : role === 4
+      ? navigationMenu.executive
+      : role === 5
+      ? navigationMenu.engineer
+      : [];
 
   const [form, setForm] = useState({
     name: "",

@@ -27,18 +27,20 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
         "Chat & Diskusi"
       ]
     },
+
     2: {
       title: "Staff / CCIT",
       code: "STAFF",
-      desc: "Fokus pada penyelesaian tiket.",
+      desc: "Fokus pada pengecekan awal dan penyelesaian tiket.",
       permissions: [
-        "Melihat & Mengelola Tiket (Sesuai Project)",
-        "Mengubah Status & Input Solusi",
-        "Manajemen Master Data",
-        "Export Laporan Dasar",
-        "Chat & Diskusi"
+        "Melihat & Mengelola Tiket Sesuai Project",
+        "Melakukan Pengecekan Case Log",
+        "Mengubah Status Tiket",
+        "Input Solusi",
+        "Reassign Tiket ke Engineer"
       ]
     },
+
     3: {
       title: "User / Pelapor",
       code: "USER",
@@ -50,6 +52,7 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
         "Upload Lampiran"
       ]
     },
+
     4: {
       title: "Executive",
       code: "EXECUTIVE",
@@ -58,11 +61,22 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
         "Melihat Tiket Sesuai Project",
         "Melihat Dashboard Tiket",
         "Melihat Detail Tiket",
-        "Tidak Dapat Mengelola Tiket (Hanya View)",
+        "Tidak Dapat Mengelola Tiket (Hanya View)"
+      ]
+    },
+
+    5: {
+      title: "Engineer",
+      code: "ENGINEER",
+      desc: "Melakukan investigasi dan penyelesaian masalah teknis.",
+      permissions: [
+        "Melihat Tiket Sesuai Project",
+        "Menerima Reassign Tiket dari Staff",
+        "Melakukan Investigasi Teknis",
+        "Memberi solusi dan Update Status Tiket",
       ]
     }
   };
-  
 
   const toggleProject = (projectId) => {
 
@@ -200,7 +214,7 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
               PENGATURAN PRIVILEGE (HAK AKSES)
             </h3>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
 
               {Object.entries(roleInfo).map(([id, role]) => (
 
@@ -231,8 +245,7 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
           </div>
 
           {/* PROJECT ACCESS */}
-          {(form.role_id === 2 || form.role_id === 3 || form.role_id === 4) && (
-
+          {(form.role_id === 2 || form.role_id === 3 || form.role_id === 4 || form.role_id === 5) && (
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
 
               <div className="font-semibold mb-3">
@@ -315,6 +328,14 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
                 Executive hanya dapat melihat tiket dan dashboard
                 pada project yang dipilih. Executive tidak dapat
                 membuat, mengubah, atau menghapus tiket.
+              </div>
+            )}
+
+            {form.role_id === 5 && (
+              <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-sm">
+                Engineer dapat menerima tiket dari Staff CCIT dan melakukan
+                investigasi serta penyelesaian masalah teknis pada project
+                yang dipilih.
               </div>
             )}
 
