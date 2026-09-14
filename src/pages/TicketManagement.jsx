@@ -48,6 +48,8 @@ export default function TicketManagement() {
           ? ROLE.USER
           : rawRole === "EXECUTIVE"
           ? ROLE.EXECUTIVE
+          : rawRole === "ENGINEER"
+          ? ROLE.ENGINEER
           : Number(rawRole)
       )
     : Number(rawRole);

@@ -111,7 +111,7 @@ export default function TicketFilter({ search, setSearch, filters, setFilters, t
         <div
           className={`grid gap-2 ${
             role === ROLE.ADMINISTRATOR
-              ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-8"
+              ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-6"
               : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-6"
           }`}
         >
@@ -129,7 +129,7 @@ export default function TicketFilter({ search, setSearch, filters, setFilters, t
             ))}
           </select>
 
-          {role === ROLE.ADMINISTRATOR && (
+          {/* {role === ROLE.ADMINISTRATOR && (
             <select
               name="assigned_to_id"
               value={filters.assigned_to_id}
@@ -152,7 +152,7 @@ export default function TicketFilter({ search, setSearch, filters, setFilters, t
                 <option key={r.id} value={r.id}>{r.name}</option>
               ))}
             </select>
-          )}
+          )} */}
 
           <select
             name="priority"
