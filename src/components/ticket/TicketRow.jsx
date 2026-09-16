@@ -1,8 +1,9 @@
-import { FiEdit, FiEye, FiMessageCircle } from "react-icons/fi";
+import { FiEdit, FiEye, FiMessageCircle, FiRefreshCw } from "react-icons/fi";
 import { useState, useEffect } from "react";
 import TicketResolutionModal from "../modal/TicketResolutionModal";
 import TicketCommentModal from "../modal/TicketCommentModal";
 import TicketHistoryModal from "../modal/TicketHistoryModal";
+import TicketReassignModal from "../modal/TicketReassignModal";
 import { markTicketCommentsAsRead } from "../../services/ticketService";
 import { ROLE } from "../../constants/role";
 
@@ -10,6 +11,7 @@ export default function TicketRow({ ticket, role }) {
     const [showResolution, setShowResolution] = useState(false);  
     const [showComment, setShowComment] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
+    const [showReassignModal, setShowReassignModal] = useState(false);
 
     const priorityColor = {
       LOW: "bg-gray-400",
@@ -198,6 +200,22 @@ export default function TicketRow({ ticket, role }) {
               </button>
             )}
 
+            {(
+              role === ROLE.ADMINISTRATOR ||
+              role === ROLE.EXECUTIVE ||
+              role === ROLE.STAFF ||
+              role === ROLE.USER
+            ) && (
+              <button
+                type="button"
+                onClick={() => setShowReassignModal(true)}
+                className="text-purple-600 hover:text-purple-800"
+                title="Reassign Ticket"
+              >
+                <FiRefreshCw size={16} />
+              </button>
+            )}
+
             </div>
       
           </div>
@@ -222,6 +240,16 @@ export default function TicketRow({ ticket, role }) {
             <TicketHistoryModal
               ticket={ticket}
               onClose={() => setShowHistory(false)}
+            />
+          )}
+
+          {showReassignModal && (
+            <TicketReassignModal
+              ticket={ticket}
+              onClose={() => setShowReassignModal(false)}
+              onSuccess={() => {
+                setShowReassignModal(false);
+              }}
             />
           )}
         </>

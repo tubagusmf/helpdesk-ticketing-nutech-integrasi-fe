@@ -111,6 +111,15 @@ export const getStaffs = async () => {
   });
 };
 
+export const getEngineers = async (projectId) => {
+  return fetchAPI(
+    `${BASE_URL}/users?role_id=5&is_active=true&project_id=${projectId}&page=1&limit=50`,
+    {
+      headers: getHeaders(),
+    }
+  );
+};
+
 export const getCauses = async (partId) => {
   return fetchAPI(`${BASE_URL}/causes?part_id=${partId}&limit=100`, {
     headers: getHeaders(),
@@ -206,4 +215,15 @@ export const markTicketCommentsAsRead = async (ticketId) => {
     method: "PUT",
     headers: getHeaders(),
   });
+};
+
+export const reassignTicket = async (ticketId, formData) => {
+  return fetchAPI(
+    `${BASE_URL}/tickets/reassign/${ticketId}`,
+    {
+      method: "POST",
+      headers: getHeaders(false),
+      body: formData,
+    }
+  );
 };

@@ -118,8 +118,10 @@ export default function TicketManagement() {
 
   const handleRealtimeTicket = useCallback(
     (ticket) => {
-      // STAFF
-      if (role === ROLE.STAFF || role === ROLE.ENGINEER) {
+      if (
+        role === ROLE.STAFF ||
+        role === ROLE.ENGINEER
+      ) {
         if (Number(ticket.assigned_to_id) !== userId) {
           return;
         }
@@ -155,10 +157,11 @@ export default function TicketManagement() {
             .slice(0, limit);
         }
 
-        return [ticket, ...prev].slice(0, limit);
+        return [ticket, ...prev]
+          .slice(0, limit);
       });
     },
-    [role, userId]
+    [role, userId, limit]
   );
 
   useTicketSocket({
