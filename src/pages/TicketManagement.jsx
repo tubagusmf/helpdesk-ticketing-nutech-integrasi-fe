@@ -222,8 +222,10 @@ export default function TicketManagement() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h2 className="text-xl font-semibold">
-              {role === ROLE.STAFF || role === ROLE.ENGINEER
+              {role === ROLE.STAFF
                 ? "Tiket Assigned ke Saya"
+                : role === ROLE.ENGINEER
+                ? "Tiket Reassignment Saya"
                 : "Daftar Tiket Aduan"}
             </h2>
 
