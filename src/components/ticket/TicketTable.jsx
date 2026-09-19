@@ -1,6 +1,6 @@
 import TicketRow from "./TicketRow"
 
-export default function TicketTable({ tickets, role }) {
+export default function TicketTable({ tickets, role, userId }) {
 
     if (!tickets || tickets.length === 0) {
       return (
@@ -22,7 +22,7 @@ export default function TicketTable({ tickets, role }) {
         </div>
   
         {tickets.map(ticket => (
-          <TicketRow key={ticket.id} ticket={ticket} role={role} />
+          <TicketRow key={ticket.id} ticket={ticket} role={role} userId={userId} />
         ))}
       </div>
     );

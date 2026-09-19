@@ -248,6 +248,7 @@ export default function TicketManagement() {
           tickets={tickets}
           search={search}
           role={role}
+          userId={userId}
         />
       </div>
 

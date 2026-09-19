@@ -4,14 +4,16 @@ import TicketResolutionModal from "../modal/TicketResolutionModal";
 import TicketCommentModal from "../modal/TicketCommentModal";
 import TicketHistoryModal from "../modal/TicketHistoryModal";
 import TicketReassignModal from "../modal/TicketReassignModal";
+import TicketEngineerResolutionModal from "../modal/TicketEngineerResolutionModal";
 import { markTicketCommentsAsRead } from "../../services/ticketService";
 import { ROLE } from "../../constants/role";
 
-export default function TicketRow({ ticket, role }) {
+export default function TicketRow({ ticket, role, userId }) {
     const [showResolution, setShowResolution] = useState(false);  
     const [showComment, setShowComment] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
     const [showReassignModal, setShowReassignModal] = useState(false);
+    const [showEngineerResolution, setShowEngineerResolution] = useState(false);
 
     const priorityColor = {
       LOW: "bg-gray-400",
@@ -189,6 +191,20 @@ export default function TicketRow({ ticket, role }) {
               </button>
             )}
 
+            {/* RESOLUTION - ENGINEER */}
+            {role === ROLE.ENGINEER &&
+            Number(ticket.assigned_to_id) === Number(userId) && (
+              <button
+                onClick={() =>
+                  setShowEngineerResolution(true)
+                }
+                className="text-orange-600 hover:text-orange-800"
+                title="Engineer Resolution"
+              >
+                <FiEdit size={18} />
+              </button>
+            )}
+
             {/* RESOLUTION - USER / REPORTER */}
             {role === ROLE.USER && ticket.status === "RESOLVED" && (
               <button
@@ -226,6 +242,19 @@ export default function TicketRow({ ticket, role }) {
               role={role}
               onClose={() => setShowResolution(false)}
               onSuccess={() => window.location.reload()}
+            />
+          )}
+
+          {showEngineerResolution && (
+            <TicketEngineerResolutionModal
+              ticket={ticket}
+              onClose={() =>
+                setShowEngineerResolution(false)
+              }
+              onSuccess={() => {
+                setShowEngineerResolution(false);
+                window.location.reload();
+              }}
             />
           )}
 

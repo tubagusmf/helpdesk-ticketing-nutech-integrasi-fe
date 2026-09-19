@@ -227,3 +227,32 @@ export const reassignTicket = async (ticketId, formData) => {
     }
   );
 };
+
+export const createEngineerTicketResolution = async (ticketId, formData) => {
+  return fetchAPI(
+    `${BASE_URL}/tickets/${ticketId}/engineer-resolution`,
+    {
+      method: "POST",
+      headers: getHeaders(false),
+      body: formData,
+    }
+  );
+};
+
+export const getTicketReassignment = async (ticketId) => {
+  return fetchAPI(
+    `${BASE_URL}/tickets/${ticketId}/reassignment`,
+    {
+      headers: getHeaders(),
+    }
+  );
+};
+
+export const getEngineerTicketResolution = async (ticketId) => {
+  return fetchAPI(
+    `${BASE_URL}/tickets/${ticketId}/engineer-resolution`,
+    {
+      headers: getHeaders(),
+    }
+  );
+};
