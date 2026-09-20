@@ -6,6 +6,7 @@ import MasterDataAdmin from "./pages/MasterDataAdmin";
 import UserManagement from "./pages/UserManagement";
 import ProtectedRoute from "./components/ProtectedRoute";
 import TicketManagement from "./pages/TicketManagement";
+import TicketDetail from "./pages/TicketDetail";
 import Profile from "./pages/Profile";
 import { Toaster } from "react-hot-toast";
 
@@ -130,6 +131,15 @@ function App() {
           element={
             <ProtectedRoute role={5}>
               <TicketManagement />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/tickets/:id"
+          element={
+            <ProtectedRoute>
+              <TicketDetail />
             </ProtectedRoute>
           }
         />

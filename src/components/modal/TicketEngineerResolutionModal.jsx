@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import {createEngineerTicketResolution, getTicketReassignment} from "../../services/ticketService";
-import { FiEye, FiDownload } from "react-icons/fi";
+import {createEngineerTicketResolution, getTicketReassignment, getEngineerTicketResolution} from "../../services/ticketService";
+import { FiDownload } from "react-icons/fi";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -9,34 +9,91 @@ export default function TicketEngineerResolutionModal({ticket, onClose, onSucces
   const [files, setFiles] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reassignment, setReassignment] = useState(null);
+  const [engineerResolution, setEngineerResolution] = useState(null);
+  const [loadingResolution, setLoadingResolution] = useState(false);
   const [loadingReassignment, setLoadingReassignment] = useState(false);
 
   useEffect(() => {
     if (!ticket?.id) {
       setReassignment(null);
+      setEngineerResolution(null);
+      setSolution("");
+      setFiles([]);
+
       return;
     }
-  
-    const fetchReassignment = async () => {
+
+    const fetchModalData = async () => {
+      setLoadingReassignment(true);
+      setLoadingResolution(true);
+
       try {
-        setLoadingReassignment(true);
-  
-        const response = await getTicketReassignment(ticket.id);
-  
-        setReassignment(response ?? null);
-      } catch (error) {
-        console.error(
-          "Failed to fetch ticket reassignment:",
-          error
-        );
-  
-        setReassignment(null);
+        const [
+          reassignmentResponse,
+          engineerResolutionResponse
+        ] = await Promise.allSettled([
+          getTicketReassignment(ticket.id),
+          getEngineerTicketResolution(ticket.id)
+        ]);
+
+        // DATA REASSIGNMENT
+        if (
+          reassignmentResponse.status === "fulfilled"
+        ) {
+          console.log(
+            "REASSIGNMENT:",
+            reassignmentResponse.value
+          );
+
+          setReassignment(
+            reassignmentResponse.value ?? null
+          );
+        } else {
+          console.error(
+            "Failed to fetch reassignment:",
+            reassignmentResponse.reason
+          );
+
+          setReassignment(null);
+        }
+
+        // DATA ENGINEER RESOLUTION
+        if (
+          engineerResolutionResponse.status ===
+          "fulfilled"
+        ) {
+          console.log(
+            "ENGINEER RESOLUTION:",
+            engineerResolutionResponse.value
+          );
+
+          const resolution =
+            engineerResolutionResponse.value ?? null;
+
+          setEngineerResolution(resolution);
+
+          setSolution(
+            resolution?.solution || ""
+          );
+
+          setFiles([]);
+        } else {
+          console.error(
+            "Failed to fetch engineer resolution:",
+            engineerResolutionResponse.reason
+          );
+
+          setEngineerResolution(null);
+          setSolution("");
+          setFiles([]);
+        }
       } finally {
         setLoadingReassignment(false);
+        setLoadingResolution(false);
       }
     };
-  
-    fetchReassignment();
+
+    fetchModalData();
   }, [ticket?.id]);
 
   const handleFileChange = (e) => {
@@ -89,34 +146,6 @@ export default function TicketEngineerResolutionModal({ticket, onClose, onSucces
     }
 
     return `${(size / 1024 / 1024).toFixed(2)} MB`;
-  };
-
-  const getDownloadUrl = (url, fileName) => {
-    if (!url) {
-      return "#";
-    }
-  
-    try {
-      const parsedUrl = new URL(url);
-  
-      if (
-        parsedUrl.hostname.includes("res.cloudinary.com") &&
-        parsedUrl.pathname.includes("/upload/")
-      ) {
-        const encodedFileName = encodeURIComponent(
-          fileName || "lampiran"
-        );
-  
-        parsedUrl.pathname = parsedUrl.pathname.replace(
-          "/upload/",
-          `/upload/fl_attachment:${encodedFileName}/`
-        );
-      }
-  
-      return parsedUrl.toString();
-    } catch {
-      return url;
-    }
   };
 
   const getStatusClass = (status) => {
@@ -444,12 +473,6 @@ export default function TicketEngineerResolutionModal({ticket, onClose, onSucces
                         const fileUrl =
                             attachment.file_url;
 
-                        const downloadUrl =
-                            getDownloadUrl(
-                            fileUrl,
-                            fileName
-                            );
-
                         return (
                             <div
                             key={
@@ -473,14 +496,6 @@ export default function TicketEngineerResolutionModal({ticket, onClose, onSucces
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="px-3 py-1.5 text-xs font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50"
-                                >
-                                <FiEye size={18} />
-                                </a>
-
-                                <a
-                                href={downloadUrl}
-                                download={fileName}
-                                className="px-3 py-1.5 text-xs font-medium text-green-600 border border-green-200 rounded-lg hover:bg-green-50"
                                 >
                                 <FiDownload size={18} />
                                 </a>
@@ -509,87 +524,211 @@ export default function TicketEngineerResolutionModal({ticket, onClose, onSucces
               RESOLUTION ENGINEER
             </h3>
 
-            <div className="space-y-4">
-
-              {/* SOLUTION */}
-              <div>
-                <label className="text-sm font-medium text-gray-700">
-                  Solution
-                </label>
-
-                <textarea
-                  value={solution}
-                  onChange={(e) =>
-                    setSolution(e.target.value)
-                  }
-                  disabled={isSubmitting}
-                  rows={6}
-                  placeholder="Masukkan solusi atau tindakan yang dilakukan untuk menyelesaikan permasalahan..."
-                  className="w-full mt-1 border px-3 py-2 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
+            {loadingResolution ? (
+              <div className="text-sm text-gray-500">
+                Memuat data resolution engineer...
               </div>
+            ) : (
+              <div className="space-y-4">
 
-              {/* ATTACHMENTS */}
-              <div>
-                <label className="text-sm font-medium text-gray-700">
-                  Lampiran
-                </label>
+                {/* SOLUTION */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700">
+                    Solution
+                  </label>
 
-                <p className="text-xs text-gray-500 mb-2">
-                  Dapat memilih beberapa file.
-                  Maksimal 10MB untuk setiap file.
-                </p>
+                  <textarea
+                    value={solution}
+                    onChange={(e) =>
+                      setSolution(e.target.value)
+                    }
+                    disabled={
+                      isSubmitting ||
+                      Boolean(engineerResolution)
+                    }
+                    rows={6}
+                    placeholder="Masukkan solusi atau tindakan yang dilakukan untuk menyelesaikan permasalahan..."
+                    className={`w-full mt-1 border px-3 py-2 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                      engineerResolution
+                        ? "bg-gray-100 text-gray-700"
+                        : ""
+                    }`}
+                  />
 
-                <input
-                  type="file"
-                  multiple
-                  onChange={handleFileChange}
-                  disabled={isSubmitting}
-                  className="block w-full text-sm border rounded-lg px-3 py-2"
-                />
+                  {engineerResolution && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Resolution Engineer sudah disimpan.
+                    </p>
+                  )}
+                </div>
 
-                {/* FILE LIST */}
-                {files.length > 0 && (
-                  <div className="mt-3 space-y-2">
+                {/* ATTACHMENTS YANG SUDAH TERSIMPAN */}
+                {engineerResolution?.attachments?.length > 0 && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">
+                      Lampiran Resolution
+                    </label>
 
-                    {files.map((file, index) => (
-                      <div
-                        key={`${file.name}-${file.size}-${index}`}
-                        className="flex items-center justify-between border rounded-lg px-3 py-2 bg-gray-50"
-                      >
+                    <div className="mt-2 space-y-2">
 
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-gray-700 truncate">
-                            {file.name}
-                          </p>
+                      {engineerResolution.attachments.map(
+                        (attachment, index) => {
 
-                          <p className="text-xs text-gray-500">
-                            {formatFileSize(
-                              file.size
-                            )}
-                          </p>
-                        </div>
+                          const fileName =
+                            attachment.file_name ||
+                            "Lampiran";
 
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleRemoveFile(index)
-                          }
-                          disabled={isSubmitting}
-                          className="ml-3 text-red-500 hover:text-red-700 text-lg disabled:opacity-50"
-                        >
-                          ✕
-                        </button>
+                          const fileUrl =
+                            attachment.file_url;
+
+                          return (
+                            <div
+                              key={
+                                attachment.id ||
+                                `${fileName}-${index}`
+                              }
+                              className="flex items-center justify-between gap-3 border rounded-lg px-3 py-2 bg-gray-50"
+                            >
+
+                              {/* FILE NAME */}
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium text-gray-700 truncate">
+                                  {fileName}
+                                </p>
+                              </div>
+
+                              {/* ACTION */}
+                              <div className="flex items-center gap-2 shrink-0">
+
+                                {/* BUKA */}
+                                <a
+                                  href={fileUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-3 py-1.5 text-xs font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50"
+                                >
+                                  Buka
+                                </a>
+
+                                {/* DOWNLOAD */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const link =
+                                      document.createElement("a");
+
+                                    link.href = fileUrl;
+                                    link.download = fileName;
+                                    link.target = "_blank";
+
+                                    document.body.appendChild(
+                                      link
+                                    );
+
+                                    link.click();
+
+                                    document.body.removeChild(
+                                      link
+                                    );
+                                  }}
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-green-600 border border-green-200 rounded-lg hover:bg-green-50"
+                                >
+                                  <FiDownload size={14} />
+                                  Unduh
+                                </button>
+
+                              </div>
+
+                            </div>
+                          );
+                        }
+                      )}
+
+                    </div>
+                  </div>
+                )}
+
+                {/* FILE INPUT */}
+                {!engineerResolution && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">
+                      Lampiran
+                    </label>
+
+                    <p className="text-xs text-gray-500 mb-2">
+                      Dapat memilih beberapa file.
+                      Maksimal 10MB untuk setiap file.
+                    </p>
+
+                    <input
+                      type="file"
+                      multiple
+                      onChange={handleFileChange}
+                      disabled={isSubmitting}
+                      className="block w-full text-sm border rounded-lg px-3 py-2"
+                    />
+
+                    {/* FILE LIST */}
+                    {files.length > 0 && (
+                      <div className="mt-3 space-y-2">
+
+                        {files.map((file, index) => (
+                          <div
+                            key={`${file.name}-${file.size}-${index}`}
+                            className="flex items-center justify-between border rounded-lg px-3 py-2 bg-gray-50"
+                          >
+
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-gray-700 truncate">
+                                {file.name}
+                              </p>
+
+                              <p className="text-xs text-gray-500">
+                                {formatFileSize(file.size)}
+                              </p>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleRemoveFile(index)
+                              }
+                              disabled={isSubmitting}
+                              className="ml-3 text-red-500 hover:text-red-700 text-lg disabled:opacity-50"
+                            >
+                              ✕
+                            </button>
+
+                          </div>
+                        ))}
 
                       </div>
-                    ))}
+                    )}
+                  </div>
+                )}
+
+                {/* CREATED / UPDATED */}
+                {engineerResolution && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t">
+
+                    <div>
+                      <p className="text-xs text-gray-500">
+                        Dibuat Resolusi
+                      </p>
+
+                      <p className="text-sm text-gray-700">
+                        {new Date(
+                          engineerResolution.created_at
+                        ).toLocaleString("id-ID")}
+                      </p>
+                    </div>
 
                   </div>
                 )}
 
               </div>
+            )}
 
-            </div>
           </div>
 
         </div>
@@ -606,19 +745,21 @@ export default function TicketEngineerResolutionModal({ticket, onClose, onSucces
             Batal
           </button>
 
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={
-              isSubmitting ||
-              !solution.trim()
-            }
-            className="px-4 py-2 bg-orange-600 text-white rounded-lg text-sm hover:bg-orange-700 disabled:opacity-50"
-          >
-            {isSubmitting
-              ? "Menyimpan..."
-              : "Simpan Resolution"}
-          </button>
+          {!engineerResolution && !loadingResolution && (
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={
+                isSubmitting ||
+                !solution.trim()
+              }
+              className="px-4 py-2 bg-orange-600 text-white rounded-lg text-sm hover:bg-orange-700 disabled:opacity-50"
+            >
+              {isSubmitting
+                ? "Menyimpan..."
+                : "Simpan Resolution"}
+            </button>
+          )}
 
         </div>
 

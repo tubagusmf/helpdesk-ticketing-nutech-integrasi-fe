@@ -1,5 +1,6 @@
 import { FiEdit, FiEye, FiMessageCircle, FiRefreshCw } from "react-icons/fi";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import TicketResolutionModal from "../modal/TicketResolutionModal";
 import TicketCommentModal from "../modal/TicketCommentModal";
 import TicketHistoryModal from "../modal/TicketHistoryModal";
@@ -14,6 +15,7 @@ export default function TicketRow({ ticket, role, userId }) {
     const [showHistory, setShowHistory] = useState(false);
     const [showReassignModal, setShowReassignModal] = useState(false);
     const [showEngineerResolution, setShowEngineerResolution] = useState(false);
+    const navigate = useNavigate();
 
     const priorityColor = {
       LOW: "bg-gray-400",
@@ -95,14 +97,21 @@ export default function TicketRow({ ticket, role, userId }) {
       
             {/* TICKET INFO */}
             <div>
-              <div className="font-semibold text-gray-800">
+              <button
+                type="button"
+                onClick={() =>
+                  navigate(`/tickets/${ticket.id}`)
+                }
+                className="font-semibold text-blue-600 hover:text-blue-800 hover:underline text-left"
+                title="Lihat detail tiket"
+              >
                 {ticket.ticket_code}
-              </div>
-      
+              </button>
+
               <div className="text-gray-400 text-xs">
                 {new Date(ticket.created_at).toLocaleString()}
               </div>
-      
+
               <div className="text-blue-600 text-xs">
                 {ticket.reporter_name}
               </div>
