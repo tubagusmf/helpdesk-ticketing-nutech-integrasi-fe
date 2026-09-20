@@ -22,12 +22,25 @@ export default function TicketHistoryModal({ ticket, onClose }) {
     switch (item.type) {
       case "CREATED":
         return "🟢 Ticket dibuat";
+  
       case "STATUS_UPDATED":
         return "🟡 Status diubah";
+  
       case "COMMENT":
         return "💬 Komentar";
+  
       case "ONHOLD_NOTE":
         return "📝 Catatan OnHold";
+  
+      case "REASSIGNED":
+        return "🔄 Tiket dialihkan";
+  
+      case "RESOLUTION":
+        return "✅ Solusi tiket";
+  
+      case "ENGINEER_RESOLUTION":
+        return "🛠️ Solusi Tim Engineer";
+  
       default:
         return "ℹ️ Aktivitas";
     }
@@ -119,6 +132,21 @@ export default function TicketHistoryModal({ ticket, onClose }) {
                   <p>
                     Notes OnHold: <b>{h.message}</b>
                   </p>
+                )}
+
+                {h.type === "REASSIGNED" && (
+                  <p>
+                    Tiket dialihkan kepada Tim Engineer.
+                  </p>
+                )}
+
+                {h.type === "ENGINEER_RESOLUTION" && (
+                  <div>
+
+                    <p className="mt-1 text-gray-600 whitespace-pre-wrap">
+                      {h.message || "-"}
+                    </p>
+                  </div>
                 )}
               </div>
             ))}
