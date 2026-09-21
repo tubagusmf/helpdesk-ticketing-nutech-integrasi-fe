@@ -391,7 +391,7 @@ export default function TicketDetail() {
             />
 
             <DetailItem
-              label="Reporter"
+              label="Pelapor"
               value={ticket.reporter_name}
             />
 
@@ -418,11 +418,6 @@ export default function TicketDetail() {
             <DetailItem
               label="Due At"
               value={formatDate(ticket.due_at)}
-            />
-
-            <DetailItem
-              label="Updated At"
-              value={formatDate(ticket.updated_at)}
             />
 
           </div>

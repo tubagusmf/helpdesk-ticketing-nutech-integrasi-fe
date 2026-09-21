@@ -1,4 +1,4 @@
-import { FiEdit, FiEye, FiMessageCircle, FiRefreshCw } from "react-icons/fi";
+import { FiEdit, FiEye, FiMessageCircle, FiSend } from "react-icons/fi";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import TicketResolutionModal from "../modal/TicketResolutionModal";
@@ -102,7 +102,7 @@ export default function TicketRow({ ticket, role, userId }) {
                 onClick={() =>
                   navigate(`/tickets/${ticket.id}`)
                 }
-                className="font-semibold text-blue-600 hover:text-blue-800 hover:underline text-left"
+                className="font-semibold text-gray-900 cursor-pointer hover:text-orange-500 text-left"
                 title="Lihat detail tiket"
               >
                 {ticket.ticket_code}
@@ -237,7 +237,7 @@ export default function TicketRow({ ticket, role, userId }) {
                 className="text-purple-600 hover:text-purple-800"
                 title="Reassign Ticket"
               >
-                <FiRefreshCw size={16} />
+                <FiSend size={16} />
               </button>
             )}
 
