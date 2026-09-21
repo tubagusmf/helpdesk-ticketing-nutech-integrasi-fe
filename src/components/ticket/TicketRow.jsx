@@ -150,17 +150,38 @@ export default function TicketRow({ ticket, role, userId }) {
             </div>
       
             {/* STATUS */}
+            {/* STATUS / ENGINEER RESOLUTION */}
             <div>
-              <span
-                className={`px-3 py-1 text-xs rounded-full ${statusColor[ticket.status]}`}
-              >
-                {ticket.status}
-              </span>
-      
-              {ticket.status === "OPEN" && (
-                <div className={`text-xs mt-1 ${overdue ? "text-red-500" : "text-gray-500"}`}>
-                  {overdue ? "⚠ Overdue" : `⏳ ${getSLA(ticket.due_at)}`}
-                </div>
+              {role === ROLE.ENGINEER ? (
+                ticket.engineer_status === "DONE" ? (
+                  <span className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-600">
+                    Done
+                  </span>
+                ) : (
+                  <span className="px-3 py-1 text-xs rounded-full bg-orange-100 text-orange-600">
+                    Pending
+                  </span>
+                )
+              ) : (
+                <>
+                  <span
+                    className={`px-3 py-1 text-xs rounded-full ${statusColor[ticket.status]}`}
+                  >
+                    {ticket.status}
+                  </span>
+
+                  {ticket.status === "OPEN" && (
+                    <div
+                      className={`text-xs mt-1 ${
+                        overdue ? "text-red-500" : "text-gray-500"
+                      }`}
+                    >
+                      {overdue
+                        ? "⚠ Overdue"
+                        : `⏳ ${getSLA(ticket.due_at)}`}
+                    </div>
+                  )}
+                </>
               )}
             </div>
       
@@ -225,17 +246,16 @@ export default function TicketRow({ ticket, role, userId }) {
               </button>
             )}
 
-            {(
-              role === ROLE.ADMINISTRATOR ||
-              role === ROLE.EXECUTIVE ||
-              role === ROLE.STAFF ||
-              role === ROLE.USER
-            ) && (
+            {[
+              ROLE.ADMINISTRATOR,
+              ROLE.STAFF,
+              ROLE.EXECUTIVE,
+            ].includes(role) && (
               <button
                 type="button"
                 onClick={() => setShowReassignModal(true)}
                 className="text-purple-600 hover:text-purple-800"
-                title="Reassign Ticket"
+                title="Reassign Ticket ke Engineer"
               >
                 <FiSend size={16} />
               </button>

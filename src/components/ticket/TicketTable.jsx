@@ -1,4 +1,5 @@
 import TicketRow from "./TicketRow"
+import { ROLE } from "../../constants/role";
 
 export default function TicketTable({ tickets, role, userId }) {
 
@@ -17,7 +18,11 @@ export default function TicketTable({ tickets, role, userId }) {
           <div>PRIORITAS</div>
           <div>LOKASI & MASALAH</div>
           <div>ASSIGN TO</div>
-          <div>STATUS & SLA</div>
+          <div>
+            {role === ROLE.ENGINEER
+              ? "STATUS"
+              : "STATUS & SLA"}
+          </div>
           <div>AKSI</div>
         </div>
   
