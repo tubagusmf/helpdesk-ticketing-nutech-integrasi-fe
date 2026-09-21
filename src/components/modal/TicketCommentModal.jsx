@@ -81,7 +81,7 @@ export default function TicketCommentModal({ ticket, onClose }) {
 
         <div className="border rounded-xl p-4 mb-4">
           <h3 className="text-sm font-semibold mb-3 text-gray-600">
-            INFORMASI MASALAH
+            INFORMASI PERMASALAHAN
           </h3>
 
           <div className="space-y-2 text-sm">

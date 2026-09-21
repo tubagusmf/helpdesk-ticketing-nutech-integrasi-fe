@@ -16,7 +16,7 @@ export default function TicketTable({ tickets, role, userId }) {
         <div className="grid grid-cols-6 text-xs font-semibold text-gray-500 border-b pb-2">
           <div>NOMOR TIKET</div>
           <div>PRIORITAS</div>
-          <div>LOKASI & MASALAH</div>
+          <div>LOKASI & PERMASALAHAN</div>
           <div>ASSIGN TO</div>
           <div>
             {role === ROLE.ENGINEER

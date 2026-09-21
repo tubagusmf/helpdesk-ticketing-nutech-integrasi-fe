@@ -67,46 +67,42 @@ export default function TicketManagement() {
       ? navigationMenu.engineer
       : [];
 
-  const fetchTickets = useCallback(async () => {
-    try {
-      const roleFilters = {
-        ...filters,
-        search,
-        page,
-        limit,
-      };
-
-      if (role === 2) {
-        roleFilters.assigned_to_id = userId;
-      }
-
-      if (role === 3) {
-        roleFilters.reporter_id = userId;
-      }
-
-      const cleanFilters = Object.fromEntries(
-        Object.entries(roleFilters).filter(
-          ([_, value]) => value !== ""
-        )
-      );
-
-      const res = await getTickets(cleanFilters);
-      const data = res.data || [];
-
-      if (role === 2) {
-        data.sort(
-          (a, b) =>
-            new Date(b.created_at).getTime() -
-            new Date(a.created_at).getTime()
-        );
-      }
-
-      setTickets(data);
-      setTotalPage(res.total_page || 1);
-    } catch (err) {
-      console.error("[TICKET] Fetch error:", err);
-    }
-  }, [filters, search, page, limit, role, userId]);
+      const fetchTickets = useCallback(async () => {
+        try {
+          const roleFilters = {
+            ...filters,
+            search,
+            page,
+            limit,
+          };
+      
+          if (role === ROLE.USER) {
+            roleFilters.reporter_id = userId;
+          }
+      
+          const cleanFilters = Object.fromEntries(
+            Object.entries(roleFilters).filter(
+              ([_, value]) => value !== ""
+            )
+          );
+      
+          const res = await getTickets(cleanFilters);
+          const data = res.data || [];
+      
+          if (role === ROLE.STAFF) {
+            data.sort(
+              (a, b) =>
+                new Date(b.created_at).getTime() -
+                new Date(a.created_at).getTime()
+            );
+          }
+      
+          setTickets(data);
+          setTotalPage(res.total_page || 1);
+        } catch (err) {
+          console.error("[TICKET] Fetch error:", err);
+        }
+      }, [filters, search, page, limit, role, userId]);
 
   useEffect(() => {
     fetchTickets();

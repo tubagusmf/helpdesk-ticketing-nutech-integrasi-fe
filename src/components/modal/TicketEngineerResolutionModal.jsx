@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {createEngineerTicketResolution, getTicketReassignment, getEngineerTicketResolution} from "../../services/ticketService";
-import { FiDownload } from "react-icons/fi";
+import { FiDownload, FiExternalLink } from "react-icons/fi";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -186,6 +186,57 @@ export default function TicketEngineerResolutionModal({ticket, onClose, onSucces
 
       default:
         return "bg-gray-100 text-gray-600";
+    }
+  };
+
+  const downloadFile = async (file) => {
+    try {
+      const fileUrl =
+        file.file_url || file.fileUrl;
+  
+      const fileName =
+        file.file_name ||
+        file.fileName ||
+        "attachment";
+  
+      const response = await fetch(fileUrl, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+  
+      if (!response.ok) {
+        throw new Error("Gagal mengunduh file");
+      }
+  
+      const blob = await response.blob();
+  
+      const url = window.URL.createObjectURL(blob);
+  
+      const anchor = document.createElement("a");
+  
+      anchor.href = url;
+      anchor.download = fileName;
+  
+      document.body.appendChild(anchor);
+  
+      anchor.click();
+  
+      anchor.remove();
+  
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("[DOWNLOAD] Error:", err);
+  
+      // fallback
+      const fileUrl =
+        file.file_url || file.fileUrl;
+  
+      window.open(
+        fileUrl,
+        "_blank",
+        "noopener,noreferrer"
+      );
     }
   };
 
@@ -458,55 +509,64 @@ export default function TicketEngineerResolutionModal({ticket, onClose, onSucces
                 </div>
 
                 {/* ATTACHMENTS */}
-                {reassignment.attachments?.length > 0 && (
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Lampiran Dokumen
+                {reassignment?.attachments?.length > 0 && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">
+                      Lampiran Dokumen
                     </label>
 
-                    <div className="space-y-2">
-                    {reassignment.attachments.map(
-                        (attachment, index) => {
+                    <div className="mt-2 space-y-2">
+                      {reassignment.attachments.map((attachment, index) => {
                         const fileName =
-                            attachment.file_name || "lampiran";
+                          attachment.file_name ||
+                          attachment.fileName ||
+                          "Lampiran";
 
                         const fileUrl =
-                            attachment.file_url;
+                          attachment.file_url ||
+                          attachment.fileUrl;
 
                         return (
-                            <div
+                          <div
                             key={
-                                attachment.file_url ||
-                                `${fileName}-${index}`
+                              attachment.id ||
+                              `${fileName}-${index}`
                             }
                             className="flex items-center justify-between gap-3 border rounded-lg px-3 py-2 bg-gray-50"
-                            >
-                            {/* FILE NAME */}
+                          >
                             <div className="min-w-0 flex-1">
-                                <p className="text-sm font-medium text-gray-700 truncate">
+                              <p className="text-sm font-medium text-gray-700 truncate">
                                 {fileName}
-                                </p>
+                              </p>
                             </div>
 
-                            {/* ACTIONS */}
                             <div className="flex items-center gap-2 shrink-0">
-
-                                <a
+                              {/* Buka */}
+                              <a
                                 href={fileUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="px-3 py-1.5 text-xs font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50"
-                                >
-                                <FiDownload size={18} />
-                                </a>
+                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50"
+                              >
+                                <FiExternalLink size={14} />
+                                Buka
+                              </a>
 
+                              {/* Unduh */}
+                              <button
+                                type="button"
+                                onClick={() => downloadFile(attachment)}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-green-600 border border-green-200 rounded-lg hover:bg-green-50"
+                              >
+                                <FiDownload size={14} />
+                                Unduh
+                              </button>
                             </div>
-                            </div>
+                          </div>
                         );
-                        }
-                    )}
+                      })}
                     </div>
-                </div>
+                  </div>
                 )}
 
                 </div>
@@ -570,16 +630,16 @@ export default function TicketEngineerResolutionModal({ticket, onClose, onSucces
                     </label>
 
                     <div className="mt-2 space-y-2">
-
                       {engineerResolution.attachments.map(
                         (attachment, index) => {
-
                           const fileName =
                             attachment.file_name ||
+                            attachment.fileName ||
                             "Lampiran";
 
                           const fileUrl =
-                            attachment.file_url;
+                            attachment.file_url ||
+                            attachment.fileUrl;
 
                           return (
                             <div
@@ -589,7 +649,6 @@ export default function TicketEngineerResolutionModal({ticket, onClose, onSucces
                               }
                               className="flex items-center justify-between gap-3 border rounded-lg px-3 py-2 bg-gray-50"
                             >
-
                               {/* FILE NAME */}
                               <div className="min-w-0 flex-1">
                                 <p className="text-sm font-medium text-gray-700 truncate">
@@ -605,32 +664,18 @@ export default function TicketEngineerResolutionModal({ticket, onClose, onSucces
                                   href={fileUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="px-3 py-1.5 text-xs font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50"
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50"
                                 >
+                                  <FiExternalLink size={14} />
                                   Buka
                                 </a>
 
-                                {/* DOWNLOAD */}
+                                {/* UNDUH */}
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    const link =
-                                      document.createElement("a");
-
-                                    link.href = fileUrl;
-                                    link.download = fileName;
-                                    link.target = "_blank";
-
-                                    document.body.appendChild(
-                                      link
-                                    );
-
-                                    link.click();
-
-                                    document.body.removeChild(
-                                      link
-                                    );
-                                  }}
+                                  onClick={() =>
+                                    downloadFile(attachment)
+                                  }
                                   className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-green-600 border border-green-200 rounded-lg hover:bg-green-50"
                                 >
                                   <FiDownload size={14} />
@@ -638,12 +683,10 @@ export default function TicketEngineerResolutionModal({ticket, onClose, onSucces
                                 </button>
 
                               </div>
-
                             </div>
                           );
                         }
                       )}
-
                     </div>
                   </div>
                 )}

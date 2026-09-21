@@ -155,11 +155,11 @@ export default function TicketRow({ ticket, role, userId }) {
               {role === ROLE.ENGINEER ? (
                 ticket.engineer_status === "DONE" ? (
                   <span className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-600">
-                    Done
+                    DONE
                   </span>
                 ) : (
                   <span className="px-3 py-1 text-xs rounded-full bg-orange-100 text-orange-600">
-                    Pending
+                    PENDING
                   </span>
                 )
               ) : (

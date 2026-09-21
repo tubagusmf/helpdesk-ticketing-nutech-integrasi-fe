@@ -174,10 +174,20 @@ export default function TicketFilter({ search, setSearch, filters, setFilters, t
             className="border bg-white px-3 py-2 rounded-lg text-sm"
           >
             <option value="">Semua Status</option>
-            <option value="OPEN">OPEN</option>
-            <option value="ONHOLD">ONHOLD</option>
-            <option value="RESOLVED">RESOLVED</option>
-            <option value="CLOSED">CLOSED</option>
+
+            {role === ROLE.ENGINEER ? (
+              <>
+                <option value="PENDING">PENDING</option>
+                <option value="DONE">DONE</option>
+              </>
+            ) : (
+              <>
+                <option value="OPEN">OPEN</option>
+                <option value="ONHOLD">ONHOLD</option>
+                <option value="RESOLVED">RESOLVED</option>
+                <option value="CLOSED">CLOSED</option>
+              </>
+            )}
           </select>
 
           <div className="flex flex-col">
