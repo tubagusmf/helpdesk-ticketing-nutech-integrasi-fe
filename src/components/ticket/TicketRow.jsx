@@ -1,4 +1,4 @@
-import { FiEdit, FiEye, FiMessageCircle, FiSend } from "react-icons/fi";
+import { FiEdit, FiEye, FiMessageCircle, FiSend, FiClock } from "react-icons/fi";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import TicketResolutionModal from "../modal/TicketResolutionModal";
@@ -6,8 +6,9 @@ import TicketCommentModal from "../modal/TicketCommentModal";
 import TicketHistoryModal from "../modal/TicketHistoryModal";
 import TicketReassignModal from "../modal/TicketReassignModal";
 import TicketEngineerResolutionModal from "../modal/TicketEngineerResolutionModal";
-import { markTicketCommentsAsRead } from "../../services/ticketService";
+import { markTicketCommentsAsRead, responseTicket } from "../../services/ticketService";
 import { ROLE } from "../../constants/role";
+import { toast } from "react-hot-toast";
 
 export default function TicketRow({ ticket, role, userId }) {
     const [showResolution, setShowResolution] = useState(false);  
@@ -16,6 +17,7 @@ export default function TicketRow({ ticket, role, userId }) {
     const [showReassignModal, setShowReassignModal] = useState(false);
     const [showEngineerResolution, setShowEngineerResolution] = useState(false);
     const navigate = useNavigate();
+    const RESPONSE_SLA_SECONDS = 3 * 60;
 
     const priorityColor = {
       LOW: "bg-gray-400",
@@ -30,6 +32,21 @@ export default function TicketRow({ ticket, role, userId }) {
       ONHOLD: "bg-blue-100 text-blue-600",
       RESOLVED: "bg-green-100 text-green-600",
       CLOSED: "bg-gray-200 text-gray-600",
+    };
+
+    const handleResponse = async () => {
+      try {
+        await responseTicket(ticket.id);
+
+        toast.success("Ticket berhasil diresponse");
+      } catch (error) {
+        console.error(error);
+
+        toast.error(
+          error?.message ||
+          "Gagal melakukan response ticket"
+        );
+      }
     };
 
     const handleOpenComment = async () => {
@@ -82,10 +99,49 @@ export default function TicketRow({ ticket, role, userId }) {
     useEffect(() => {
       const interval = setInterval(() => {
         setNow(new Date());
-      }, 60000);
+      }, 1000);
     
       return () => clearInterval(interval);
     }, []);
+
+    const getResponseSLA = (ticket) => {
+      if (
+        !ticket.staff_assigned_at ||
+        ticket.staff_first_response_at
+      ) {
+        return null;
+      }
+
+      const assignedAt = new Date(
+        ticket.staff_assigned_at
+      ).getTime();
+
+      const elapsedSeconds = Math.floor(
+        (now - assignedAt) / 1000
+      );
+
+      const remainingSeconds = RESPONSE_SLA_SECONDS - elapsedSeconds;
+
+      if (remainingSeconds <= 0) {
+        return {
+          overdue: true,
+          text: "⚠ Ticket belum diresponse",
+        };
+      }
+
+      const minutes = Math.floor(
+        remainingSeconds / 60
+      );
+
+      const seconds = remainingSeconds % 60;
+
+      return {
+        overdue: false,
+        text: `⏱ ${minutes}:${String(
+          seconds
+        ).padStart(2, "0")}`,
+      };
+    };
   
     const overdue =
       parseLocalDate(ticket.due_at) < now &&
@@ -183,6 +239,28 @@ export default function TicketRow({ ticket, role, userId }) {
                   )}
                 </>
               )}
+
+              {role === ROLE.STAFF && (
+                <>
+                  {(() => {
+                    const responseSLA = getResponseSLA(ticket);
+
+                    if (!responseSLA) return null;
+
+                    return (
+                      <div
+                        className={`text-xs mt-1 ${
+                          responseSLA.overdue
+                            ? "text-red-500 font-semibold"
+                            : "text-blue-500"
+                        }`}
+                      >
+                        {responseSLA.text}
+                      </div>
+                    );
+                  })()}
+                </>
+              )}
             </div>
       
             {/* ACTION */}
@@ -219,6 +297,20 @@ export default function TicketRow({ ticket, role, userId }) {
               >
                 <FiEdit size={18} />
               </button>
+            )}
+
+            {/* RESPONSE TICKET BY STAFF */}
+            {role === ROLE.STAFF &&
+              ticket.staff_assigned_to_id &&
+              Number(ticket.staff_assigned_to_id) === Number(userId) &&
+              !ticket.staff_first_response_at && (
+                <button
+                  onClick={handleResponse}
+                  className="text-blue-600 hover:text-blue-800"
+                  title="Response Ticket"
+                >
+                  <FiClock size={18} />
+                </button>
             )}
 
             {/* RESOLUTION - ENGINEER */}

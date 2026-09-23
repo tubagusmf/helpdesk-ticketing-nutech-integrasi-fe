@@ -256,3 +256,13 @@ export const getEngineerTicketResolution = async (ticketId) => {
     }
   );
 };
+
+export const responseTicket = async (ticketId) => {
+  return fetchAPI(
+    `${BASE_URL}/tickets/${ticketId}/response-ticket`,
+    {
+      method: "POST",
+      headers: getHeaders(),
+    }
+  );
+};
