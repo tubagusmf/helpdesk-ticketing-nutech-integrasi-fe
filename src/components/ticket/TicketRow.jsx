@@ -142,10 +142,9 @@ export default function TicketRow({ ticket, role, userId }) {
         ).padStart(2, "0")}`,
       };
     };
-  
-    const overdue =
-      parseLocalDate(ticket.due_at) < now &&
-      ticket.status === "OPEN";
+
+    const hasEngineerResolution = Boolean(ticket.engineer_resolution_at);
+    const overdue = parseLocalDate(ticket.due_at) < now && ticket.status === "OPEN";
   
       return (
         <>
@@ -235,6 +234,26 @@ export default function TicketRow({ ticket, role, userId }) {
                       {overdue
                         ? "⚠ Overdue"
                         : `⏳ ${getSLA(ticket.due_at)}`}
+                    </div>
+                  )}
+
+                  {/* ENGINEER RESOLUTION */}
+                  {hasEngineerResolution && (
+                    <div className="mt-2">
+                      <span
+                        className="
+                          inline-flex items-center
+                          px-2 py-1
+                          rounded-full
+                          bg-purple-100
+                          text-purple-700
+                          text-[10px]
+                          font-semibold
+                        "
+                        title="Engineer sudah memberikan resolution"
+                      >
+                        🔔 Engineer Updated
+                      </span>
                     </div>
                   )}
                 </>

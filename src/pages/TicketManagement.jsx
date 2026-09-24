@@ -196,6 +196,15 @@ export default function TicketManagement() {
       );
     },
 
+    onEngineerResolution: (ticket) => {
+      console.log(
+        "[WS] TICKET_ENGINEER_RESOLUTION:",
+        ticket
+      );
+
+      handleEngineerResolutionRealtime(ticket);
+    },
+
     onNewComment: (data) => {
       console.log("[WS] NEW_COMMENT:", data);
     },

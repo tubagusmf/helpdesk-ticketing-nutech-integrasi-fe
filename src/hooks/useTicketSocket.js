@@ -9,6 +9,7 @@ export default function useTicketSocket({
   onNewComment,
   onNotification,
   onTicketHistory,
+  onEngineerResolution,
 }) {
   const callbacksRef = useRef({
     onNewTicket,
@@ -17,6 +18,7 @@ export default function useTicketSocket({
     onNewComment,
     onNotification,
     onTicketHistory,
+    onEngineerResolution,
   });
 
   useEffect(() => {
@@ -27,6 +29,7 @@ export default function useTicketSocket({
       onNewComment,
       onNotification,
       onTicketHistory,
+      onEngineerResolution,
     };
   }, [
     onNewTicket,
@@ -35,6 +38,7 @@ export default function useTicketSocket({
     onNewComment,
     onNotification,
     onTicketHistory,
+    onEngineerResolution,
   ]);
 
   useEffect(() => {
@@ -64,6 +68,10 @@ export default function useTicketSocket({
 
         case "TICKET_HISTORY":
           callbacksRef.current.onTicketHistory?.(message.data);
+          break;
+
+        case "TICKET_ENGINEER_RESOLUTION":
+          callbacksRef.current.onEngineerResolution?.(message.data);
           break;
 
         default:
