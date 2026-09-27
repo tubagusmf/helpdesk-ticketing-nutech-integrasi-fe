@@ -143,7 +143,7 @@ export default function TicketRow({ ticket, role, userId }) {
       };
     };
 
-    const hasEngineerResolution = Boolean(ticket.engineer_resolution_at);
+    const hasUnreadEngineerResolution = Boolean(ticket.engineer_resolution_unread);
     const overdue = parseLocalDate(ticket.due_at) < now && ticket.status === "OPEN";
   
       return (
@@ -238,7 +238,7 @@ export default function TicketRow({ ticket, role, userId }) {
                   )}
 
                   {/* ENGINEER RESOLUTION */}
-                  {hasEngineerResolution && (
+                  {hasUnreadEngineerResolution && (
                     <div className="mt-2">
                       <span
                         className="
@@ -250,7 +250,7 @@ export default function TicketRow({ ticket, role, userId }) {
                           text-[10px]
                           font-semibold
                         "
-                        title="Engineer sudah memberikan resolution"
+                        title="Engineer memberikan update baru"
                       >
                         🔔 Engineer Updated
                       </span>

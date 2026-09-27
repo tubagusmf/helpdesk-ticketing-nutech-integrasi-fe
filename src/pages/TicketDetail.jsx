@@ -1,18 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import {
-  FiArrowLeft,
-  FiDownload,
-  FiExternalLink,
-  FiFileText,
-  FiLoader,
-} from "react-icons/fi";
+import {FiArrowLeft, FiDownload, FiExternalLink, FiFileText, FiLoader} from "react-icons/fi";
 import DashboardLayout from "../components/layout/DashboardLayout";
-import {
-  getEngineerTicketResolution,
-  getTicketById,
-  getTicketResolution,
-} from "../services/ticketService";
+import {getEngineerTicketResolution, getTicketById, getTicketResolution, markEngineerResolutionAsRead} from "../services/ticketService";
 import { jwtDecode } from "jwt-decode";
 import { navigationMenu } from "../constants/navigation";
 import { ROLE } from "../constants/role";
@@ -80,18 +70,19 @@ export default function TicketDetail() {
           const resolutionData = await getTicketResolution(id);
           setResolution(resolutionData);
         } catch (err) {
-          // 404 berarti ticket belum memiliki resolution
           setResolution(null);
         }
 
-        // Resolution Engineer
         try {
           const engineerResolutionData =
             await getEngineerTicketResolution(id);
 
           setEngineerResolution(engineerResolutionData);
+
+          if (engineerResolutionData) {
+            await markEngineerResolutionAsRead(id);
+          }
         } catch (err) {
-          // 404 berarti belum ada engineer resolution
           setEngineerResolution(null);
         }
       } catch (err) {

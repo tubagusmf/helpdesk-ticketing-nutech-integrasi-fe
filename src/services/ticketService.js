@@ -266,3 +266,13 @@ export const responseTicket = async (ticketId) => {
     }
   );
 };
+
+export const markEngineerResolutionAsRead = async (ticketId) => {
+  return fetchAPI(
+    `${BASE_URL}/tickets/${ticketId}/engineer-resolution/read`,
+    {
+      method: "PUT",
+      headers: getHeaders(),
+    }
+  );
+};
