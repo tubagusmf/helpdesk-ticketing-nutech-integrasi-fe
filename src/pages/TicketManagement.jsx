@@ -160,6 +160,51 @@ export default function TicketManagement() {
     [role, userId, limit]
   );
 
+  const handleEngineerResolutionRealtime = useCallback(
+    (data) => {
+      console.log(
+        "[WS] Engineer Resolution Realtime:",
+        data
+      );
+
+      const ticketId = Number(
+        data?.ticket_id ??
+        data?.id ??
+        data?.ticket?.id
+      );
+
+      if (!ticketId) {
+        console.warn(
+          "[WS] Engineer Resolution tidak memiliki ticket_id:",
+          data
+        );
+        return;
+      }
+
+      setTickets((prev) =>
+        prev.map((item) =>
+          Number(item.id) === ticketId
+            ? {
+                ...item,
+                engineer_resolution_unread: true,
+
+                ...(data?.engineer_resolution_at && {
+                  engineer_resolution_at:
+                    data.engineer_resolution_at,
+                }),
+
+                ...(data?.created_at && {
+                  engineer_resolution_at:
+                    data.created_at,
+                }),
+              }
+            : item
+        )
+      );
+    },
+    []
+  );
+
   useTicketSocket({
     onNewTicket: (ticket) => {
       console.log("[WS] NEW_TICKET:", ticket);

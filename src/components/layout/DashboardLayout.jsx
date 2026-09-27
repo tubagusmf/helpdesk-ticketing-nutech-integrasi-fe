@@ -254,6 +254,19 @@ export default function DashboardLayout({ title, children, menu }) {
     }
   };
 
+  const handleNotificationClick = async (notif) => {
+    try {
+      await handleReadNotification(notif.id);
+
+      if (notif.ticket_id) {
+        navigate(`/tickets/${notif.ticket_id}`);
+        setOpenNotif(false);
+      }
+    } catch (error) {
+      console.error("Failed to handle notification:", error);
+    }
+  };
+
   const playNotificationSound = async () => {
     try {
       if (audioRef.current) {
@@ -430,7 +443,7 @@ export default function DashboardLayout({ title, children, menu }) {
 
               {openNotif && (
                 <div className="absolute right-0 mt-3 w-96 bg-white shadow-lg rounded-xl border z-50 overflow-hidden">
-                  
+
                   <div className="p-4 border-b font-semibold flex items-center justify-between">
                     <span>Notifikasi</span>
 
@@ -451,16 +464,17 @@ export default function DashboardLayout({ title, children, menu }) {
                       </div>
                     ) : (
                       notifications?.map((notif) => (
-                        <button
+                        <div
                           key={notif.id}
-                          onClick={() => handleReadNotification(notif.id)}
                           className={`
                             w-full text-left p-4 border-b hover:bg-gray-50 transition
                             ${!notif.is_read ? "bg-orange-50" : ""}
                           `}
                         >
                           <div className="flex justify-between items-start gap-3">
+
                             <div className="flex-1">
+
                               <p className="font-semibold text-sm text-gray-800">
                                 {notif.title}
                               </p>
@@ -469,9 +483,31 @@ export default function DashboardLayout({ title, children, menu }) {
                                 {notif.message}
                               </p>
 
+                              {/* Ticket */}
+                              {notif.ticket_id && notif.ticket_code && (
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    await handleReadNotification(notif.id);
+                                    setOpenNotif(false);
+                                    navigate(`/tickets/${notif.ticket_id}`);
+                                  }}
+                                  className="
+                                    text-sm
+                                    text-orange-600
+                                    hover:text-orange-800
+                                    font-medium
+                                    mt-2
+                                  "
+                                >
+                                  Buka Tiket
+                                </button>
+                              )}
+
                               <p className="text-xs text-gray-400 mt-2">
                                 {new Date(notif.created_at).toLocaleString()}
                               </p>
+
                             </div>
 
                             <div className="flex items-start gap-2">
@@ -481,10 +517,8 @@ export default function DashboardLayout({ title, children, menu }) {
                               )}
 
                               <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteNotification(notif.id);
-                                }}
+                                type="button"
+                                onClick={() => handleDeleteNotification(notif.id)}
                                 className="
                                   text-gray-400
                                   hover:text-red-500
@@ -493,9 +527,11 @@ export default function DashboardLayout({ title, children, menu }) {
                               >
                                 <FiX size={14} />
                               </button>
+
                             </div>
+
                           </div>
-                        </button>
+                        </div>
                       ))
                     )}
                   </div>
