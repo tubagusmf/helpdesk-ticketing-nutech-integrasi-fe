@@ -361,16 +361,19 @@ export default function TicketRow({ ticket, role, userId }) {
               ROLE.ADMINISTRATOR,
               ROLE.STAFF,
               ROLE.EXECUTIVE,
-            ].includes(role) && (
-              <button
-                type="button"
-                onClick={() => setShowReassignModal(true)}
-                className="text-purple-600 hover:text-purple-800"
-                title="Reassign Ticket ke Engineer"
-              >
-                <FiSend size={16} />
-              </button>
-            )}
+            ].includes(role) &&
+              !["RESOLVED", "CLOSED"].includes(
+                String(ticket.status || "").toUpperCase()
+              ) && (
+                <button
+                  type="button"
+                  onClick={() => setShowReassignModal(true)}
+                  className="text-purple-600 hover:text-purple-800"
+                  title="Reassign Ticket ke Engineer"
+                >
+                  <FiSend size={16} />
+                </button>
+              )}
 
             </div>
       

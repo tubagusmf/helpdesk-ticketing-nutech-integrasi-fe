@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {FiArrowLeft, FiDownload, FiExternalLink, FiFileText, FiLoader} from "react-icons/fi";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import {getEngineerTicketResolution, getTicketById, getTicketResolution, markEngineerResolutionAsRead} from "../services/ticketService";
@@ -10,16 +10,25 @@ import { ROLE } from "../constants/role";
 export default function TicketDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-
   const [ticket, setTicket] = useState(null);
   const [resolution, setResolution] = useState(null);
-  const [engineerResolution, setEngineerResolution] = useState(null);
-
+  const [engineerResolutions, setEngineerResolutions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
   const token = localStorage.getItem("token");
-  const currentUser = token ? jwtDecode(token) : null;
+
+  const sortedEngineerResolutions = [
+    ...engineerResolutions,
+  ].sort((a, b) => {
+    return (
+      new Date(a.created_at || 0) -
+      new Date(b.created_at || 0)
+    );
+  });
+
+  const currentUser = token
+    ? jwtDecode(token)
+    : null;
 
   const rawRole =
     currentUser?.role_id ??
@@ -41,7 +50,7 @@ export default function TicketDetail() {
             : Number(rawRole)
         )
       : Number(rawRole);
-
+      
   const menu =
     role === ROLE.ADMINISTRATOR
       ? navigationMenu.administrator
@@ -60,16 +69,24 @@ export default function TicketDetail() {
       try {
         setLoading(true);
         setError("");
-
-        const ticketData = await getTicketById(id);
+        const ticketData =
+          await getTicketById(id);
 
         setTicket(ticketData);
 
-        // Resolution Staff/Admin
         try {
-          const resolutionData = await getTicketResolution(id);
-          setResolution(resolutionData);
+          const resolutionData =
+            await getTicketResolution(id);
+
+          setResolution(
+            resolutionData
+          );
         } catch (err) {
+          console.error(
+            "[TICKET DETAIL] Failed to fetch ticket resolution:",
+            err
+          );
+
           setResolution(null);
         }
 
@@ -77,19 +94,61 @@ export default function TicketDetail() {
           const engineerResolutionData =
             await getEngineerTicketResolution(id);
 
-          setEngineerResolution(engineerResolutionData);
+          console.log(
+            "[TICKET DETAIL] ENGINEER RESOLUTION:",
+            engineerResolutionData
+          );
 
-          if (engineerResolutionData) {
-            await markEngineerResolutionAsRead(id);
+          let resolutions = [];
+
+          if (
+            Array.isArray(
+              engineerResolutionData
+            )
+          ) {
+            resolutions =
+              engineerResolutionData;
+          } else if (
+            engineerResolutionData
+          ) {
+            resolutions = [
+              engineerResolutionData,
+            ];
+          }
+
+          setEngineerResolutions(
+            resolutions
+          );
+
+          if (resolutions.length > 0) {
+            try {
+              await markEngineerResolutionAsRead(
+                id
+              );
+            } catch (readError) {
+              console.error(
+                "[TICKET DETAIL] Failed to mark engineer resolution as read:",
+                readError
+              );
+            }
           }
         } catch (err) {
-          setEngineerResolution(null);
+          console.error(
+            "[TICKET DETAIL] Failed to fetch engineer resolution:",
+            err
+          );
+
+          setEngineerResolutions([]);
         }
       } catch (err) {
-        console.error("[TICKET DETAIL] Error:", err);
+        console.error(
+          "[TICKET DETAIL] Error:",
+          err
+        );
 
         setError(
-          err.message || "Gagal mengambil detail tiket"
+          err.message ||
+            "Gagal mengambil detail tiket"
         );
       } finally {
         setLoading(false);
@@ -102,12 +161,17 @@ export default function TicketDetail() {
   }, [id]);
 
   const formatDate = (date) => {
-    if (!date) return "-";
+    if (!date) {
+      return "-";
+    }
 
-    return new Date(date).toLocaleString("id-ID", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    });
+    return new Date(date).toLocaleString(
+      "id-ID",
+      {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }
+    );
   };
 
   const getStatusClass = (status) => {
@@ -119,9 +183,11 @@ export default function TicketDetail() {
         return "bg-orange-100 text-orange-600";
 
       case "ONHOLD":
+      case "PENDING":
         return "bg-blue-100 text-blue-600";
 
       case "RESOLVED":
+      case "DONE":
         return "bg-green-100 text-green-600";
 
       case "CLOSED":
@@ -153,51 +219,94 @@ export default function TicketDetail() {
 
   const downloadFile = async (file) => {
     try {
-      const response = await fetch(file.file_url || file.fileUrl, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
+      const fileUrl =
+        file.file_url ||
+        file.fileUrl;
 
-      if (!response.ok) {
-        throw new Error("Gagal mengunduh file");
-      }
-
-      const blob = await response.blob();
-
-      const url = window.URL.createObjectURL(blob);
-
-      const anchor = document.createElement("a");
-
-      anchor.href = url;
-
-      // Gunakan nama asli file dari backend
-      anchor.download =
+      const fileName =
         file.file_name ||
         file.fileName ||
         "attachment";
 
-      document.body.appendChild(anchor);
+      if (!fileUrl) {
+        throw new Error(
+          "URL file tidak ditemukan"
+        );
+      }
+
+      const response = await fetch(
+        fileUrl,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem(
+              "token"
+            )}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "Gagal mengunduh file"
+        );
+      }
+
+      const blob =
+        await response.blob();
+
+      const url =
+        window.URL.createObjectURL(
+          blob
+        );
+
+      const anchor =
+        document.createElement(
+          "a"
+        );
+
+      anchor.href = url;
+
+      anchor.download =
+        fileName;
+
+      document.body.appendChild(
+        anchor
+      );
 
       anchor.click();
 
       anchor.remove();
 
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("[DOWNLOAD] Error:", err);
-
-      // fallback kalau browser tidak mengizinkan fetch download
-      window.open(
-        file.file_url || file.fileUrl,
-        "_blank",
-        "noopener,noreferrer"
+      window.URL.revokeObjectURL(
+        url
       );
+    } catch (err) {
+      console.error(
+        "[DOWNLOAD] Error:",
+        err
+      );
+
+      const fileUrl =
+        file.file_url ||
+        file.fileUrl;
+
+      if (fileUrl) {
+        window.open(
+          fileUrl,
+          "_blank",
+          "noopener,noreferrer"
+        );
+      }
     }
   };
 
-  const renderAttachments = (attachments = []) => {
-    if (!attachments || attachments.length === 0) {
+  const renderAttachments = (
+    attachments = []
+  ) => {
+    if (
+      !attachments ||
+      attachments.length === 0
+    ) {
       return (
         <p className="text-sm text-gray-500">
           Tidak ada attachment.
@@ -207,54 +316,80 @@ export default function TicketDetail() {
 
     return (
       <div className="space-y-2">
-        {attachments.map((file) => {
-          const fileUrl =
-            file.file_url || file.fileUrl;
 
-          const fileName =
-            file.file_name ||
-            file.fileName ||
-            "Attachment";
+        {attachments.map(
+          (file, index) => {
+            const fileUrl =
+              file.file_url ||
+              file.fileUrl;
 
-          return (
-            <div
-              key={file.id}
-              className="flex items-center justify-between gap-3 border rounded-lg p-3 bg-gray-50"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <FiFileText
-                  className="text-gray-500 shrink-0"
-                  size={20}
-                />
+            const fileName =
+              file.file_name ||
+              file.fileName ||
+              "Attachment";
 
-                <span className="text-sm text-gray-700 truncate">
-                  {fileName}
-                </span>
+            return (
+              <div
+                key={
+                  file.id ||
+                  `${fileName}-${index}`
+                }
+                className="flex items-center justify-between gap-3 border rounded-lg p-3 bg-gray-50"
+              >
+
+                {/* FILE */}
+                <div className="flex items-center gap-3 min-w-0">
+
+                  <FiFileText
+                    className="text-gray-500 shrink-0"
+                    size={20}
+                  />
+
+                  <span className="text-sm text-gray-700 truncate">
+                    {fileName}
+                  </span>
+
+                </div>
+
+                {/* ACTION */}
+                <div className="flex items-center gap-2 shrink-0">
+
+                  {/* BUKA */}
+                  <a
+                    href={fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border rounded-md text-blue-600 hover:bg-blue-50"
+                  >
+                    <FiExternalLink
+                      size={14}
+                    />
+
+                    Buka
+                  </a>
+
+                  {/* UNDUH */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      downloadFile(file)
+                    }
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border rounded-md text-green-600 hover:bg-green-50"
+                  >
+                    <FiDownload
+                      size={14}
+                    />
+
+                    Unduh
+                  </button>
+
+                </div>
+
               </div>
+            );
+          }
+        )}
 
-              <div className="flex items-center gap-2 shrink-0">
-                <a
-                  href={fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border rounded-md text-blue-600 hover:bg-blue-50"
-                >
-                  <FiExternalLink size={14} />
-                  Buka
-                </a>
-
-                <button
-                  type="button"
-                  onClick={() => downloadFile(file)}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border rounded-md text-green-600 hover:bg-green-50"
-                >
-                  <FiDownload size={14} />
-                  Unduh
-                </button>
-              </div>
-            </div>
-          );
-        })}
       </div>
     );
   };
@@ -265,12 +400,19 @@ export default function TicketDetail() {
         title="Detail Tiket"
         menu={menu}
       >
+
         <div className="bg-white rounded-xl shadow p-10 flex justify-center items-center">
+
           <div className="flex items-center gap-2 text-gray-500">
+
             <FiLoader className="animate-spin" />
+
             Memuat detail tiket...
+
           </div>
+
         </div>
+
       </DashboardLayout>
     );
   }
@@ -281,20 +423,28 @@ export default function TicketDetail() {
         title="Detail Tiket"
         menu={menu}
       >
+
         <div className="bg-white rounded-xl shadow p-6">
+
           <div className="text-red-500 mb-4">
-            {error || "Tiket tidak ditemukan"}
+            {error ||
+              "Tiket tidak ditemukan"}
           </div>
 
           <button
             type="button"
-            onClick={() => navigate(-1)}
+            onClick={() =>
+              navigate(-1)
+            }
             className="inline-flex items-center gap-2 px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-50"
           >
             <FiArrowLeft />
+
             Kembali
           </button>
+
         </div>
+
       </DashboardLayout>
     );
   }
@@ -304,18 +454,24 @@ export default function TicketDetail() {
       title="Detail Tiket"
       menu={menu}
     >
+
       <div className="space-y-6">
 
-        {/* HEADER */}
         <div className="bg-white rounded-xl shadow p-6">
+
           <div className="flex items-center justify-between gap-4">
+
             <div>
+
               <button
                 type="button"
-                onClick={() => navigate(-1)}
+                onClick={() =>
+                  navigate(-1)
+                }
                 className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-4"
               >
                 <FiArrowLeft />
+
                 Kembali
               </button>
 
@@ -324,11 +480,14 @@ export default function TicketDetail() {
               </h1>
 
               <p className="text-sm text-gray-500 mt-1">
-                Detail informasi tiket helpdesk
+                Detail informasi tiket
+                helpdesk
               </p>
+
             </div>
 
             <div className="flex items-center gap-2">
+
               <span
                 className={`px-3 py-1.5 rounded-full text-xs font-medium ${getPriorityClass(
                   ticket.priority
@@ -344,12 +503,15 @@ export default function TicketDetail() {
               >
                 {ticket.status}
               </span>
+
             </div>
+
           </div>
+
         </div>
 
-        {/* INFORMASI TIKET */}
         <section className="bg-white rounded-xl shadow p-6">
+
           <h2 className="text-lg font-semibold text-gray-800 mb-5">
             Informasi Tiket
           </h2>
@@ -358,120 +520,166 @@ export default function TicketDetail() {
 
             <DetailItem
               label="Nomor Tiket"
-              value={ticket.ticket_code}
+              value={
+                ticket.ticket_code
+              }
             />
 
             <DetailItem
               label="Project"
-              value={ticket.project_name}
+              value={
+                ticket.project_name
+              }
             />
 
             <DetailItem
               label="Location"
-              value={ticket.location_name}
+              value={
+                ticket.location_name
+              }
             />
 
             <DetailItem
               label="Part"
-              value={ticket.part_name}
+              value={
+                ticket.part_name
+              }
             />
 
             <DetailItem
               label="Asset"
-              value={ticket.asset_code}
+              value={
+                ticket.asset_code
+              }
             />
 
             <DetailItem
               label="Pelapor"
-              value={ticket.reporter_name}
+              value={
+                ticket.reporter_name
+              }
             />
 
             <DetailItem
               label="Assigned To"
-              value={ticket.assigned_to_name}
+              value={
+                ticket.assigned_to_name
+              }
             />
 
             <DetailItem
               label="Priority"
-              value={ticket.priority}
+              value={
+                ticket.priority
+              }
             />
 
             <DetailItem
               label="Status"
-              value={ticket.status}
+              value={
+                ticket.status
+              }
             />
 
             <DetailItem
               label="Dibuat"
-              value={formatDate(ticket.created_at)}
+              value={formatDate(
+                ticket.created_at
+              )}
             />
 
             <DetailItem
               label="Due At"
-              value={formatDate(ticket.due_at)}
+              value={formatDate(
+                ticket.due_at
+              )}
             />
 
           </div>
+
         </section>
 
-        {/* PERMASALAHAN */}
         <section className="bg-white rounded-xl shadow p-6">
+
           <h2 className="text-lg font-semibold text-gray-800 mb-4">
             Permasalahan
           </h2>
 
           <div className="bg-gray-50 border rounded-lg p-4">
+
             <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-              {ticket.description || "-"}
+              {ticket.description ||
+                "-"}
             </p>
+
           </div>
+
         </section>
 
-        {/* RESOLUTION ADMIN / STAFF */}
         <section className="bg-white rounded-xl shadow p-6">
+
           <h2 className="text-lg font-semibold text-gray-800 mb-5">
             Resolusi Tiket
           </h2>
 
           {!resolution ? (
             <div className="bg-gray-50 border rounded-lg p-4">
+
               <p className="text-sm text-gray-500">
-                Belum ada resolusi tiket.
+                Belum ada resolusi
+                tiket.
               </p>
+
             </div>
           ) : (
             <div className="space-y-5">
 
+              {/* PENYEBAB */}
               <div>
+
                 <p className="text-xs font-medium text-gray-500 mb-1">
                   Penyebab
                 </p>
 
                 <div className="bg-gray-50 border rounded-lg p-4">
+
                   <p className="text-sm text-gray-700">
                     {resolution.cause_name ||
-                      resolution.cause?.name ||
+                      resolution
+                        .cause
+                        ?.name ||
                       "-"}
                   </p>
+
                 </div>
+
               </div>
 
+              {/* SOLUSI */}
               <div>
+
                 <p className="text-xs font-medium text-gray-500 mb-1">
                   Solusi
                 </p>
 
                 <div className="bg-gray-50 border rounded-lg p-4">
+
                   <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
                     {resolution.solution_name ||
-                      resolution.solution?.name ||
+                      resolution
+                        .solution
+                        ?.name ||
                       resolution.solution ||
                       "-"}
                   </p>
+
                 </div>
+
               </div>
 
+              {/* ATTACHMENT */}
               <div>
+
                 <p className="text-xs font-medium text-gray-500 mb-2">
                   Attachment
                 </p>
@@ -479,91 +687,162 @@ export default function TicketDetail() {
                 {renderAttachments(
                   resolution.attachments
                 )}
+
               </div>
 
             </div>
           )}
+
         </section>
 
-        {/* ENGINEER RESOLUTION */}
         <section className="bg-white rounded-xl shadow p-6">
+
           <div className="flex items-center justify-between mb-5">
+
             <div>
+
               <h2 className="text-lg font-semibold text-gray-800">
                 Resolusi Engineer
               </h2>
 
               <p className="text-sm text-gray-500 mt-1">
-                Solusi dan attachment yang diberikan oleh Engineer.
+                Solusi dan attachment
+                yang diberikan oleh
+                Engineer.
               </p>
+
             </div>
+
           </div>
 
-          {!engineerResolution ? (
+          {engineerResolutions.length ===
+          0 ? (
             <div className="bg-gray-50 border rounded-lg p-4">
+
               <p className="text-sm text-gray-500">
-                Belum ada resolusi dari Engineer.
+                Belum ada resolusi
+                dari Engineer.
               </p>
+
             </div>
           ) : (
             <div className="space-y-5">
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <DetailItem
-                  label="Engineer ID"
-                  value={engineerResolution.engineer_id}
-                />
+              {sortedEngineerResolutions.map(
+              (
+                engineerResolution,
+                index
+              ) => {
 
-                <DetailItem
-                  label="Dibuat"
-                  value={formatDate(
-                    engineerResolution.created_at
-                  )}
-                />
+                const resolutionNumber =
+                  index + 1;
 
-                <DetailItem
-                  label="Diperbarui"
-                  value={formatDate(
-                    engineerResolution.updated_at
-                  )}
-                />
-              </div>
+                return (
+                  <div
+                    key={
+                      engineerResolution.id ||
+                      index
+                    }
+                    className="border rounded-xl p-5 bg-gray-50"
+                  >
 
-              <div>
-                <p className="text-xs font-medium text-gray-500 mb-1">
-                  Solusi Engineer
-                </p>
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-5">
 
-                <div className="bg-gray-50 border rounded-lg p-4">
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                    {engineerResolution.solution ||
-                      "-"}
-                  </p>
-                </div>
-              </div>
+                      <div>
 
-              <div>
-                <p className="text-xs font-medium text-gray-500 mb-2">
-                  Attachment Engineer
-                </p>
+                        <p className="text-sm font-semibold text-gray-700">
+                          Resolusi #
+                          {resolutionNumber}
+                        </p>
 
-                {renderAttachments(
-                  engineerResolution.attachments
-                )}
-              </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {formatDate(
+                            engineerResolution.created_at
+                          )}
+                        </p>
+
+                      </div>
+
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+
+                      <DetailItem
+                        label="Engineer ID"
+                        value={
+                          engineerResolution.engineer_id ||
+                          engineerResolution.engineerId
+                        }
+                      />
+
+                      <DetailItem
+                        label="Dibuat"
+                        value={formatDate(
+                          engineerResolution.created_at
+                        )}
+                      />
+
+                      <DetailItem
+                        label="Diperbarui"
+                        value={formatDate(
+                          engineerResolution.updated_at
+                        )}
+                      />
+
+                    </div>
+
+                    <div>
+
+                      <p className="text-xs font-medium text-gray-500 mb-1">
+                        Solusi Engineer
+                      </p>
+
+                      <div className="bg-white border rounded-lg p-4">
+
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                          {engineerResolution.solution ||
+                            "-"}
+                        </p>
+
+                      </div>
+
+                    </div>
+
+                    <div className="mt-5">
+
+                      <p className="text-xs font-medium text-gray-500 mb-2">
+                        Attachment Engineer
+                      </p>
+
+                      {renderAttachments(
+                        engineerResolution.attachments
+                      )}
+
+                    </div>
+
+                  </div>
+                );
+              }
+            )}
 
             </div>
           )}
+
         </section>
 
       </div>
+
     </DashboardLayout>
   );
 }
 
-function DetailItem({ label, value }) {
+function DetailItem({
+  label,
+  value,
+}) {
   return (
     <div>
+
       <p className="text-xs font-medium text-gray-500 mb-1">
         {label}
       </p>
@@ -571,6 +850,7 @@ function DetailItem({ label, value }) {
       <p className="text-sm font-medium text-gray-800">
         {value || "-"}
       </p>
+
     </div>
   );
 }
