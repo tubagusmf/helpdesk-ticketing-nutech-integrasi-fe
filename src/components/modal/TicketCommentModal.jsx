@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { createTicketComment, getTicketComments } from "../../services/ticketService";
 import useTicketSocket from "../../hooks/useTicketSocket";
+import { jwtDecode } from "jwt-decode";
 
 export default function TicketCommentModal({ ticket, onClose }) {
   const [comments, setComments] = useState([]);
@@ -44,6 +45,19 @@ export default function TicketCommentModal({ ticket, onClose }) {
       setLoading(false);
     }
   };
+
+  const token = localStorage.getItem("token");
+
+  let currentUserId = null;
+
+  if (token) {
+    try {
+      const decoded = jwtDecode(token);
+      currentUserId = Number(decoded.user_id);
+    } catch (err) {
+      console.error("Invalid token:", err);
+    }
+  }
 
   useTicketSocket({
     onNewComment: (data) => {
@@ -103,18 +117,42 @@ export default function TicketCommentModal({ ticket, onClose }) {
               <p className="text-sm text-gray-400">Belum ada komentar</p>
             )}
 
-            {comments.map((c) => (
-              <div
-                key={c.id}
-                className="bg-white border rounded-lg p-3 text-sm"
-              >
-                <div className="flex justify-between text-xs text-gray-500 mb-1">
-                  <span>{c.user_name}</span>
-                  <span>{new Date(c.created_at).toLocaleString()}</span>
+            {comments.map((c) => {
+              const isMine = Number(c.user_id) === currentUserId;
+
+              return (
+                <div
+                  key={c.id}
+                  className={`flex ${isMine ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm shadow-sm ${
+                      isMine
+                        ? "bg-orange-600 text-white rounded-br-sm"
+                        : "bg-white border text-gray-800 rounded-bl-sm"
+                    }`}
+                  >
+                    <div
+                      className={`flex justify-between gap-4 text-xs mb-1 ${
+                        isMine ? "text-orange-100" : "text-gray-500"
+                      }`}
+                    >
+                      <span className="font-semibold">
+                        {c.user_name}
+                      </span>
+
+                      <span>
+                        {new Date(c.created_at).toLocaleString()}
+                      </span>
+                    </div>
+
+                    <p className="whitespace-pre-wrap break-words">
+                      {c.message}
+                    </p>
+                  </div>
                 </div>
-                <p>{c.message}</p>
-              </div>
-            ))}
+              );
+            })}
             <div ref={bottomRef} />
           </div>
 
@@ -140,7 +178,7 @@ export default function TicketCommentModal({ ticket, onClose }) {
                   ? "bg-gray-400"
                   : loading
                   ? "bg-gray-400"
-                  : "bg-blue-600"
+                  : "bg-orange-600"
               }`}
             >
               {loading ? "Mengirim..." : "Kirim Komentar"}
