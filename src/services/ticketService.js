@@ -1,4 +1,4 @@
-const BASE_URL = "${import.meta.env.VITE_API_URL}/v1";
+const BASE_URL = `${import.meta.env.VITE_API_URL}/v1`;
 
 const getHeaders = (isJSON = true) => {
   const headers = {
