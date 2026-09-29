@@ -365,7 +365,7 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
                     src={
                       ticket.attachment_url?.startsWith("http")
                         ? ticket.attachment_url
-                        : `http://localhost:3000/${ticket.attachment_url}`
+                        : `${import.meta.env.VITE_API_URL}/${ticket.attachment_url}`
                     }
                     alt="problem"
                     onError={(e) => {
@@ -600,7 +600,7 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
                     src={
                       resolution.attachment_url.startsWith("http")
                         ? resolution.attachment_url
-                        : `http://localhost:3000/${resolution.attachment_url}`
+                        : `${import.meta.env.VITE_API_URL}/${resolution.attachment_url}`
                     }
                     alt="resolution"
                     className="w-40 h-40 object-cover rounded-lg border"

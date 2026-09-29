@@ -3,7 +3,7 @@ import { forceOffline } from "../services/userService";
 import { jwtDecode } from "jwt-decode";
 
 const API = axios.create({
-  baseURL: "http://localhost:3000/v1",
+  baseURL: "${import.meta.env.VITE_API_URL}/v1",
 });
 
 API.interceptors.request.use((config) => {

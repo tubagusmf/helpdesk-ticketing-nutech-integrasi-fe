@@ -14,7 +14,7 @@ export const connectWebSocket = () => {
   if (!token) return null;
 
   socket = new WebSocket(
-    `ws://localhost:3000/ws?token=${token}`
+    `${import.meta.env.VITE_WS_URL}/ws?token=${token}`
   );
 
   socket.onopen = () => {

@@ -17,7 +17,7 @@ export function AuthProvider({ children }) {
         const currentTime = Date.now() / 1000;
   
         if (decoded.exp < currentTime) {
-          fetch("http://localhost:3000/v1/users/logout", {
+          fetch("${import.meta.env.VITE_API_URL}/v1/users/logout", {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
@@ -51,7 +51,7 @@ export function AuthProvider({ children }) {
   
     if (token) {
       try {
-        await fetch("http://localhost:3000/v1/users/logout", {
+        await fetch("${import.meta.env.VITE_API_URL}/v1/users/logout", {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",

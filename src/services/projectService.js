@@ -1,4 +1,4 @@
-const BASE_URL = "http://localhost:3000/v1/projects";
+const BASE_URL = "${import.meta.env.VITE_API_URL}/v1/projects";
 
 const getHeaders = () => ({
   "Content-Type": "application/json",
@@ -7,7 +7,7 @@ const getHeaders = () => ({
 
 export async function getProjects(page = 1, search = "") {
     const res = await fetch(
-      `http://localhost:3000/v1/projects?page=${page}&limit=10&name=${search}`,
+      `${import.meta.env.VITE_API_URL}/v1/projects?page=${page}&limit=10&name=${search}`,
       {
         headers: getHeaders(),
       }

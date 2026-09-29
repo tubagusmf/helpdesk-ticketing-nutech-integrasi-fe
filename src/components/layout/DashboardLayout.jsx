@@ -30,7 +30,7 @@ export default function DashboardLayout({ title, children, menu }) {
     try {
       const token = localStorage.getItem("token");
   
-      await fetch("http://localhost:3000/v1/users/logout", {
+      await fetch("${import.meta.env.VITE_API_URL}/v1/users/logout", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
