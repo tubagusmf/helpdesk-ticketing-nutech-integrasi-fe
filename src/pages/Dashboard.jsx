@@ -10,7 +10,7 @@ import {
   getStatusDistribution,
   getPriorityDistribution,
   getVolumePerProject,
-  getDashboardProjects, 
+  getDashboardProjects,
 } from "../services/dashboardService";
 
 import {
@@ -76,8 +76,7 @@ export default function Dashboard() {
 
   const [filters, setFilters] = useState(EMPTY_FILTERS);
 
-  const [appliedFilters, setAppliedFilters] =
-    useState(EMPTY_FILTERS);
+  const [appliedFilters, setAppliedFilters] = useState(EMPTY_FILTERS);
 
   const pieData = useMemo(
     () => [
@@ -102,7 +101,7 @@ export default function Dashboard() {
         value: statusData.onhold || 0,
       },
     ],
-    [statusData]
+    [statusData],
   );
 
   const mergedVolumeData = useMemo(() => {
@@ -111,20 +110,14 @@ export default function Dashboard() {
     }
 
     return projects.map((project) => {
-      const found = volumeData.find(
-        (item) => item.project === project.name
-      );
+      const found = volumeData.find((item) => item.project === project.name);
 
       return {
         project: project.name,
         total: found ? found.total : 0,
       };
     });
-  }, [
-    projects,
-    volumeData,
-    appliedFilters.project_id,
-  ]);
+  }, [projects, volumeData, appliedFilters.project_id]);
 
   useEffect(() => {
     if (!role) return;
@@ -141,19 +134,14 @@ export default function Dashboard() {
       setPriorityData([]);
       setVolumeData([]);
 
-      const [
-        summaryRes,
-        statusRes,
-        priorityRes,
-        volumeRes,
-        projectsRes,
-      ] = await Promise.all([
-        getDashboardSummary(appliedFilters),
-        getStatusDistribution(appliedFilters),
-        getPriorityDistribution(appliedFilters),
-        getVolumePerProject(appliedFilters),
-        getDashboardProjects(),
-      ]);
+      const [summaryRes, statusRes, priorityRes, volumeRes, projectsRes] =
+        await Promise.all([
+          getDashboardSummary(appliedFilters),
+          getStatusDistribution(appliedFilters),
+          getPriorityDistribution(appliedFilters),
+          getVolumePerProject(appliedFilters),
+          getDashboardProjects(),
+        ]);
 
       setSummary(summaryRes);
       setStatusData(statusRes);
@@ -247,9 +235,7 @@ export default function Dashboard() {
 
       {
         title: "Rata-rata Solusi",
-        value: formatHoursToHM(
-          summary.avg_resolution_time
-        ),
+        value: formatHoursToHM(summary.avg_resolution_time),
         subtitle: "Waktu penanganan",
         color: "text-purple-600",
       },
@@ -276,9 +262,7 @@ export default function Dashboard() {
 
       {
         title: "Resolved",
-        value:
-          (statusData.resolved || 0) +
-          (statusData.closed || 0),
+        value: (statusData.resolved || 0) + (statusData.closed || 0),
         color: "text-green-600",
       },
     ],
@@ -304,9 +288,7 @@ export default function Dashboard() {
 
       {
         title: "Resolved",
-        value:
-          (statusData.resolved || 0) +
-          (statusData.closed || 0),
+        value: (statusData.resolved || 0) + (statusData.closed || 0),
         color: "text-green-600",
       },
     ],
@@ -328,18 +310,14 @@ export default function Dashboard() {
 
       {
         title: "Ticket Selesai",
-        value:
-          (statusData.resolved || 0) +
-          (statusData.closed || 0),
+        value: (statusData.resolved || 0) + (statusData.closed || 0),
         subtitle: "Resolved + Closed",
         color: "text-green-600",
       },
 
       {
         title: "Rata-rata Solusi",
-        value: formatHoursToHM(
-          summary.avg_resolution_time
-        ),
+        value: formatHoursToHM(summary.avg_resolution_time),
         subtitle: "Waktu penanganan",
         color: "text-purple-600",
       },
@@ -362,18 +340,14 @@ export default function Dashboard() {
 
       {
         title: "Ticket Selesai",
-        value:
-          (statusData.resolved || 0) +
-          (statusData.closed || 0),
+        value: (statusData.resolved || 0) + (statusData.closed || 0),
         subtitle: "Resolved + Closed",
         color: "text-green-600",
       },
 
       {
         title: "Rata-rata Solusi",
-        value: formatHoursToHM(
-          summary.avg_resolution_time
-        ),
+        value: formatHoursToHM(summary.avg_resolution_time),
         subtitle: "Waktu penanganan",
         color: "text-purple-600",
       },
@@ -381,19 +355,11 @@ export default function Dashboard() {
   };
 
   if (!config) {
-    return (
-      <div className="p-6 text-red-600">
-        Role user tidak dikenali.
-      </div>
-    );
+    return <div className="p-6 text-red-600">Role user tidak dikenali.</div>;
   }
 
   return (
-    <DashboardLayout
-      title={config.title}
-      menu={config.menu}
-    >
-
+    <DashboardLayout title={config.title} menu={config.menu}>
       {error && (
         <div className="bg-red-100 text-red-700 p-4 rounded-xl mb-6">
           {error}
@@ -417,10 +383,7 @@ export default function Dashboard() {
           <option value="">Semua Project</option>
 
           {projects.map((project) => (
-            <option
-              key={project.id}
-              value={project.id}
-            >
+            <option key={project.id} value={project.id}>
               {project.name}
             </option>
           ))}
@@ -441,10 +404,7 @@ export default function Dashboard() {
           <option value="">Semua Part</option>
 
           {parts.map((part) => (
-            <option
-              key={part.id}
-              value={part.id}
-            >
+            <option key={part.id} value={part.id}>
               {part.name}
             </option>
           ))}
@@ -504,24 +464,20 @@ export default function Dashboard() {
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-            {summaryConfig[role]?.map(
-              (item, index) => (
-                <SummaryCard
-                  key={index}
-                  title={item.title}
-                  value={item.value}
-                  subtitle={item.subtitle}
-                  color={item.color}
-                />
-              )
-            )}
+            {summaryConfig[role]?.map((item, index) => (
+              <SummaryCard
+                key={index}
+                title={item.title}
+                value={item.value}
+                subtitle={item.subtitle}
+                color={item.color}
+              />
+            ))}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="bg-white p-6 rounded-xl shadow min-h-[320px]">
-              <h3 className="font-semibold mb-4">
-                Status Distribusi
-              </h3>
+              <h3 className="font-semibold mb-4">Status Distribusi</h3>
 
               <div className="flex flex-col items-center">
                 <PieChart
@@ -541,14 +497,7 @@ export default function Dashboard() {
                     animationEasing="ease-out"
                   >
                     {pieData.map((entry, index) => (
-                      <Cell
-                        key={index}
-                        fill={
-                          COLORS[
-                            index % COLORS.length
-                          ]
-                        }
-                      />
+                      <Cell key={index} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
 
@@ -557,17 +506,11 @@ export default function Dashboard() {
 
                 <div className="flex flex-wrap justify-center gap-3 mt-3 text-xs">
                   {pieData.map((item, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-1"
-                    >
+                    <div key={index} className="flex items-center gap-1">
                       <span
                         className="w-3 h-3 rounded-full"
                         style={{
-                          backgroundColor:
-                            COLORS[
-                              index % COLORS.length
-                            ],
+                          backgroundColor: COLORS[index % COLORS.length],
                         }}
                       />
 
@@ -579,25 +522,19 @@ export default function Dashboard() {
             </div>
 
             <div className="bg-white p-6 rounded-xl shadow min-h-[320px]">
-              <h3 className="font-semibold mb-4">
-                Berdasarkan Prioritas
-              </h3>
+              <h3 className="font-semibold mb-4">Berdasarkan Prioritas</h3>
 
               <div className="space-y-3 max-h-[200px] overflow-y-auto">
                 {priorityData.map((item, index) => {
                   const max = Math.max(
-                    ...priorityData.map(
-                      (priority) => priority.total
-                    ),
-                    1
+                    ...priorityData.map((priority) => priority.total),
+                    1,
                   );
 
                   return (
                     <div key={index}>
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="font-medium">
-                          {item.priority}
-                        </span>
+                        <span className="font-medium">{item.priority}</span>
 
                         <span>{item.total}</span>
                       </div>
@@ -607,23 +544,17 @@ export default function Dashboard() {
                           className="h-2 rounded-full transition-all duration-700 ease-out"
                           style={{
                             width: animateBar
-                              ? `${
-                                  (item.total / max) *
-                                  100
-                                }%`
+                              ? `${(item.total / max) * 100}%`
                               : "0%",
 
                             backgroundColor:
-                              item.priority ===
-                              "URGENT"
+                              item.priority === "URGENT"
                                 ? "#ef4444"
-                                : item.priority ===
-                                  "HIGH"
-                                ? "#f97316"
-                                : item.priority ===
-                                  "MEDIUM"
-                                ? "#3b82f6"
-                                : "#10b981",
+                                : item.priority === "HIGH"
+                                  ? "#f97316"
+                                  : item.priority === "MEDIUM"
+                                    ? "#3b82f6"
+                                    : "#10b981",
                           }}
                         />
                       </div>
@@ -634,25 +565,18 @@ export default function Dashboard() {
             </div>
 
             <div className="bg-white p-6 rounded-xl shadow min-h-[320px]">
-              <h3 className="font-semibold mb-4">
-                Volume per Project
-              </h3>
+              <h3 className="font-semibold mb-4">Volume per Project</h3>
 
               <div className="flex items-center justify-center h-full text-gray-400">
                 <BarChart
                   width={260}
                   height={200}
                   data={mergedVolumeData}
-                  key={JSON.stringify(
-                    mergedVolumeData
-                  )}
+                  key={JSON.stringify(mergedVolumeData)}
                 >
                   <CartesianGrid strokeDasharray="3 3" />
 
-                  <XAxis
-                    dataKey="project"
-                    tick={{ fontSize: 10 }}
-                  />
+                  <XAxis dataKey="project" tick={{ fontSize: 10 }} />
 
                   <YAxis />
 

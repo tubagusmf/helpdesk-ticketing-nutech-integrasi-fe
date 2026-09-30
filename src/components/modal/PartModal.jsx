@@ -56,17 +56,12 @@ export default function PartModal({
           />
 
           <div className="flex justify-end gap-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 border rounded-lg"
-            >
+            <button onClick={onClose} className="px-4 py-2 border rounded-lg">
               Batal
             </button>
 
             <button
-              onClick={() =>
-                onSubmit(name, selectedProject?.value)
-              }
+              onClick={() => onSubmit(name, selectedProject?.value)}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg"
             >
               Simpan

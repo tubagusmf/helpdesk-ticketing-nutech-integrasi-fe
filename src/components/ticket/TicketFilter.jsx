@@ -1,218 +1,529 @@
-import { FiSearch, FiDownload, FiPlus, FiRotateCcw } from "react-icons/fi";
-import { useState, useEffect } from "react";
+import {
+  FiSearch,
+  FiDownload,
+  FiPlus,
+  FiRotateCcw,
+  FiSliders,
+  FiChevronDown,
+} from "react-icons/fi";
+
+import { useEffect, useMemo, useState } from "react";
+
 import TicketModal from "../modal/TicketModal";
-import { getProjects, getStaffs } from "../../services/ticketService";
-import { exportTickets } from "../../services/ticketService";
+
+import {
+  getProjects,
+  getStaffs,
+  exportTickets,
+} from "../../services/ticketService";
+
 import { ROLE } from "../../constants/role";
 
-export default function TicketFilter({ search, setSearch, filters, setFilters, tickets, role }) {
+const EMPTY_FILTERS = {
+  project_id: "",
+  assigned_to_id: "",
+  reporter_id: "",
+  priority: "",
+  status: "",
+  start_date: "",
+  end_date: "",
+};
 
+export default function TicketFilter({
+  search,
+  setSearch,
+  filters,
+  setFilters,
+  tickets,
+  role,
+}) {
   const [openModal, setOpenModal] = useState(false);
+
   const [projects, setProjects] = useState([]);
   const [staffs, setStaffs] = useState([]);
-  const [reporters, setReporters] = useState([]);
+
+  const [showFilters, setShowFilters] = useState(false);
+
+  const [isExporting, setIsExporting] = useState(false);
+
+  // =========================================================
+  // LOAD FILTER DATA
+  // =========================================================
 
   useEffect(() => {
     loadFilterData();
   }, []);
-  
+
   const loadFilterData = async () => {
     try {
-      const projectRes = await getProjects();
-      const staffRes = await getStaffs();
-  
+      const [projectRes, staffRes] = await Promise.all([
+        getProjects(),
+        getStaffs(),
+      ]);
+
       setProjects(projectRes?.data || projectRes || []);
+
       setStaffs(staffRes?.data || staffRes || []);
-      setReporters(staffRes?.data || staffRes || []);
-    } catch (err) {
-      console.error("Error load filter:", err);
+    } catch (error) {
+      console.error("Error load filter:", error);
     }
   };
 
-  const reporterOptions = Array.from(
-    new Map(
-      (tickets || []).map((t) => [
-        t.reporter_name,
-        {
-          id: t.reporter_id,
-          name: t.reporter_name,
-        },
-      ])
-    ).values()
-  );
+  const reporterOptions = useMemo(() => {
+    return Array.from(
+      new Map(
+        (tickets || [])
+          .filter((ticket) => ticket.reporter_id && ticket.reporter_name)
+          .map((ticket) => [
+            ticket.reporter_id,
+            {
+              id: ticket.reporter_id,
+              name: ticket.reporter_name,
+            },
+          ]),
+      ).values(),
+    );
+  }, [tickets]);
 
-  const handleChange = (e) => {
-    setFilters({
-      ...filters,
-      [e.target.name]: e.target.value,
-    });
+  const activeFilterCount = useMemo(() => {
+    return Object.values(filters || {}).filter(Boolean).length;
+  }, [filters]);
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+
+    setFilters((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleReset = () => {
     setFilters({
-      project_id: "",
-      assigned_to_id: "",
-      reporter_id: "",
-      priority: "",
-      status: "",
-      start_date: "",
-      end_date: "",
+      ...EMPTY_FILTERS,
     });
+
+    setShowFilters(false);
   };
+
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+
+      await exportTickets({
+        ...filters,
+        search,
+      });
+    } catch (error) {
+      console.error("Export ticket error:", error);
+
+      alert(error?.message || "Gagal export ticket");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const selectClassName = `
+    w-full
+    h-10
+    border
+    border-gray-200
+    bg-white
+    px-3
+    rounded-xl
+    text-sm
+    text-gray-700
+    focus:outline-none
+    focus:ring-2
+    focus:ring-blue-100
+    focus:border-blue-400
+    transition
+  `;
+
+  const dateInputClassName = `
+    w-full
+    h-10
+    border
+    border-gray-200
+    bg-white
+    px-3
+    rounded-xl
+    text-sm
+    text-gray-700
+    focus:outline-none
+    focus:ring-2
+    focus:ring-blue-100
+    focus:border-blue-400
+    transition
+  `;
 
   return (
     <>
-      <div className="bg-gray-50 border rounded-xl p-4 mb-4">
+      <div
+        className="
+          mb-5
+          rounded-2xl
+          border
+          border-gray-200
+          bg-gray-50
+          p-3
+          sm:p-4
+        "
+      >
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold text-gray-800">
+              Filter Tiket
+            </h2>
 
-        <div className="mb-3">
-          <h2 className="text-sm font-semibold text-gray-700">
-            Daftar Tiket Aduan
-          </h2>
+            <p className="hidden sm:block text-xs text-gray-500 mt-0.5">
+              Cari dan filter tiket berdasarkan kebutuhan
+            </p>
+          </div>
+
+          {/* MOBILE FILTER BUTTON */}
+          <button
+            type="button"
+            onClick={() => setShowFilters((prev) => !prev)}
+            className="
+              md:hidden
+              shrink-0
+              h-9
+              px-3
+              rounded-xl
+              border
+              border-gray-200
+              bg-white
+              text-gray-700
+              text-xs
+              font-medium
+              flex
+              items-center
+              gap-2
+              hover:bg-gray-50
+              transition
+            "
+          >
+            <FiSliders size={14} />
+
+            <span>Filter</span>
+
+            {activeFilterCount > 0 && (
+              <span
+                className="
+                  min-w-5
+                  h-5
+                  px-1
+                  rounded-full
+                  bg-orange-500
+                  text-white
+                  text-[10px]
+                  font-bold
+                  flex
+                  items-center
+                  justify-center
+                "
+              >
+                {activeFilterCount}
+              </span>
+            )}
+
+            <FiChevronDown
+              size={13}
+              className={`
+                transition-transform
+                ${showFilters ? "rotate-180" : ""}
+              `}
+            />
+          </button>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-2 mb-3">
+        <div
+          className="
+            flex
+            flex-col
+            sm:flex-row
+            gap-2
+          "
+        >
+          {/* SEARCH */}
+          <div className="relative flex-1 min-w-0">
+            <FiSearch
+              className="
+                absolute
+                left-3
+                top-1/2
+                -translate-y-1/2
+                text-gray-400
+              "
+              size={16}
+            />
 
-          <div className="relative flex-1">
-            <FiSearch className="absolute left-3 top-3 text-gray-400 text-sm" />
             <input
               type="text"
-              placeholder="Cari Nomor Tiket..."
+              placeholder="Cari nomor tiket..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full border bg-white pl-9 pr-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+              onChange={(event) => setSearch(event.target.value)}
+              className="
+                w-full
+                h-10
+                border
+                border-gray-200
+                bg-white
+                pl-9
+                pr-3
+                rounded-xl
+                text-sm
+                focus:outline-none
+                focus:ring-2
+                focus:ring-blue-100
+                focus:border-blue-400
+                transition
+              "
             />
           </div>
 
-          <div className="flex gap-2">
-
+          {/* ACTION BUTTONS */}
+          <div
+            className="
+              flex
+              gap-2
+              shrink-0
+            "
+          >
+            {/* EXPORT */}
             <button
-              onClick={() => exportTickets({
-                ...filters,
-                search,
-              })}
-              className="p-2 border rounded-lg bg-green-50 text-green-600 hover:bg-green-100"
+              type="button"
+              onClick={handleExport}
+              disabled={isExporting}
+              title="Export ticket"
+              className="
+                h-10
+                w-10
+                shrink-0
+                flex
+                items-center
+                justify-center
+                rounded-xl
+                border
+                border-green-200
+                bg-green-50
+                text-green-600
+                hover:bg-green-100
+                disabled:opacity-50
+                disabled:cursor-not-allowed
+                transition
+              "
             >
               <FiDownload size={16} />
             </button>
 
+            {/* CREATE TICKET */}
             {[ROLE.USER, ROLE.ADMINISTRATOR].includes(role) && (
-            <button
-              onClick={() => setOpenModal(true)}
-              className="flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm"
-            >
-              <FiPlus size={16} />
-              Buat Tiket
-            </button>
-          )}
+              <button
+                type="button"
+                onClick={() => setOpenModal(true)}
+                className="
+                  h-10
+                  flex
+                  items-center
+                  justify-center
+                  gap-2
+                  px-3
+                  sm:px-4
+                  rounded-xl
+                  bg-blue-600
+                  text-white
+                  text-xs
+                  sm:text-sm
+                  font-medium
+                  hover:bg-blue-700
+                  transition
+                  whitespace-nowrap
+                "
+              >
+                <FiPlus size={16} />
 
+                <span>Buat Tiket</span>
+              </button>
+            )}
           </div>
         </div>
 
         <div
-          className={`grid gap-2 ${
-            role === ROLE.ADMINISTRATOR
-              ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-6"
-              : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-6"
-          }`}
+          className={`
+            ${showFilters ? "block" : "hidden"}
+            md:block
+            mt-3
+            pt-3
+            border-t
+            border-gray-200
+          `}
         >
-          <select
-            name="project_id"
-            value={filters.project_id}
-            onChange={handleChange}
-            className="border bg-white px-3 py-2 rounded-lg text-sm"
+          <div
+            className="
+              grid
+              grid-cols-1
+              sm:grid-cols-2
+              lg:grid-cols-6
+              gap-3
+            "
           >
-            <option value="">Semua Project</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+            {/* PROJECT */}
+            <div className="min-w-0">
+              <label className="block mb-1 text-[11px] font-semibold uppercase text-gray-400">
+                Project
+              </label>
 
-          {/* {role === ROLE.ADMINISTRATOR && (
-            <select
-              name="assigned_to_id"
-              value={filters.assigned_to_id}
-              onChange={handleChange}
-              className="border bg-white px-3 py-2 rounded-lg text-sm"
-            >
-              <option value="">Semua Staff</option>
-              {staffs.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+              <select
+                name="project_id"
+                value={filters.project_id}
+                onChange={handleChange}
+                className={selectClassName}
+              >
+                <option value="">Semua Project</option>
+
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* PRIORITY */}
+            <div className="min-w-0">
+              <label className="block mb-1 text-[11px] font-semibold uppercase text-gray-400">
+                Prioritas
+              </label>
+
+              <select
+                name="priority"
+                value={filters.priority}
+                onChange={handleChange}
+                className={selectClassName}
+              >
+                <option value="">Semua Prioritas</option>
+
+                <option value="LOW">LOW</option>
+
+                <option value="MEDIUM">MEDIUM</option>
+
+                <option value="HIGH">HIGH</option>
+
+                <option value="URGENT">URGENT</option>
+              </select>
+            </div>
+
+            {/* STATUS */}
+            <div className="min-w-0">
+              <label className="block mb-1 text-[11px] font-semibold uppercase text-gray-400">
+                Status
+              </label>
+
+              <select
+                name="status"
+                value={filters.status}
+                onChange={handleChange}
+                className={selectClassName}
+              >
+                <option value="">Semua Status</option>
+
+                {role === ROLE.ENGINEER ? (
+                  <>
+                    <option value="PENDING">PENDING</option>
+
+                    <option value="DONE">DONE</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="OPEN">OPEN</option>
+
+                    <option value="ONHOLD">ONHOLD</option>
+
+                    <option value="RESOLVED">RESOLVED</option>
+
+                    <option value="CLOSED">CLOSED</option>
+                  </>
+                )}
+              </select>
+            </div>
+
+            {/* START DATE */}
+            <div className="min-w-0">
+              <label className="block mb-1 text-[11px] font-semibold uppercase text-gray-400">
+                Tanggal Awal
+              </label>
+
+              <input
+                type="date"
+                name="start_date"
+                value={filters.start_date}
+                onChange={handleChange}
+                className={dateInputClassName}
+              />
+            </div>
+
+            {/* END DATE */}
+            <div className="min-w-0">
+              <label className="block mb-1 text-[11px] font-semibold uppercase text-gray-400">
+                Tanggal Akhir
+              </label>
+
+              <input
+                type="date"
+                name="end_date"
+                value={filters.end_date}
+                onChange={handleChange}
+                className={dateInputClassName}
+              />
+            </div>
+
+            {/* RESET */}
+            <div className="flex items-end">
+              <button
+                type="button"
+                onClick={handleReset}
+                className="
+                  w-full
+                  h-10
+                  flex
+                  items-center
+                  justify-center
+                  gap-2
+                  border
+                  border-gray-200
+                  bg-white
+                  text-gray-600
+                  rounded-xl
+                  text-sm
+                  hover:bg-gray-100
+                  transition
+                "
+              >
+                <FiRotateCcw size={14} />
+                Reset Filter
+              </button>
+            </div>
+          </div>
+
+          {/* DESKTOP ACTIVE FILTER INFO */}
+          {activeFilterCount > 0 && (
+            <div className="hidden md:flex items-center gap-2 mt-3 text-xs text-gray-500">
+              <span>{activeFilterCount} filter aktif</span>
+
+              <button
+                type="button"
+                onClick={handleReset}
+                className="text-orange-600 hover:text-orange-700 font-medium"
+              >
+                Bersihkan semua
+              </button>
+            </div>
           )}
-
-          {role === ROLE.ADMINISTRATOR && (
-            <select name="reporter_id" value={filters.reporter_id} onChange={handleChange} className="border px-3 py-2 rounded-lg text-sm">
-              <option value="">Semua Pelapor</option>
-              {reporterOptions.map(r => (
-                <option key={r.id} value={r.id}>{r.name}</option>
-              ))}
-            </select>
-          )} */}
-
-          <select
-            name="priority"
-            value={filters.priority}
-            onChange={handleChange}
-            className="border bg-white px-3 py-2 rounded-lg text-sm"
-          >
-            <option value="">Semua Prioritas</option>
-            <option value="LOW">LOW</option>
-            <option value="MEDIUM">MEDIUM</option>
-            <option value="HIGH">HIGH</option>
-            <option value="URGENT">URGENT</option>
-          </select>
-
-          <select
-            name="status"
-            value={filters.status}
-            onChange={handleChange}
-            className="border bg-white px-3 py-2 rounded-lg text-sm"
-          >
-            <option value="">Semua Status</option>
-
-            {role === ROLE.ENGINEER ? (
-              <>
-                <option value="PENDING">PENDING</option>
-                <option value="DONE">DONE</option>
-              </>
-            ) : (
-              <>
-                <option value="OPEN">OPEN</option>
-                <option value="ONHOLD">ONHOLD</option>
-                <option value="RESOLVED">RESOLVED</option>
-                <option value="CLOSED">CLOSED</option>
-              </>
-            )}
-          </select>
-
-          <div className="flex flex-col">
-            <label className="text-xs text-gray-500">Tanggal Awal</label>
-            <input type="date" name="start_date" value={filters.start_date} onChange={handleChange} className="border px-3 py-2 rounded-lg text-sm" />
-          </div>
-
-          <div className="flex flex-col">
-            <label className="text-xs text-gray-500">Tanggal Akhir</label>
-            <input type="date" name="end_date" value={filters.end_date} onChange={handleChange} className="border px-3 py-2 rounded-lg text-sm" />
-          </div>
-
-          <button onClick={handleReset} className="flex items-center justify-center gap-2 border px-3 py-2 rounded-lg text-sm bg-white hover:bg-gray-100">
-            <FiRotateCcw size={14} />
-            Reset Filter
-          </button>
-
         </div>
       </div>
-
-      {openModal && (
-        <TicketModal
-          onClose={() => setOpenModal(false)}
-        />
-      )}
+      {openModal && <TicketModal onClose={() => setOpenModal(false)} />}
     </>
   );
 }

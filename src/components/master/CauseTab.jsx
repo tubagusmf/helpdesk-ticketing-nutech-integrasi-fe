@@ -106,9 +106,7 @@ export default function CauseTab() {
           >
             <div>
               <p className="font-medium">{item.name}</p>
-              <p className="text-sm text-gray-500">
-                Part: {item.part?.name}
-              </p>
+              <p className="text-sm text-gray-500">Part: {item.part?.name}</p>
               <p className="text-sm text-gray-500">
                 Project: {item.part?.project?.name}
               </p>

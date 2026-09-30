@@ -2,12 +2,12 @@ import { useEffect, useState } from "react";
 import { jwtDecode } from "jwt-decode";
 import Select from "react-select";
 import {
-    createTicket,
-    getLocations,
-    getParts,
-    getAssets,
-    getStaffs,
-  } from "../../services/ticketService";
+  createTicket,
+  getLocations,
+  getParts,
+  getAssets,
+  getStaffs,
+} from "../../services/ticketService";
 import { getCurrentUser } from "../../services/userService";
 
 export default function TicketModal({ onClose, role }) {
@@ -36,24 +36,24 @@ export default function TicketModal({ onClose, role }) {
 
   const userRole = currentUser?.role;
 
-  const projectOptions = projects.map(p => ({
+  const projectOptions = projects.map((p) => ({
     value: p.id,
-    label: p.name
+    label: p.name,
   }));
-  
-  const locationOptions = locations.map(l => ({
+
+  const locationOptions = locations.map((l) => ({
     value: l.id,
-    label: l.name
+    label: l.name,
   }));
-  
-  const partOptions = parts.map(p => ({
+
+  const partOptions = parts.map((p) => ({
     value: p.id,
-    label: p.name
+    label: p.name,
   }));
-  
-  const assetOptions = assets.map(a => ({
+
+  const assetOptions = assets.map((a) => ({
     value: a.id,
-    label: a.name
+    label: a.name,
   }));
 
   const priorityOptions = [
@@ -77,19 +77,19 @@ export default function TicketModal({ onClose, role }) {
     fetchProjects();
     fetchStaffs();
   }, []);
-  
+
   const fetchProjects = async () => {
     const user = await getCurrentUser();
-  
+
     setProjects(user.projects || []);
   };
-  
+
   const fetchStaffs = async () => {
     const res = await getStaffs();
-    
+
     const activeStaffs = (res.data || []).filter(
-      (user) => user.is_active === true
-    );  
+      (user) => user.is_active === true,
+    );
     setStaffs(activeStaffs);
   };
 
@@ -102,9 +102,9 @@ export default function TicketModal({ onClose, role }) {
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
-  
+
     setAttachment(file);
-  
+
     if (file) {
       const previewUrl = URL.createObjectURL(file);
       setPreview(previewUrl);
@@ -114,28 +114,29 @@ export default function TicketModal({ onClose, role }) {
   const handleSubmit = async () => {
     try {
       setLoading(true);
-  
+
       const formData = new FormData();
-  
+
       Object.keys(form).forEach((key) => {
         if (form[key] !== "" && form[key] !== null) {
           formData.append(key, form[key]);
         }
       });
-  
+
       if (attachment) {
         formData.append("attachment", attachment);
       }
-  
+
       const res = await createTicket(formData);
-  
+
       if (!res.assigned) {
-        alert("⏳ Tiket berhasil dibuat.\nSistem sedang mencari staff yang tersedia.");
+        alert(
+          "⏳ Tiket berhasil dibuat.\nSistem sedang mencari staff yang tersedia.",
+        );
       } else {
         alert("✅ Tiket berhasil di assign ke staff");
       }
       onClose();
-  
     } catch (err) {
       console.error(err);
       alert(err.message);
@@ -147,7 +148,6 @@ export default function TicketModal({ onClose, role }) {
   return (
     <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
       <div className="bg-white w-full max-w-6xl rounded-xl shadow-lg p-6 overflow-y-auto max-h-[90vh]">
-
         {/* HEADER */}
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold">Buat Tiket Baru</h2>
@@ -155,7 +155,6 @@ export default function TicketModal({ onClose, role }) {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
           {/* LEFT */}
           <div className="border rounded-xl p-4">
             <h3 className="text-sm font-semibold mb-3 text-gray-600">
@@ -163,9 +162,8 @@ export default function TicketModal({ onClose, role }) {
             </h3>
 
             <div className="space-y-3">
-
               {/* PROJECT */}
-              <div className="flex flex-col">
+              <div className="flex flex-col min-w-0">
                 <label className="text-sm font-medium text-gray-700">
                   Project
                 </label>
@@ -202,12 +200,13 @@ export default function TicketModal({ onClose, role }) {
               </div>
 
               {/* LOCATION & PART */}
-              <div className="grid grid-cols-2 gap-2">
-
-                <div className="flex flex-col">
-                  <label className="text-sm font-medium text-gray-700">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* LOKASI */}
+                <div className="flex flex-col min-w-0">
+                  <label className="text-sm font-medium text-gray-700 mb-1">
                     Lokasi
                   </label>
+
                   <Select
                     options={locationOptions}
                     value={selectedLocation}
@@ -227,13 +226,16 @@ export default function TicketModal({ onClose, role }) {
                     placeholder="Pilih atau ketik lokasi..."
                     isSearchable
                     isDisabled={!selectedProject}
+                    className="w-full"
                   />
                 </div>
 
-                <div className="flex flex-col">
-                  <label className="text-sm font-medium text-gray-700">
+                {/* PERANGKAT */}
+                <div className="flex flex-col min-w-0">
+                  <label className="text-sm font-medium text-gray-700 mb-1">
                     Perangkat
                   </label>
+
                   <Select
                     options={partOptions}
                     value={selectedPart}
@@ -248,19 +250,25 @@ export default function TicketModal({ onClose, role }) {
                         asset_id: "",
                       });
 
+                      if (!selected?.value) {
+                        setAssets([]);
+                        return;
+                      }
+
                       const res = await getAssets(selected.value);
+
                       setAssets(res.data || []);
                     }}
                     placeholder="Pilih atau ketik perangkat..."
                     isSearchable
                     isDisabled={!selectedProject}
+                    className="w-full"
                   />
                 </div>
-
               </div>
 
               {/* ASSET */}
-              <div className="flex flex-col">
+              <div className="flex flex-col min-w-0">
                 <label className="text-sm font-medium text-gray-700">
                   ID / No Perangkat
                 </label>
@@ -282,7 +290,7 @@ export default function TicketModal({ onClose, role }) {
               </div>
 
               {/* DESCRIPTION */}
-              <div className="flex flex-col">
+              <div className="flex flex-col min-w-0">
                 <label className="text-sm font-medium text-gray-700">
                   Deskripsi Permasalahan
                 </label>
@@ -295,7 +303,7 @@ export default function TicketModal({ onClose, role }) {
               </div>
 
               {/* ATTACHMENT */}
-              <div className="flex flex-col">
+              <div className="flex flex-col min-w-0">
                 <label className="text-sm font-medium text-gray-700">
                   Bukti Foto Masalah (Opsional)
                 </label>
@@ -315,7 +323,6 @@ export default function TicketModal({ onClose, role }) {
                   />
                 )}
               </div>
-
             </div>
           </div>
 
@@ -326,9 +333,8 @@ export default function TicketModal({ onClose, role }) {
             </h3>
 
             <div className="space-y-3">
-
               {/* PELAPOR */}
-              <div className="flex flex-col">
+              <div className="flex flex-col min-w-0">
                 <label className="text-sm font-medium text-gray-700">
                   Nama Pelapor
                 </label>
@@ -340,7 +346,7 @@ export default function TicketModal({ onClose, role }) {
               </div>
 
               {/* STATUS */}
-              <div className="flex flex-col">
+              <div className="flex flex-col min-w-0">
                 <label className="text-sm font-medium text-gray-700">
                   Status
                 </label>
@@ -352,13 +358,13 @@ export default function TicketModal({ onClose, role }) {
               </div>
 
               {/* PRIORITY */}
-              <div className="flex flex-col">
+              <div className="flex flex-col min-w-0">
                 <label className="text-sm font-medium text-gray-700">
                   Prioritas
                 </label>
                 <Select
                   options={priorityOptions}
-                  value={priorityOptions.find(p => p.value === form.priority)}
+                  value={priorityOptions.find((p) => p.value === form.priority)}
                   onChange={(selected) => {
                     setForm({
                       ...form,
@@ -386,7 +392,6 @@ export default function TicketModal({ onClose, role }) {
             {loading ? "Menyimpan..." : "Buat Tiket"}
           </button>
         </div>
-
       </div>
     </div>
   );

@@ -69,8 +69,8 @@ export default function LocationTab() {
 
   return (
     <>
-    {/* HEADER */}
-    <div className="flex justify-between items-center mb-6">
+      {/* HEADER */}
+      <div className="flex justify-between items-center mb-6">
         <h2 className="text-lg font-semibold">Data Locations</h2>
 
         <button

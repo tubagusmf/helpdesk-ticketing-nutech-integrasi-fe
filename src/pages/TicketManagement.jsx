@@ -33,76 +33,69 @@ export default function TicketManagement() {
 
   const userId = Number(currentUser?.user_id);
 
-  const rawRole =
-    currentUser?.role_id ??
-    currentUser?.role;
+  const rawRole = currentUser?.role_id ?? currentUser?.role;
 
   const role =
-  typeof rawRole === "string"
-    ? (
-        rawRole === "ADMINISTRATOR"
-          ? ROLE.ADMINISTRATOR
-          : rawRole === "STAFF"
+    typeof rawRole === "string"
+      ? rawRole === "ADMINISTRATOR"
+        ? ROLE.ADMINISTRATOR
+        : rawRole === "STAFF"
           ? ROLE.STAFF
           : rawRole === "USER"
-          ? ROLE.USER
-          : rawRole === "EXECUTIVE"
-          ? ROLE.EXECUTIVE
-          : rawRole === "ENGINEER"
-          ? ROLE.ENGINEER
-          : Number(rawRole)
-      )
-    : Number(rawRole);
+            ? ROLE.USER
+            : rawRole === "EXECUTIVE"
+              ? ROLE.EXECUTIVE
+              : rawRole === "ENGINEER"
+                ? ROLE.ENGINEER
+                : Number(rawRole)
+      : Number(rawRole);
 
   const menu =
     role === ROLE.ADMINISTRATOR
       ? navigationMenu.administrator
       : role === ROLE.STAFF
-      ? navigationMenu.staff
-      : role === ROLE.USER
-      ? navigationMenu.user
-      : role === ROLE.EXECUTIVE
-      ? navigationMenu.executive
-      : role === ROLE.ENGINEER
-      ? navigationMenu.engineer
-      : [];
+        ? navigationMenu.staff
+        : role === ROLE.USER
+          ? navigationMenu.user
+          : role === ROLE.EXECUTIVE
+            ? navigationMenu.executive
+            : role === ROLE.ENGINEER
+              ? navigationMenu.engineer
+              : [];
 
-      const fetchTickets = useCallback(async () => {
-        try {
-          const roleFilters = {
-            ...filters,
-            search,
-            page,
-            limit,
-          };
-      
-          if (role === ROLE.USER) {
-            roleFilters.reporter_id = userId;
-          }
-      
-          const cleanFilters = Object.fromEntries(
-            Object.entries(roleFilters).filter(
-              ([_, value]) => value !== ""
-            )
-          );
-      
-          const res = await getTickets(cleanFilters);
-          const data = res.data || [];
-      
-          if (role === ROLE.STAFF) {
-            data.sort(
-              (a, b) =>
-                new Date(b.created_at).getTime() -
-                new Date(a.created_at).getTime()
-            );
-          }
-      
-          setTickets(data);
-          setTotalPage(res.total_page || 1);
-        } catch (err) {
-          console.error("[TICKET] Fetch error:", err);
-        }
-      }, [filters, search, page, limit, role, userId]);
+  const fetchTickets = useCallback(async () => {
+    try {
+      const roleFilters = {
+        ...filters,
+        search,
+        page,
+        limit,
+      };
+
+      if (role === ROLE.USER) {
+        roleFilters.reporter_id = userId;
+      }
+
+      const cleanFilters = Object.fromEntries(
+        Object.entries(roleFilters).filter(([_, value]) => value !== ""),
+      );
+
+      const res = await getTickets(cleanFilters);
+      const data = res.data || [];
+
+      if (role === ROLE.STAFF) {
+        data.sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        );
+      }
+
+      setTickets(data);
+      setTotalPage(res.total_page || 1);
+    } catch (err) {
+      console.error("[TICKET] Fetch error:", err);
+    }
+  }, [filters, search, page, limit, role, userId]);
 
   useEffect(() => {
     fetchTickets();
@@ -114,10 +107,7 @@ export default function TicketManagement() {
 
   const handleRealtimeTicket = useCallback(
     (ticket) => {
-      if (
-        role === ROLE.STAFF ||
-        role === ROLE.ENGINEER
-      ) {
+      if (role === ROLE.STAFF || role === ROLE.ENGINEER) {
         if (Number(ticket.assigned_to_id) !== userId) {
           return;
         }
@@ -131,8 +121,7 @@ export default function TicketManagement() {
 
       setTickets((prev) => {
         const exists = prev.some(
-          (item) =>
-            Number(item.id) === Number(ticket.id)
+          (item) => Number(item.id) === Number(ticket.id),
         );
 
         if (exists) {
@@ -143,67 +132,51 @@ export default function TicketManagement() {
                     ...item,
                     ...ticket,
                   }
-                : item
+                : item,
             )
             .sort(
               (a, b) =>
                 new Date(b.created_at).getTime() -
-                new Date(a.created_at).getTime()
+                new Date(a.created_at).getTime(),
             )
             .slice(0, limit);
         }
 
-        return [ticket, ...prev]
-          .slice(0, limit);
+        return [ticket, ...prev].slice(0, limit);
       });
     },
-    [role, userId, limit]
+    [role, userId, limit],
   );
 
-  const handleEngineerResolutionRealtime = useCallback(
-    (data) => {
-      console.log(
-        "[WS] Engineer Resolution Realtime:",
-        data
-      );
+  const handleEngineerResolutionRealtime = useCallback((data) => {
+    console.log("[WS] Engineer Resolution Realtime:", data);
 
-      const ticketId = Number(
-        data?.ticket_id ??
-        data?.id ??
-        data?.ticket?.id
-      );
+    const ticketId = Number(data?.ticket_id ?? data?.id ?? data?.ticket?.id);
 
-      if (!ticketId) {
-        console.warn(
-          "[WS] Engineer Resolution tidak memiliki ticket_id:",
-          data
-        );
-        return;
-      }
+    if (!ticketId) {
+      console.warn("[WS] Engineer Resolution tidak memiliki ticket_id:", data);
+      return;
+    }
 
-      setTickets((prev) =>
-        prev.map((item) =>
-          Number(item.id) === ticketId
-            ? {
-                ...item,
-                engineer_resolution_unread: true,
+    setTickets((prev) =>
+      prev.map((item) =>
+        Number(item.id) === ticketId
+          ? {
+              ...item,
+              engineer_resolution_unread: true,
 
-                ...(data?.engineer_resolution_at && {
-                  engineer_resolution_at:
-                    data.engineer_resolution_at,
-                }),
+              ...(data?.engineer_resolution_at && {
+                engineer_resolution_at: data.engineer_resolution_at,
+              }),
 
-                ...(data?.created_at && {
-                  engineer_resolution_at:
-                    data.created_at,
-                }),
-              }
-            : item
-        )
-      );
-    },
-    []
-  );
+              ...(data?.created_at && {
+                engineer_resolution_at: data.created_at,
+              }),
+            }
+          : item,
+      ),
+    );
+  }, []);
 
   useTicketSocket({
     onNewTicket: (ticket) => {
@@ -224,10 +197,7 @@ export default function TicketManagement() {
     },
 
     onStatusUpdate: (ticket) => {
-      console.log(
-        "[WS] TICKET_STATUS_UPDATED:",
-        ticket
-      );
+      console.log("[WS] TICKET_STATUS_UPDATED:", ticket);
 
       setTickets((prev) =>
         prev.map((item) =>
@@ -236,16 +206,13 @@ export default function TicketManagement() {
                 ...item,
                 ...ticket,
               }
-            : item
-        )
+            : item,
+        ),
       );
     },
 
     onEngineerResolution: (ticket) => {
-      console.log(
-        "[WS] TICKET_ENGINEER_RESOLUTION:",
-        ticket
-      );
+      console.log("[WS] TICKET_ENGINEER_RESOLUTION:", ticket);
 
       handleEngineerResolutionRealtime(ticket);
     },
@@ -264,24 +231,19 @@ export default function TicketManagement() {
   });
 
   return (
-    <DashboardLayout
-      title="Manajemen Tiket"
-      menu={menu}
-    >
-      <div className="bg-white p-6 rounded-xl shadow">
+    <DashboardLayout title="Manajemen Tiket" menu={menu}>
+      <div className="bg-white p-3 sm:p-4 md:p-6 rounded-xl shadow w-full min-w-0">
         <div className="flex justify-between items-center mb-6">
           <div>
             <h2 className="text-xl font-semibold">
               {role === ROLE.STAFF
                 ? "Tiket Assigned ke Saya"
                 : role === ROLE.ENGINEER
-                ? "Tiket Reassignment Saya"
-                : "Daftar Tiket Aduan"}
+                  ? "Tiket Reassignment Saya"
+                  : "Daftar Tiket Aduan"}
             </h2>
 
-            <p className="text-gray-500 text-sm">
-              Manajemen tiket helpdesk
-            </p>
+            <p className="text-gray-500 text-sm">Manajemen tiket helpdesk</p>
           </div>
         </div>
 
@@ -302,10 +264,9 @@ export default function TicketManagement() {
         />
       </div>
 
-      <div className="flex justify-between items-center mt-6">
-
+      <div className="flex flex-col items-center gap-3 mt-6 w-full">
         {/* Rows per page */}
-        <div className="flex items-center gap-2 text-sm text-gray-600">
+        <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
           <span>Rows per page:</span>
 
           <select
@@ -314,8 +275,18 @@ export default function TicketManagement() {
               setLimit(Number(e.target.value));
               setPage(1);
             }}
-            className="border border-gray-300 rounded-md px-2 py-1
-                      focus:outline-none focus:ring-2 focus:ring-orange-400"
+            className="
+              border
+              border-gray-300
+              bg-white
+              rounded-md
+              px-2
+              py-1.5
+              text-sm
+              focus:outline-none
+              focus:ring-2
+              focus:ring-orange-400
+            "
           >
             <option value={10}>10</option>
             <option value={25}>25</option>
@@ -324,28 +295,61 @@ export default function TicketManagement() {
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-center gap-2">
           <button
+            type="button"
             disabled={page === 1}
             onClick={() => setPage((prev) => prev - 1)}
-            className="px-3 py-1 border rounded disabled:opacity-50"
+            className="
+              px-3
+              py-1.5
+              border
+              border-gray-300
+              rounded-md
+              text-sm
+              bg-white
+              hover:bg-gray-50
+              disabled:opacity-50
+              disabled:cursor-not-allowed
+              transition
+            "
           >
             Prev
           </button>
 
-          <span className="px-3 py-1 text-sm">
+          <span
+            className="
+              px-3
+              py-1.5
+              text-sm
+              text-gray-600
+              whitespace-nowrap
+            "
+          >
             Page {page} of {totalPage}
           </span>
 
           <button
+            type="button"
             disabled={page === totalPage}
             onClick={() => setPage((prev) => prev + 1)}
-            className="px-3 py-1 border rounded disabled:opacity-50"
+            className="
+              px-3
+              py-1.5
+              border
+              border-gray-300
+              rounded-md
+              text-sm
+              bg-white
+              hover:bg-gray-50
+              disabled:opacity-50
+              disabled:cursor-not-allowed
+              transition
+            "
           >
             Next
           </button>
         </div>
-
       </div>
 
       {showModal && (

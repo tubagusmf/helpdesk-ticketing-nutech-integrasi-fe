@@ -18,18 +18,18 @@ export default function UserManagement() {
   const [limit, setLimit] = useState(10);
 
   const loadProjects = async () => {
-    const res = await getProjects()
-    setProjects(res.data)
-  }
-  
-  useEffect(()=>{
-    loadUsers()
-    loadProjects()
-  },[])
-  
+    const res = await getProjects();
+    setProjects(res.data);
+  };
+
+  useEffect(() => {
+    loadUsers();
+    loadProjects();
+  }, []);
+
   const loadUsers = async () => {
     const res = await getUsers(page, search, limit);
-  
+
     setUsers(res.data || []);
     setTotalPage(res.total_page || 1);
   };
@@ -48,29 +48,26 @@ export default function UserManagement() {
   };
 
   return (
-    <DashboardLayout title="Manajemen Pengguna" menu={menu}>
-      <div className="bg-white p-6 rounded-xl shadow">
+    <DashboardLayout title="Manajemen User" menu={menu}>
+      <div className="bg-white p-3 sm:p-4 md:p-6 rounded-xl shadow w-full min-w-0">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+          <div>
+            <h2 className="text-xl font-semibold">Manajemen User</h2>
 
-        <div className="flex justify-between items-center mb-4">
-            <div>
-                <h2 className="text-xl font-semibold">
-                Manajemen Pengguna
-                </h2>
+            <p className="text-gray-500 text-sm">
+              Kelola akun, password, dan hak akses (privilege)
+            </p>
+          </div>
 
-                <p className="text-gray-500 text-sm">
-                Kelola akun, password, dan hak akses (privilege)
-                </p>
-            </div>
-
-            <button
-                onClick={() => {
-                setSelectedUser(null);
-                setOpenModal(true);
-                }}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg"
-            >
-                + Tambah User
-            </button>
+          <button
+            onClick={() => {
+              setSelectedUser(null);
+              setOpenModal(true);
+            }}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg w-full sm:w-auto"
+          >
+            + Tambah User
+          </button>
         </div>
 
         <UserTab

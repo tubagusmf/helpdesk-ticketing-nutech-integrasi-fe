@@ -71,7 +71,7 @@ export default function AssetIDTab() {
     <>
       {/* HEADER */}
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-lg font-semibold">Data Asset ID</h2>
+        <h2 className="text-lg font-semibold">Data Part ID</h2>
 
         <button
           onClick={() => {
@@ -80,7 +80,7 @@ export default function AssetIDTab() {
           }}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
         >
-          + Add Asset ID
+          + Add Part ID
         </button>
       </div>
       {/* SEARCH */}
@@ -106,9 +106,7 @@ export default function AssetIDTab() {
           >
             <div>
               <p className="font-medium">{item.name}</p>
-              <p className="text-sm text-gray-500">
-                Part: {item.part?.name}
-              </p>
+              <p className="text-sm text-gray-500">Part: {item.part?.name}</p>
               <p className="text-sm text-gray-500">
                 Project: {item.part?.project?.name}
               </p>

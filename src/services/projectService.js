@@ -6,14 +6,14 @@ const getHeaders = () => ({
 });
 
 export async function getProjects(page = 1, search = "") {
-    const res = await fetch(
-      `${import.meta.env.VITE_API_URL}/v1/projects?page=${page}&limit=10&name=${search}`,
-      {
-        headers: getHeaders(),
-      }
-    );
-  
-    return res.json();
+  const res = await fetch(
+    `${import.meta.env.VITE_API_URL}/v1/projects?page=${page}&limit=10&name=${search}`,
+    {
+      headers: getHeaders(),
+    },
+  );
+
+  return res.json();
 }
 
 export async function createProject(data) {

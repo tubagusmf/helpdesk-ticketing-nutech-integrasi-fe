@@ -1,9 +1,4 @@
-import {
-  FiGrid,
-  FiFileText,
-  FiUsers,
-  FiDatabase,
-} from "react-icons/fi";
+import { FiGrid, FiFileText, FiUsers, FiDatabase } from "react-icons/fi";
 
 export const navigationMenu = {
   administrator: [

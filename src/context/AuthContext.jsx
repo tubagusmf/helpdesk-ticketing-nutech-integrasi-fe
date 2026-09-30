@@ -9,13 +9,13 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-  
+
     if (token) {
       try {
         const decoded = jwtDecode(token);
-  
+
         const currentTime = Date.now() / 1000;
-  
+
         if (decoded.exp < currentTime) {
           fetch(`${import.meta.env.VITE_API_URL}/v1/users/logout`, {
             method: "PUT",
@@ -24,7 +24,7 @@ export function AuthProvider({ children }) {
             },
             body: JSON.stringify({ token }),
           });
-        
+
           localStorage.removeItem("token");
           setUser(null);
         } else {
@@ -36,7 +36,7 @@ export function AuthProvider({ children }) {
         setUser(null);
       }
     }
-  
+
     setLoading(false);
   }, []);
 
@@ -48,7 +48,7 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     const token = localStorage.getItem("token");
-  
+
     if (token) {
       try {
         await fetch("${import.meta.env.VITE_API_URL}/v1/users/logout", {
@@ -62,7 +62,7 @@ export function AuthProvider({ children }) {
         console.error("Logout API error:", err);
       }
     }
-  
+
     localStorage.removeItem("token");
     setUser(null);
   };

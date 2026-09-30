@@ -12,12 +12,9 @@ export async function getUsers(page = 1, search = "", limit = 10) {
     limit: limit.toString(),
   });
 
-  const res = await fetch(
-    `${BASE_URL}?${params.toString()}`,
-    {
-      headers: getHeaders(),
-    }
-  );
+  const res = await fetch(`${BASE_URL}?${params.toString()}`, {
+    headers: getHeaders(),
+  });
 
   return res.json();
 }

@@ -6,13 +6,12 @@ const getHeaders = () => ({
 });
 
 export async function getCauses(page = 1, search = "") {
-    const res = await fetch(
-      `${BASE_URL}?page=${page}&name=${search}`,
-      { headers: getHeaders() }
-    );
-  
-    return res.json();
-  }
+  const res = await fetch(`${BASE_URL}?page=${page}&name=${search}`, {
+    headers: getHeaders(),
+  });
+
+  return res.json();
+}
 
 export async function createCause(data) {
   const res = await fetch(`${BASE_URL}/create`, {

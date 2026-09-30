@@ -69,8 +69,8 @@ export default function SolutionTab() {
 
   return (
     <>
-    {/* HEADER */}
-    <div className="flex justify-between items-center mb-6">
+      {/* HEADER */}
+      <div className="flex justify-between items-center mb-6">
         <h2 className="text-lg font-semibold">Data Solutions</h2>
 
         <button
@@ -108,9 +108,7 @@ export default function SolutionTab() {
             <div>
               <p className="font-medium">{item.name}</p>
 
-              <p className="text-sm text-gray-500">
-                Cause: {item.cause?.name}
-              </p>
+              <p className="text-sm text-gray-500">Cause: {item.cause?.name}</p>
 
               <p className="text-sm text-gray-500">
                 Part: {item.cause?.part?.name}

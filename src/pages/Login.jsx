@@ -49,18 +49,14 @@ export default function Login() {
       else if (roleID === 3) navigate("/user/dashboard");
       else if (roleID === 4) navigate("/executive/dashboard");
       else if (roleID === 5) navigate("/engineer/dashboard");
-
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Gagal koneksi ke server."
-      );
+      setError(err.response?.data?.message || "Gagal koneksi ke server.");
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-200">
       <div className="bg-white w-[420px] rounded-xl shadow-lg p-8">
-
         <div className="flex justify-center mb-6">
           <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center">
             <span className="text-3xl font-bold text-orange-600">CCIT</span>
@@ -81,7 +77,6 @@ export default function Login() {
         )}
 
         <form onSubmit={handleLogin}>
-
           <label
             htmlFor="email"
             className="block text-xs font-semibold text-gray-500 mb-1 cursor-pointer"

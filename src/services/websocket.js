@@ -2,10 +2,7 @@ let socket = null;
 let listeners = [];
 
 export const connectWebSocket = () => {
-  if (
-    socket &&
-    socket.readyState === WebSocket.OPEN
-  ) {
+  if (socket && socket.readyState === WebSocket.OPEN) {
     return socket;
   }
 
@@ -13,18 +10,14 @@ export const connectWebSocket = () => {
 
   if (!token) return null;
 
-  socket = new WebSocket(
-    `${import.meta.env.VITE_WS_URL}/ws?token=${token}`
-  );
+  socket = new WebSocket(`${import.meta.env.VITE_WS_URL}/ws?token=${token}`);
 
   socket.onopen = () => {
     console.log("websocket connected");
   };
 
   socket.onmessage = (event) => {
-
     try {
-
       const data = JSON.parse(event.data);
 
       console.log("WS MESSAGE:", data);
@@ -32,14 +25,12 @@ export const connectWebSocket = () => {
       listeners.forEach((callback) => {
         callback(data);
       });
-
     } catch (err) {
       console.error("WS parse error:", err);
     }
   };
 
   socket.onclose = () => {
-
     console.log("websocket disconnected");
 
     setTimeout(() => {
@@ -55,18 +46,14 @@ export const connectWebSocket = () => {
 };
 
 export const subscribeWebSocket = (callback) => {
-
   listeners.push(callback);
 
   return () => {
-    listeners = listeners.filter(
-      (cb) => cb !== callback
-    );
+    listeners = listeners.filter((cb) => cb !== callback);
   };
 };
 
 export const disconnectWebSocket = () => {
-
   if (socket) {
     socket.close();
     socket = null;

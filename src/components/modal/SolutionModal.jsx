@@ -31,21 +31,21 @@ export default function SolutionModal({
   const groupedOptions = Object.values(
     causes.reduce((acc, c) => {
       const projectName = c.part?.project?.name || "Tanpa Project";
-  
+
       if (!acc[projectName]) {
         acc[projectName] = {
           label: projectName,
           options: [],
         };
       }
-  
+
       acc[projectName].options.push({
         value: c.id,
         label: `${c.part?.name} | ${c.name}`,
       });
-  
+
       return acc;
-    }, {})
+    }, {}),
   );
 
   return (
@@ -73,17 +73,12 @@ export default function SolutionModal({
           />
 
           <div className="flex justify-end gap-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 border rounded-lg"
-            >
+            <button onClick={onClose} className="px-4 py-2 border rounded-lg">
               Batal
             </button>
 
             <button
-              onClick={() =>
-                onSubmit(name, selectedCause?.value)
-              }
+              onClick={() => onSubmit(name, selectedCause?.value)}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg"
             >
               Simpan

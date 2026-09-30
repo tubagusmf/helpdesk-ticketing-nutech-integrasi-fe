@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { getTicketHistories } from "../../services/ticketService";
-import useTicketSocket from "../../hooks/useTicketSocket";  
+import useTicketSocket from "../../hooks/useTicketSocket";
 
 export default function TicketHistoryModal({ ticket, onClose }) {
   const [histories, setHistories] = useState([]);
@@ -22,25 +22,25 @@ export default function TicketHistoryModal({ ticket, onClose }) {
     switch (item.type) {
       case "CREATED":
         return "🟢 Ticket dibuat";
-  
+
       case "STATUS_UPDATED":
         return "🟡 Status diubah";
-  
+
       case "COMMENT":
         return "💬 Komentar";
-  
+
       case "ONHOLD_NOTE":
         return "📝 Catatan OnHold";
-  
+
       case "REASSIGNED":
         return "🔄 Tiket dialihkan";
-  
+
       case "RESOLUTION":
         return "✅ Solusi tiket";
-  
+
       case "ENGINEER_RESOLUTION":
         return "🛠️ Solusi Tim Engineer";
-  
+
       default:
         return "ℹ️ Aktivitas";
     }
@@ -49,17 +49,14 @@ export default function TicketHistoryModal({ ticket, onClose }) {
   useTicketSocket({
     onTicketHistory: (data) => {
       if (data.ticket_id !== ticket.id) return;
-  
+
       setHistories((prev) => {
-  
-        const exists = prev.some(
-          (h) => h.id === data.id
-        );
-  
+        const exists = prev.some((h) => h.id === data.id);
+
         if (exists) {
           return prev;
         }
-  
+
         return [data, ...prev];
       });
     },
@@ -68,16 +65,13 @@ export default function TicketHistoryModal({ ticket, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
       <div className="bg-white w-full max-w-3xl rounded-xl shadow-lg p-6 max-h-[90vh] overflow-y-auto">
-
         {/* HEADER */}
         <div className="flex justify-between mb-4">
           <div>
             <h2 className="text-lg font-semibold">
               History Tiket #{ticket.ticket_code}
             </h2>
-            <p className="text-sm text-gray-500">
-              Status: {ticket.status}
-            </p>
+            <p className="text-sm text-gray-500">Status: {ticket.status}</p>
           </div>
           <button onClick={onClose}>✕</button>
         </div>
@@ -90,9 +84,7 @@ export default function TicketHistoryModal({ ticket, onClose }) {
 
           <div className="space-y-4">
             {histories.length === 0 && (
-              <p className="text-sm text-gray-400">
-                Belum ada riwayat
-              </p>
+              <p className="text-sm text-gray-400">Belum ada riwayat</p>
             )}
 
             {histories.map((h) => (
@@ -106,7 +98,7 @@ export default function TicketHistoryModal({ ticket, onClose }) {
                 </div>
 
                 <div className="font-medium text-gray-700 mb-1">
-                  {getLabel(h)} 
+                  {getLabel(h)}
                   <span className="text-xs text-red-400 ml-2">
                     ({h.type || "NO_TYPE"})
                   </span>
@@ -115,18 +107,13 @@ export default function TicketHistoryModal({ ticket, onClose }) {
                 {/* DETAIL */}
                 {h.type === "STATUS_UPDATED" && (
                   <p>
-                    Status: <b>{h.old_value}</b> →{" "}
-                    <b>{h.new_value}</b>
+                    Status: <b>{h.old_value}</b> → <b>{h.new_value}</b>
                   </p>
                 )}
 
-                {h.type === "COMMENT" && (
-                  <p>{h.message}</p>
-                )}
+                {h.type === "COMMENT" && <p>{h.message}</p>}
 
-                {h.type === "CREATED" && (
-                  <p>Tiket berhasil dibuat</p>
-                )}
+                {h.type === "CREATED" && <p>Tiket berhasil dibuat</p>}
 
                 {h.type === "ONHOLD_NOTE" && (
                   <p>
@@ -135,14 +122,11 @@ export default function TicketHistoryModal({ ticket, onClose }) {
                 )}
 
                 {h.type === "REASSIGNED" && (
-                  <p>
-                    Tiket dialihkan kepada Tim Engineer.
-                  </p>
+                  <p>Tiket dialihkan kepada Tim Engineer.</p>
                 )}
 
                 {h.type === "ENGINEER_RESOLUTION" && (
                   <div>
-
                     <p className="mt-1 text-gray-600 whitespace-pre-wrap">
                       {h.message || "-"}
                     </p>
@@ -152,7 +136,6 @@ export default function TicketHistoryModal({ ticket, onClose }) {
             ))}
           </div>
         </div>
-
       </div>
     </div>
   );

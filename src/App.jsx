@@ -13,9 +13,8 @@ import { Toaster } from "react-hot-toast";
 function App() {
   return (
     <BrowserRouter>
-    <Toaster position="top-right" />
+      <Toaster position="top-right" />
       <Routes>
-
         <Route path="/" element={<Login />} />
 
         <Route
@@ -145,7 +144,6 @@ function App() {
         />
 
         <Route path="/unauthorized" element={<Unauthorized />} />
-
       </Routes>
     </BrowserRouter>
   );

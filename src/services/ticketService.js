@@ -116,7 +116,7 @@ export const getEngineers = async (projectId) => {
     `${BASE_URL}/users?role_id=5&is_active=true&project_id=${projectId}&page=1&limit=50`,
     {
       headers: getHeaders(),
-    }
+    },
   );
 };
 
@@ -154,7 +154,7 @@ export const getTicketHistories = async (ticketId) => {
 
 export const exportTickets = async (filters = {}) => {
   const cleanFilters = Object.fromEntries(
-    Object.entries(filters).filter(([_, v]) => v !== "")
+    Object.entries(filters).filter(([_, v]) => v !== ""),
   );
 
   const query = new URLSearchParams(cleanFilters).toString();
@@ -171,8 +171,7 @@ export const exportTickets = async (filters = {}) => {
     try {
       const result = await res.json();
       message = result?.message || message;
-    } catch {
-    }
+    } catch {}
 
     throw new Error(message);
   }
@@ -218,61 +217,43 @@ export const markTicketCommentsAsRead = async (ticketId) => {
 };
 
 export const reassignTicket = async (ticketId, formData) => {
-  return fetchAPI(
-    `${BASE_URL}/tickets/reassign/${ticketId}`,
-    {
-      method: "POST",
-      headers: getHeaders(false),
-      body: formData,
-    }
-  );
+  return fetchAPI(`${BASE_URL}/tickets/reassign/${ticketId}`, {
+    method: "POST",
+    headers: getHeaders(false),
+    body: formData,
+  });
 };
 
 export const createEngineerTicketResolution = async (ticketId, formData) => {
-  return fetchAPI(
-    `${BASE_URL}/tickets/${ticketId}/engineer-resolution`,
-    {
-      method: "POST",
-      headers: getHeaders(false),
-      body: formData,
-    }
-  );
+  return fetchAPI(`${BASE_URL}/tickets/${ticketId}/engineer-resolution`, {
+    method: "POST",
+    headers: getHeaders(false),
+    body: formData,
+  });
 };
 
 export const getTicketReassignment = async (ticketId) => {
-  return fetchAPI(
-    `${BASE_URL}/tickets/${ticketId}/reassignment`,
-    {
-      headers: getHeaders(),
-    }
-  );
+  return fetchAPI(`${BASE_URL}/tickets/${ticketId}/reassignment`, {
+    headers: getHeaders(),
+  });
 };
 
 export const getEngineerTicketResolution = async (ticketId) => {
-  return fetchAPI(
-    `${BASE_URL}/tickets/${ticketId}/engineer-resolution`,
-    {
-      headers: getHeaders(),
-    }
-  );
+  return fetchAPI(`${BASE_URL}/tickets/${ticketId}/engineer-resolution`, {
+    headers: getHeaders(),
+  });
 };
 
 export const responseTicket = async (ticketId) => {
-  return fetchAPI(
-    `${BASE_URL}/tickets/${ticketId}/response-ticket`,
-    {
-      method: "POST",
-      headers: getHeaders(),
-    }
-  );
+  return fetchAPI(`${BASE_URL}/tickets/${ticketId}/response-ticket`, {
+    method: "POST",
+    headers: getHeaders(),
+  });
 };
 
 export const markEngineerResolutionAsRead = async (ticketId) => {
-  return fetchAPI(
-    `${BASE_URL}/tickets/${ticketId}/engineer-resolution/read`,
-    {
-      method: "PUT",
-      headers: getHeaders(),
-    }
-  );
+  return fetchAPI(`${BASE_URL}/tickets/${ticketId}/engineer-resolution/read`, {
+    method: "PUT",
+    headers: getHeaders(),
+  });
 };

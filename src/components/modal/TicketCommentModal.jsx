@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from "react";
-import { createTicketComment, getTicketComments } from "../../services/ticketService";
+import {
+  createTicketComment,
+  getTicketComments,
+} from "../../services/ticketService";
 import useTicketSocket from "../../hooks/useTicketSocket";
 import { jwtDecode } from "jwt-decode";
 
@@ -62,15 +65,14 @@ export default function TicketCommentModal({ ticket, onClose }) {
   useTicketSocket({
     onNewComment: (data) => {
       if (data.ticket_id !== ticket.id) return;
-    
+
       setComments((prev) => {
-    
         const exists = prev.some((c) => c.id === data.id);
-    
+
         if (exists) {
           return prev;
         }
-    
+
         return [...prev, data];
       });
     },
@@ -79,16 +81,13 @@ export default function TicketCommentModal({ ticket, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
       <div className="bg-white w-full max-w-4xl rounded-xl shadow-lg p-6 max-h-[90vh] overflow-y-auto">
-
         {/* HEADER */}
         <div className="flex justify-between mb-4">
           <div>
             <h2 className="text-lg font-semibold">
               Komentar Tiket #{ticket.ticket_code}
             </h2>
-            <p className="text-sm text-gray-500">
-              Status: {ticket.status}
-            </p>
+            <p className="text-sm text-gray-500">Status: {ticket.status}</p>
           </div>
           <button onClick={onClose}>✕</button>
         </div>
@@ -99,17 +98,23 @@ export default function TicketCommentModal({ ticket, onClose }) {
           </h3>
 
           <div className="space-y-2 text-sm">
-            <p><b>Project:</b> {ticket.project_name}</p>
-            <p><b>Lokasi:</b> {ticket.location_name}</p>
-            <p><b>Perangkat:</b> {ticket.part_name}</p>
-            <p><b>Deskripsi:</b> {ticket.description}</p>
+            <p>
+              <b>Project:</b> {ticket.project_name}
+            </p>
+            <p>
+              <b>Lokasi:</b> {ticket.location_name}
+            </p>
+            <p>
+              <b>Perangkat:</b> {ticket.part_name}
+            </p>
+            <p>
+              <b>Deskripsi:</b> {ticket.description}
+            </p>
           </div>
         </div>
 
         <div className="border rounded-xl p-4 bg-gray-50">
-          <h3 className="text-sm font-semibold mb-3 text-gray-700">
-            KOMENTAR
-          </h3>
+          <h3 className="text-sm font-semibold mb-3 text-gray-700">KOMENTAR</h3>
 
           {/* LIST */}
           <div className="space-y-3 max-h-64 overflow-y-auto mb-4">
@@ -137,13 +142,9 @@ export default function TicketCommentModal({ ticket, onClose }) {
                         isMine ? "text-orange-100" : "text-gray-500"
                       }`}
                     >
-                      <span className="font-semibold">
-                        {c.user_name}
-                      </span>
+                      <span className="font-semibold">{c.user_name}</span>
 
-                      <span>
-                        {new Date(c.created_at).toLocaleString()}
-                      </span>
+                      <span>{new Date(c.created_at).toLocaleString()}</span>
                     </div>
 
                     <p className="whitespace-pre-wrap break-words">
@@ -177,15 +178,14 @@ export default function TicketCommentModal({ ticket, onClose }) {
                 isClosed
                   ? "bg-gray-400"
                   : loading
-                  ? "bg-gray-400"
-                  : "bg-orange-600"
+                    ? "bg-gray-400"
+                    : "bg-orange-600"
               }`}
             >
               {loading ? "Mengirim..." : "Kirim Komentar"}
             </button>
           </div>
         </div>
-
       </div>
     </div>
   );

@@ -6,7 +6,6 @@ export default function ProjectModal({
   onSubmit,
   initialData,
 }) {
-
   const [name, setName] = useState("");
   const [codePrefix, setCodePrefix] = useState("");
 
@@ -27,7 +26,6 @@ export default function ProjectModal({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
       <div className="bg-white w-96 rounded-xl shadow-lg">
-
         <div className="flex justify-between items-center p-5 border-b">
           <h3 className="text-lg font-semibold">
             {initialData ? "Edit Project" : "Tambah Project"}
@@ -65,10 +63,7 @@ export default function ProjectModal({
         </div>
 
         <div className="flex justify-end gap-3 p-5 border-t">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-600"
-          >
+          <button onClick={onClose} className="px-4 py-2 text-gray-600">
             Batal
           </button>
 

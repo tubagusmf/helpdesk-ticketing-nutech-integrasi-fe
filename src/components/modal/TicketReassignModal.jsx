@@ -4,11 +4,7 @@ import { getEngineers, reassignTicket } from "../../services/ticketService";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
-export default function TicketReassignModal({
-  ticket,
-  engineerId,
-  onClose,
-}) {
+export default function TicketReassignModal({ ticket, engineerId, onClose }) {
   const [engineers, setEngineers] = useState([]);
   const [selectedEngineer, setSelectedEngineer] = useState(null);
 
@@ -32,7 +28,7 @@ export default function TicketReassignModal({
     }
 
     const engineer = engineers.find(
-      (user) => Number(user.id) === Number(engineerId)
+      (user) => Number(user.id) === Number(engineerId),
     );
 
     if (engineer) {
@@ -66,9 +62,7 @@ export default function TicketReassignModal({
   }));
 
   const handleFileChange = (e) => {
-    const selectedFiles = Array.from(
-      e.target.files || []
-    );
+    const selectedFiles = Array.from(e.target.files || []);
 
     const validFiles = [];
     const invalidFiles = [];
@@ -85,23 +79,18 @@ export default function TicketReassignModal({
       alert(
         `File berikut melebihi ukuran maksimal 10MB:\n\n${invalidFiles
           .map((file) => file.name)
-          .join("\n")}`
+          .join("\n")}`,
       );
     }
 
-    setFiles((prevFiles) => [
-      ...prevFiles,
-      ...validFiles,
-    ]);
+    setFiles((prevFiles) => [...prevFiles, ...validFiles]);
 
     e.target.value = "";
   };
 
   const handleRemoveFile = (indexToRemove) => {
     setFiles((prevFiles) =>
-      prevFiles.filter(
-        (_, index) => index !== indexToRemove
-      )
+      prevFiles.filter((_, index) => index !== indexToRemove),
     );
   };
 
@@ -123,31 +112,17 @@ export default function TicketReassignModal({
 
       const formData = new FormData();
 
-      formData.append(
-        "to_user_id",
-        selectedEngineer.value
-      );
+      formData.append("to_user_id", selectedEngineer.value);
 
-      formData.append(
-        "message",
-        message.trim()
-      );
+      formData.append("message", message.trim());
 
       files.forEach((file) => {
-        formData.append(
-          "attachments",
-          file
-        );
+        formData.append("attachments", file);
       });
 
-      await reassignTicket(
-        ticket.id,
-        formData
-      );
+      await reassignTicket(ticket.id, formData);
 
-      alert(
-        "Ticket berhasil di-reassign"
-      );
+      alert("Ticket berhasil di-reassign");
 
       setMessage("");
       setFiles([]);
@@ -155,15 +130,9 @@ export default function TicketReassignModal({
 
       onClose?.();
     } catch (error) {
-      console.error(
-        "Failed to reassign ticket:",
-        error
-      );
+      console.error("Failed to reassign ticket:", error);
 
-      alert(
-        error?.message ||
-          "Gagal melakukan reassign ticket"
-      );
+      alert(error?.message || "Gagal melakukan reassign ticket");
     } finally {
       setIsSubmitting(false);
     }
@@ -225,7 +194,6 @@ export default function TicketReassignModal({
   return (
     <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 p-4">
       <div className="bg-white w-full max-w-6xl rounded-xl shadow-lg overflow-y-auto max-h-[90vh]">
-
         {/* =====================================================
             HEADER
         ====================================================== */}
@@ -256,15 +224,12 @@ export default function TicketReassignModal({
         ====================================================== */}
 
         <div className="p-6">
-
           <div className="border rounded-xl p-4">
-
             <h3 className="text-sm font-semibold mb-4 text-gray-600">
               INFORMASI PERMASALAHAN
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
               {/* PROJECT */}
 
               <div>
@@ -343,9 +308,7 @@ export default function TicketReassignModal({
                 </label>
 
                 <input
-                  value={
-                    ticket.assigned_to_name || "Belum ada"
-                  }
+                  value={ticket.assigned_to_name || "Belum ada"}
                   disabled
                   className="w-full mt-1 border px-3 py-2 rounded-lg bg-gray-100 text-sm"
                 />
@@ -361,7 +324,7 @@ export default function TicketReassignModal({
                 <div className="mt-1">
                   <span
                     className={`inline-flex px-3 py-2 rounded-lg text-xs font-semibold ${getPriorityClass(
-                      ticket.priority
+                      ticket.priority,
                     )}`}
                   >
                     {ticket.priority || "-"}
@@ -379,7 +342,7 @@ export default function TicketReassignModal({
                 <div className="mt-1">
                   <span
                     className={`inline-flex px-3 py-2 rounded-lg text-xs font-semibold ${getStatusClass(
-                      ticket.status
+                      ticket.status,
                     )}`}
                   >
                     {ticket.status || "-"}
@@ -395,15 +358,12 @@ export default function TicketReassignModal({
                 </label>
 
                 <textarea
-                  value={
-                    ticket.description || "-"
-                  }
+                  value={ticket.description || "-"}
                   disabled
                   rows={3}
                   className="w-full mt-1 border px-3 py-2 rounded-lg bg-gray-100 text-sm resize-none"
                 />
               </div>
-
             </div>
           </div>
 
@@ -412,13 +372,11 @@ export default function TicketReassignModal({
           ==================================================== */}
 
           <div className="border rounded-xl p-4 mt-6">
-
             <h3 className="text-sm font-semibold mb-4 text-gray-600">
               REASSIGN TICKET
             </h3>
 
             <div className="space-y-4">
-
               {/* ENGINEER */}
 
               <div>
@@ -434,14 +392,9 @@ export default function TicketReassignModal({
                     placeholder="Pilih / ketik nama Tim Engineer..."
                     isSearchable
                     isClearable
-                    isDisabled={
-                      isSubmitting ||
-                      loadingEngineers
-                    }
+                    isDisabled={isSubmitting || loadingEngineers}
                     isLoading={loadingEngineers}
-                    noOptionsMessage={() =>
-                      "Engineer tidak ditemukan"
-                    }
+                    noOptionsMessage={() => "Engineer tidak ditemukan"}
                   />
                 </div>
               </div>
@@ -455,9 +408,7 @@ export default function TicketReassignModal({
 
                 <textarea
                   value={message}
-                  onChange={(e) =>
-                    setMessage(e.target.value)
-                  }
+                  onChange={(e) => setMessage(e.target.value)}
                   disabled={isSubmitting}
                   rows={4}
                   placeholder="Masukkan permasalahan atau keterangan reassign..."
@@ -473,8 +424,7 @@ export default function TicketReassignModal({
                 </label>
 
                 <p className="text-xs text-gray-500 mb-2">
-                  Dapat memilih beberapa file. Maksimal
-                  10MB untuk setiap file.
+                  Dapat memilih beberapa file. Maksimal 10MB untuk setiap file.
                 </p>
 
                 <input
@@ -489,13 +439,11 @@ export default function TicketReassignModal({
 
                 {files.length > 0 && (
                   <div className="mt-3 space-y-2">
-
                     {files.map((file, index) => (
                       <div
                         key={`${file.name}-${file.size}-${index}`}
                         className="flex items-center justify-between border rounded-lg px-3 py-2 bg-gray-50"
                       >
-
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-gray-700 truncate">
                             {file.name}
@@ -508,26 +456,19 @@ export default function TicketReassignModal({
 
                         <button
                           type="button"
-                          onClick={() =>
-                            handleRemoveFile(index)
-                          }
+                          onClick={() => handleRemoveFile(index)}
                           disabled={isSubmitting}
                           className="ml-3 text-red-500 hover:text-red-700 text-lg"
                         >
                           ✕
                         </button>
-
                       </div>
                     ))}
-
                   </div>
                 )}
-
               </div>
-
             </div>
           </div>
-
         </div>
 
         {/* =====================================================
@@ -535,7 +476,6 @@ export default function TicketReassignModal({
         ====================================================== */}
 
         <div className="flex justify-end gap-2 px-6 py-4 border-t bg-gray-50">
-
           <button
             type="button"
             onClick={onClose}
@@ -551,13 +491,9 @@ export default function TicketReassignModal({
             disabled={isSubmitting}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
           >
-            {isSubmitting
-              ? "Memproses..."
-              : "Reassign Ticket"}
+            {isSubmitting ? "Memproses..." : "Reassign Ticket"}
           </button>
-
         </div>
-
       </div>
     </div>
   );

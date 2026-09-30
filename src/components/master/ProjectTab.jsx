@@ -32,7 +32,7 @@ export default function ProjectTab() {
 
   const handleSubmit = async (name, codePrefix) => {
     if (!name || !codePrefix) return;
-  
+
     if (selectedData) {
       await updateProject(selectedData.id, {
         name,
@@ -44,7 +44,7 @@ export default function ProjectTab() {
         code_prefix: codePrefix,
       });
     }
-  
+
     setIsModalOpen(false);
     setSelectedData(null);
     fetchData();
@@ -58,8 +58,8 @@ export default function ProjectTab() {
 
   return (
     <>
-    {/* HEADER */}
-    <div className="flex justify-between items-center mb-6">
+      {/* HEADER */}
+      <div className="flex justify-between items-center mb-6">
         <h2 className="text-lg font-semibold">Data Projects</h2>
 
         <button
@@ -96,9 +96,7 @@ export default function ProjectTab() {
           >
             <div>
               <p className="font-medium">{item.name}</p>
-              <p className="text-sm text-gray-500">
-                Code: {item.code_prefix}
-              </p>
+              <p className="text-sm text-gray-500">Code: {item.code_prefix}</p>
             </div>
 
             <div className="flex gap-4 items-center">

@@ -27,12 +27,13 @@ export default function CauseModal({
 
   if (!isOpen) return null;
 
-  const partOptions = parts?.map((p) => ({
-    value: p.id,
-    label: `${p.name} (${p.project?.name || "-"})`,
-    name: p.name,
-    project: p.project?.name,
-  })) || [];
+  const partOptions =
+    parts?.map((p) => ({
+      value: p.id,
+      label: `${p.name} (${p.project?.name || "-"})`,
+      name: p.name,
+      project: p.project?.name,
+    })) || [];
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 px-4">
@@ -59,31 +60,28 @@ export default function CauseModal({
           />
 
           <div className="flex justify-end gap-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 border rounded-lg"
-            >
+            <button onClick={onClose} className="px-4 py-2 border rounded-lg">
               Batal
             </button>
 
             <button
-            onClick={() => {
-              if (!name) {
-                alert("Data wajib diisi");
-                return;
-              }
+              onClick={() => {
+                if (!name) {
+                  alert("Data wajib diisi");
+                  return;
+                }
 
-              if (!selectedPart?.value) {
-                alert("Part wajib dipilih");
-                return;
-              }
+                if (!selectedPart?.value) {
+                  alert("Part wajib dipilih");
+                  return;
+                }
 
-              onSubmit(name, selectedPart.value);
-            }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg"
-          >
-            Simpan
-          </button>
+                onSubmit(name, selectedPart.value);
+              }}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+            >
+              Simpan
+            </button>
           </div>
         </div>
       </div>

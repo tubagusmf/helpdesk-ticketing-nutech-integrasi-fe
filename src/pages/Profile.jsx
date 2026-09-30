@@ -21,14 +21,14 @@ export default function Profile() {
     role === 1
       ? navigationMenu.administrator
       : role === 2
-      ? navigationMenu.staff
-      : role === 3
-      ? navigationMenu.user
-      : role === 4
-      ? navigationMenu.executive
-      : role === 5
-      ? navigationMenu.engineer
-      : [];
+        ? navigationMenu.staff
+        : role === 3
+          ? navigationMenu.user
+          : role === 4
+            ? navigationMenu.executive
+            : role === 5
+              ? navigationMenu.engineer
+              : [];
 
   const [form, setForm] = useState({
     name: "",
@@ -75,10 +75,7 @@ export default function Profile() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (
-      form.new_password &&
-      form.new_password !== form.confirm_password
-    ) {
+    if (form.new_password && form.new_password !== form.confirm_password) {
       toast.error("Konfirmasi password tidak sama");
       return;
     }
@@ -118,9 +115,7 @@ export default function Profile() {
   if (loading) {
     return (
       <DashboardLayout title="My Profile" menu={menu}>
-        <div className="text-center py-20">
-          Loading...
-        </div>
+        <div className="text-center py-20">Loading...</div>
       </DashboardLayout>
     );
   }
@@ -128,24 +123,14 @@ export default function Profile() {
   return (
     <DashboardLayout title="My Profile" menu={menu}>
       <div className="max-w-3xl mx-auto">
-
         <div className="bg-white rounded-xl shadow border">
-
           <div className="border-b px-6 py-4">
-            <h2 className="text-xl font-semibold">
-              Informasi Profil
-            </h2>
+            <h2 className="text-xl font-semibold">Informasi Profil</h2>
           </div>
 
-          <form
-            onSubmit={handleSubmit}
-            className="p-6 space-y-5"
-          >
-
+          <form onSubmit={handleSubmit} className="p-6 space-y-5">
             <div>
-              <label className="block mb-2 text-sm font-medium">
-                Nama
-              </label>
+              <label className="block mb-2 text-sm font-medium">Nama</label>
 
               <input
                 name="name"
@@ -156,9 +141,7 @@ export default function Profile() {
             </div>
 
             <div>
-              <label className="block mb-2 text-sm font-medium">
-                Email
-              </label>
+              <label className="block mb-2 text-sm font-medium">Email</label>
 
               <input
                 value={form.email}
@@ -168,9 +151,7 @@ export default function Profile() {
             </div>
 
             <div>
-              <label className="block mb-2 text-sm font-medium">
-                Role
-              </label>
+              <label className="block mb-2 text-sm font-medium">Role</label>
 
               <input
                 value={form.role}
@@ -181,113 +162,93 @@ export default function Profile() {
 
             <hr />
 
-            <h3 className="font-semibold">
-              Ubah Password
-            </h3>
+            <h3 className="font-semibold">Ubah Password</h3>
 
             <div>
-                <label className="block mb-2 text-sm font-medium">
-                    Password Lama
-                </label>
+              <label className="block mb-2 text-sm font-medium">
+                Password Lama
+              </label>
 
-                <div className="relative">
+              <div className="relative">
+                <input
+                  type={showPassword.current ? "text" : "password"}
+                  name="current_password"
+                  value={form.current_password}
+                  onChange={handleChange}
+                  className="w-full border rounded-lg px-3 py-2 pr-10"
+                />
 
-                    <input
-                    type={showPassword.current ? "text" : "password"}
-                    name="current_password"
-                    value={form.current_password}
-                    onChange={handleChange}
-                    className="w-full border rounded-lg px-3 py-2 pr-10"
-                    />
-
-                    <button
-                    type="button"
-                    onClick={() =>
-                        setShowPassword(prev => ({
-                          ...prev,
-                          current: !prev.current,
-                        }))
-                      }
-                    className="absolute inset-y-0 right-3 flex items-center text-gray-500"
-                    >
-                    {showPassword ? (
-                        <EyeOff size={18} />
-                    ) : (
-                        <Eye size={18} />
-                    )}
-                    </button>
-
-                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowPassword((prev) => ({
+                      ...prev,
+                      current: !prev.current,
+                    }))
+                  }
+                  className="absolute inset-y-0 right-3 flex items-center text-gray-500"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
 
             <div>
-                <label className="block mb-2 text-sm font-medium">
-                    Password Baru
-                </label>
+              <label className="block mb-2 text-sm font-medium">
+                Password Baru
+              </label>
 
-                <div className="relative">
+              <div className="relative">
+                <input
+                  type={showPassword.new ? "text" : "password"}
+                  name="new_password"
+                  value={form.new_password}
+                  onChange={handleChange}
+                  className="w-full border rounded-lg px-3 py-2 pr-10"
+                />
 
-                    <input
-                    type={showPassword.new ? "text" : "password"}
-                    name="new_password"
-                    value={form.new_password}
-                    onChange={handleChange}
-                    className="w-full border rounded-lg px-3 py-2 pr-10"
-                    />
-
-                    <button
-                    type="button"
-                    onClick={() =>
-                        setShowPassword(prev => ({
-                          ...prev,
-                          new: !prev.new,
-                        }))
-                      }
-                    className="absolute inset-y-0 right-3 flex items-center text-gray-500"
-                    >
-                    {showPassword ? (
-                        <EyeOff size={18} />
-                    ) : (
-                        <Eye size={18} />
-                    )}
-                    </button>
-
-                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowPassword((prev) => ({
+                      ...prev,
+                      new: !prev.new,
+                    }))
+                  }
+                  className="absolute inset-y-0 right-3 flex items-center text-gray-500"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
 
             <div>
-                <label className="block mb-2 text-sm font-medium">
-                    Konfirmasi Password Baru
-                </label>
+              <label className="block mb-2 text-sm font-medium">
+                Konfirmasi Password Baru
+              </label>
 
-                <div className="relative">
+              <div className="relative">
+                <input
+                  type={showPassword.confirm ? "text" : "password"}
+                  name="confirm_password"
+                  value={form.confirm_password}
+                  onChange={handleChange}
+                  className="w-full border rounded-lg px-3 py-2 pr-10"
+                />
 
-                    <input
-                    type={showPassword.confirm ? "text" : "password"}
-                    name="confirm_password"
-                    value={form.confirm_password}
-                    onChange={handleChange}
-                    className="w-full border rounded-lg px-3 py-2 pr-10"
-                    />
-
-                    <button
-                    type="button"
-                    onClick={() =>
-                        setShowPassword(prev => ({
-                          ...prev,
-                          confirm: !prev.confirm,
-                        }))
-                      }
-                    className="absolute inset-y-0 right-3 flex items-center text-gray-500"
-                    >
-                    {showPassword ? (
-                        <EyeOff size={18} />
-                    ) : (
-                        <Eye size={18} />
-                    )}
-                    </button>
-
-                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowPassword((prev) => ({
+                      ...prev,
+                      confirm: !prev.confirm,
+                    }))
+                  }
+                  className="absolute inset-y-0 right-3 flex items-center text-gray-500"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
 
             <div className="pt-2">
@@ -298,11 +259,8 @@ export default function Profile() {
                 {saving ? "Menyimpan..." : "Simpan Perubahan"}
               </button>
             </div>
-
           </form>
-
         </div>
-
       </div>
     </DashboardLayout>
   );

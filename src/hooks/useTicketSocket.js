@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-import {connectWebSocket, subscribeWebSocket} from "../services/websocket";
+import { connectWebSocket, subscribeWebSocket } from "../services/websocket";
 
 export default function useTicketSocket({
   onNewTicket,

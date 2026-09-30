@@ -11,7 +11,7 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
     email: user?.email || "",
     password: "",
     role_id: user?.role_id || 1,
-    projects: user?.projects?.map(p => ({ id: p.id })) || []
+    projects: user?.projects?.map((p) => ({ id: p.id })) || [],
   });
 
   const roleInfo = {
@@ -24,8 +24,8 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
         "Hapus Tiket & Master Data",
         "Melihat & Mengelola Semua Tiket",
         "Akses Penuh Laporan & Export",
-        "Chat & Diskusi"
-      ]
+        "Chat & Diskusi",
+      ],
     },
 
     2: {
@@ -37,8 +37,8 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
         "Melakukan Pengecekan Case Log",
         "Mengubah Status Tiket",
         "Input Solusi",
-        "Reassign Tiket ke Engineer"
-      ]
+        "Reassign Tiket ke Engineer",
+      ],
     },
 
     3: {
@@ -49,8 +49,8 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
         "Membuat Tiket",
         "Melihat Status Tiket Sendiri",
         "Memberikan Komentar",
-        "Upload Lampiran"
-      ]
+        "Upload Lampiran",
+      ],
     },
 
     4: {
@@ -61,8 +61,8 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
         "Melihat Tiket Sesuai Project",
         "Melihat Dashboard Tiket",
         "Melihat Detail Tiket",
-        "Tidak Dapat Mengelola Tiket (Hanya View)"
-      ]
+        "Tidak Dapat Mengelola Tiket (Hanya View)",
+      ],
     },
 
     5: {
@@ -74,23 +74,22 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
         "Menerima Reassign Tiket dari Staff",
         "Melakukan Investigasi Teknis",
         "Memberi solusi dan Update Status Tiket",
-      ]
-    }
+      ],
+    },
   };
 
   const toggleProject = (projectId) => {
-
-    const exists = form.projects.some(p => p.id === projectId);
+    const exists = form.projects.some((p) => p.id === projectId);
 
     if (exists) {
       setForm({
         ...form,
-        projects: form.projects.filter(p => p.id !== projectId)
+        projects: form.projects.filter((p) => p.id !== projectId),
       });
     } else {
       setForm({
         ...form,
-        projects: [...form.projects, { id: projectId }]
+        projects: [...form.projects, { id: projectId }],
       });
     }
   };
@@ -99,14 +98,14 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
     if (allSelected) {
       setForm({
         ...form,
-        projects: []
+        projects: [],
       });
     } else {
       setForm({
         ...form,
         projects: projects.map((p) => ({
-          id: p.id
-        }))
+          id: p.id,
+        })),
       });
     }
   };
@@ -125,7 +124,6 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
 
       reload();
       onClose();
-
     } catch (err) {
       console.error(err);
       alert("Gagal menyimpan user");
@@ -135,15 +133,11 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
   };
 
   const allSelected =
-    projects.length > 0 &&
-    form.projects.length === projects.length;
+    projects.length > 0 && form.projects.length === projects.length;
 
   return (
-
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-
       <div className="bg-white w-[720px] rounded-xl shadow-xl max-h-[90vh] flex flex-col">
-
         {/* HEADER */}
         <div className="flex justify-between items-center px-6 py-4 border-b">
           <h2 className="text-lg font-semibold">
@@ -160,38 +154,40 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
           onSubmit={handleSubmit}
           className="overflow-y-auto px-6 py-5 space-y-6"
         >
-
           {/* ACCOUNT INFO */}
           <div>
-
             <h3 className="text-sm font-semibold text-gray-700 mb-3">
               INFORMASI AKUN
             </h3>
 
             <div className="space-y-3">
-
               <input
                 placeholder="Nama Lengkap"
                 className="w-full border rounded-lg px-3 py-2"
                 value={form.name}
-                onChange={(e)=>setForm({...form,name:e.target.value})}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
               />
 
               <input
                 placeholder="Email"
                 className="w-full border rounded-lg px-3 py-2"
                 value={form.email}
-                onChange={(e)=>setForm({...form,email:e.target.value})}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
               />
 
               <div className="relative">
-
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder={user ? "Kosongkan jika tidak ingin mengubah password" : "Masukkan password"}
-                className="w-full border rounded-lg px-3 py-2 pr-10"
-                onChange={(e)=>setForm({...form,password:e.target.value})}
-              />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder={
+                    user
+                      ? "Kosongkan jika tidak ingin mengubah password"
+                      : "Masukkan password"
+                  }
+                  className="w-full border rounded-lg px-3 py-2 pr-10"
+                  onChange={(e) =>
+                    setForm({ ...form, password: e.target.value })
+                  }
+                />
 
                 <button
                   type="button"
@@ -200,60 +196,47 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
-
               </div>
-
             </div>
-
           </div>
 
           {/* ROLE */}
           <div>
-
             <h3 className="text-sm font-semibold text-gray-700 mb-3">
               PENGATURAN PRIVILEGE (HAK AKSES)
             </h3>
 
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-
               {Object.entries(roleInfo).map(([id, role]) => (
-
                 <button
                   type="button"
                   key={id}
-                  onClick={()=>setForm({...form,role_id:Number(id)})}
+                  onClick={() => setForm({ ...form, role_id: Number(id) })}
                   className={`border rounded-lg p-3 text-center transition
-                    ${form.role_id===Number(id)
-                      ? "border-blue-500 bg-blue-50"
-                      : "hover:bg-gray-50"}
+                    ${
+                      form.role_id === Number(id)
+                        ? "border-blue-500 bg-blue-50"
+                        : "hover:bg-gray-50"
+                    }
                   `}
                 >
+                  <div className="font-semibold text-sm">{role.title}</div>
 
-                  <div className="font-semibold text-sm">
-                    {role.title}
-                  </div>
-
-                  <div className="text-xs text-gray-500">
-                    {role.code}
-                  </div>
-
+                  <div className="text-xs text-gray-500">{role.code}</div>
                 </button>
-
               ))}
-
             </div>
           </div>
 
           {/* PROJECT ACCESS */}
-          {(form.role_id === 2 || form.role_id === 3 || form.role_id === 4 || form.role_id === 5) && (
+          {(form.role_id === 2 ||
+            form.role_id === 3 ||
+            form.role_id === 4 ||
+            form.role_id === 5) && (
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-
-              <div className="font-semibold mb-3">
-                  Project Access
-              </div>
+              <div className="font-semibold mb-3">Project Access</div>
 
               <label className="flex items-center gap-2 text-sm font-medium mb-4">
-
                 <input
                   type="checkbox"
                   checked={allSelected}
@@ -264,17 +247,15 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
 
               <div className="grid grid-cols-2 gap-3">
                 {projects.map((project) => {
-
                   const checked = form.projects.some(
-                    p => p.id === project.id
-                  )
+                    (p) => p.id === project.id,
+                  );
 
                   return (
                     <label
                       key={project.id}
                       className="flex items-center gap-2 text-sm"
                     >
-
                       <input
                         type="checkbox"
                         checked={checked}
@@ -282,68 +263,60 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
                       />
 
                       {project.name}
-
                     </label>
-                  )
+                  );
                 })}
               </div>
 
               <p className="text-xs text-gray-500 mt-2">
-                  Pilih project yang dapat diakses oleh user ini.
+                Pilih project yang dapat diakses oleh user ini.
               </p>
             </div>
-            )}
+          )}
 
-
-            {/* PRIVILEGE INFO */}
-            {form.role_id === 1 && (
+          {/* PRIVILEGE INFO */}
+          {form.role_id === 1 && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="font-semibold mb-2">Project Access</div>
 
-                <div className="font-semibold mb-2">
-                    Project Access
-                </div>
-
-                <div className="text-sm text-gray-700">
-                    Administrator memiliki akses ke <b>semua project</b>.
-                    Tidak perlu memilih project secara manual.
-                </div>
-
+              <div className="text-sm text-gray-700">
+                Administrator memiliki akses ke <b>semua project</b>. Tidak
+                perlu memilih project secara manual.
+              </div>
             </div>
-            )}
+          )}
 
-            {form.role_id === 2 && (
+          {form.role_id === 2 && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
-                Staff dapat mengelola tiket pada project yang dipilih.
+              Staff dapat mengelola tiket pada project yang dipilih.
             </div>
-            )}
+          )}
 
-            {form.role_id === 3 && (
+          {form.role_id === 3 && (
             <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-sm">
-                User dapat membuat dan melihat tiket pada project yang dipilih.
+              User dapat membuat dan melihat tiket pada project yang dipilih.
             </div>
-            )}
+          )}
 
-            {form.role_id === 4 && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm">
-                Executive hanya dapat melihat tiket dan dashboard
-                pada project yang dipilih. Executive tidak dapat
-                membuat, mengubah, atau menghapus tiket.
-              </div>
-            )}
+          {form.role_id === 4 && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm">
+              Executive hanya dapat melihat tiket dan dashboard pada project
+              yang dipilih. Executive tidak dapat membuat, mengubah, atau
+              menghapus tiket.
+            </div>
+          )}
 
-            {form.role_id === 5 && (
-              <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-sm">
-                Engineer dapat menerima tiket dari Staff CCIT dan melakukan
-                investigasi serta penyelesaian masalah teknis pada project
-                yang dipilih.
-              </div>
-            )}
-
+          {form.role_id === 5 && (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-sm">
+              Engineer dapat menerima tiket dari Staff CCIT dan melakukan
+              investigasi serta penyelesaian masalah teknis pada project yang
+              dipilih.
+            </div>
+          )}
         </form>
 
         {/* FOOTER */}
         <div className="border-t p-4">
-
           <button
             onClick={handleSubmit}
             disabled={loading}
@@ -351,12 +324,8 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
           >
             {loading ? "Menyimpan..." : "Simpan Konfigurasi"}
           </button>
-
         </div>
-
       </div>
-
     </div>
-
   );
 }
