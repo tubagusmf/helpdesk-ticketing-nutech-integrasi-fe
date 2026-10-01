@@ -59,3 +59,59 @@ export const getDashboardProjects = async () => {
     headers: getHeaders(),
   });
 };
+
+export const getTopProjects = async (filters = {}) => {
+  const query = new URLSearchParams(filters).toString();
+
+  return fetchAPI(`${BASE_URL}/dashboard/top-projects?${query}`, {
+    headers: getHeaders(),
+  });
+};
+
+export const getTopLocations = async (filters = {}) => {
+  const query = new URLSearchParams(filters).toString();
+
+  return fetchAPI(`${BASE_URL}/dashboard/top-locations?${query}`, {
+    headers: getHeaders(),
+  });
+};
+
+export const getIncidentTrend = async (filters = {}) => {
+  const query = new URLSearchParams(filters).toString();
+
+  return fetchAPI(`${BASE_URL}/dashboard/incident-trend?${query}`, {
+    headers: getHeaders(),
+  });
+};
+
+export const getOpenTickets = async (filters = {}) => {
+  const query = new URLSearchParams(filters).toString();
+
+  return fetchAPI(`${BASE_URL}/dashboard/open-tickets?${query}`, {
+    headers: getHeaders(),
+  });
+};
+
+export const getOnHoldTickets = async (filters = {}) => {
+  const query = new URLSearchParams(filters).toString();
+
+  return fetchAPI(`${BASE_URL}/dashboard/onhold-tickets?${query}`, {
+    headers: getHeaders(),
+  });
+};
+
+export const getProjectSummary = async (filters = {}) => {
+  const query = new URLSearchParams(filters).toString();
+
+  return fetchAPI(`${BASE_URL}/dashboard/project-summary?${query}`, {
+    headers: getHeaders(),
+  });
+};
+
+export const getStaffSummary = async (filters = {}) => {
+  const query = new URLSearchParams(filters).toString();
+
+  return fetchAPI(`${BASE_URL}/dashboard/staff-summary?${query}`, {
+    headers: getHeaders(),
+  });
+};

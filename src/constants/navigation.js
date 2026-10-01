@@ -1,22 +1,50 @@
-import { FiGrid, FiFileText, FiUsers, FiDatabase } from "react-icons/fi";
+import {
+  FiGrid,
+  FiFileText,
+  FiUsers,
+  FiDatabase,
+} from "react-icons/fi";
+
+const createDashboardMenu = (basePath) => ({
+  label: "Dashboard",
+  path: `${basePath}/dashboard`,
+  icon: FiGrid,
+  children: [
+    {
+      label: "Dashboard Summary",
+      path: `${basePath}/dashboard`,
+    },
+    {
+      label: "Dashboard Ticket",
+      path: `${basePath}/dashboard/ticket`,
+    },
+    {
+      label: "Dashboard Project",
+      path: `${basePath}/dashboard/project`,
+    },
+    {
+      label: "Dashboard Staff",
+      path: `${basePath}/dashboard/staff`,
+    },
+  ],
+});
 
 export const navigationMenu = {
   administrator: [
-    {
-      label: "Dashboard",
-      path: "/admin/dashboard",
-      icon: FiGrid,
-    },
+    createDashboardMenu("/admin"),
+
     {
       label: "Data Tiket",
       path: "/admin/tickets",
       icon: FiFileText,
     },
+
     {
       label: "Manajemen User",
       path: "/admin/users",
       icon: FiUsers,
     },
+
     {
       label: "Master Data",
       path: "/admin/master",
@@ -25,11 +53,8 @@ export const navigationMenu = {
   ],
 
   staff: [
-    {
-      label: "Dashboard",
-      path: "/staff/dashboard",
-      icon: FiGrid,
-    },
+    createDashboardMenu("/staff"),
+
     {
       label: "Data Tiket",
       path: "/staff/tickets",
@@ -38,11 +63,8 @@ export const navigationMenu = {
   ],
 
   user: [
-    {
-      label: "Dashboard",
-      path: "/user/dashboard",
-      icon: FiGrid,
-    },
+    createDashboardMenu("/user"),
+
     {
       label: "Data Tiket",
       path: "/user/tickets",
@@ -51,11 +73,8 @@ export const navigationMenu = {
   ],
 
   executive: [
-    {
-      label: "Dashboard",
-      path: "/executive/dashboard",
-      icon: FiGrid,
-    },
+    createDashboardMenu("/executive"),
+
     {
       label: "Data Tiket",
       path: "/executive/tickets",
@@ -64,11 +83,8 @@ export const navigationMenu = {
   ],
 
   engineer: [
-    {
-      label: "Dashboard",
-      path: "/engineer/dashboard",
-      icon: FiGrid,
-    },
+    createDashboardMenu("/engineer"),
+
     {
       label: "Data Tiket",
       path: "/engineer/tickets",

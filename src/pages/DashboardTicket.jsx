@@ -5,26 +5,26 @@ import {
   useState,
 } from "react";
 
-import {
-  FiAlertTriangle,
-  FiClock,
-  FiLayers,
-  FiMapPin,
-} from "react-icons/fi";
-
 import DashboardLayout from "../components/layout/DashboardLayout";
 import SummaryCard from "../components/dashboard/SummaryCard";
 import DashboardFilter from "../components/dashboard/DashboardFilter";
 import StatusDistributionCard from "../components/dashboard/StatusDistributionCard";
 import TrendChartCard from "../components/dashboard/TrendChartCard";
+import PriorityDistributionCard from "../components/dashboard/PriorityDistributionCard";
+import TicketListCard from "../components/dashboard/TicketListCard";
 import RankingCard from "../components/dashboard/RankingCard";
+
+import { FiLayers } from "react-icons/fi";
 
 import {
   getDashboardSummary,
   getStatusDistribution,
-  getTopProjects,
-  getTopLocations,
+  getPriorityDistribution,
+  getVolumePerProject,
+  getDashboardProjects,
   getIncidentTrend,
+  getOpenTickets,
+  getOnHoldTickets,
 } from "../services/dashboardService";
 
 import useDashboardFilters from "../hooks/useDashboardFilters";
@@ -32,10 +32,9 @@ import useDashboardFilters from "../hooks/useDashboardFilters";
 import {
   getCurrentRole,
   getRoleMenu,
-  formatHoursToHM,
 } from "../utils/dashboard";
 
-export default function Dashboard() {
+export default function DashboardTicket() {
   const role = useMemo(
     () => getCurrentRole(),
     [],
@@ -68,13 +67,19 @@ export default function Dashboard() {
   const [statusData, setStatusData] =
     useState({});
 
-  const [topProjects, setTopProjects] =
+  const [priorityData, setPriorityData] =
     useState([]);
 
-  const [topLocations, setTopLocations] =
+  const [volumeData, setVolumeData] =
     useState([]);
 
-  const [incidentTrend, setIncidentTrend] =
+  const [trendData, setTrendData] =
+    useState([]);
+
+  const [openTickets, setOpenTickets] =
+    useState([]);
+
+  const [onholdTickets, setOnholdTickets] =
     useState([]);
 
   const fetchDashboard =
@@ -86,9 +91,11 @@ export default function Dashboard() {
         const [
           summaryRes,
           statusRes,
-          projectRes,
-          locationRes,
+          priorityRes,
+          volumeRes,
           trendRes,
+          openRes,
+          onholdRes,
         ] = await Promise.all([
           getDashboardSummary(
             appliedFilters,
@@ -96,34 +103,46 @@ export default function Dashboard() {
           getStatusDistribution(
             appliedFilters,
           ),
-          getTopProjects(
+          getPriorityDistribution(
             appliedFilters,
           ),
-          getTopLocations(
+          getVolumePerProject(
             appliedFilters,
           ),
           getIncidentTrend(
+            appliedFilters,
+          ),
+          getOpenTickets(
+            appliedFilters,
+          ),
+          getOnHoldTickets(
             appliedFilters,
           ),
         ]);
 
         setSummary(summaryRes || {});
         setStatusData(statusRes || {});
-        setTopProjects(
-          projectRes || [],
+        setPriorityData(
+          priorityRes || [],
         );
-        setTopLocations(
-          locationRes || [],
+        setVolumeData(
+          volumeRes || [],
         );
-        setIncidentTrend(
+        setTrendData(
           trendRes || [],
+        );
+        setOpenTickets(
+          openRes || [],
+        );
+        setOnholdTickets(
+          onholdRes || [],
         );
       } catch (err) {
         console.error(err);
 
         setError(
           err?.message ||
-            "Gagal mengambil data dashboard.",
+            "Gagal mengambil data ticket.",
         );
       } finally {
         setLoading(false);
@@ -136,17 +155,9 @@ export default function Dashboard() {
     }
   }, [role, fetchDashboard]);
 
-  if (!role) {
-    return (
-      <div className="p-6 text-red-600">
-        Session user tidak ditemukan.
-      </div>
-    );
-  }
-
   return (
     <DashboardLayout
-      title="Dashboard Summary"
+      title="Dashboard Ticket"
       menu={menu}
     >
       <div className="space-y-5 sm:space-y-6">
@@ -167,12 +178,10 @@ export default function Dashboard() {
 
         {loading ? (
           <div className="bg-white border rounded-2xl p-10 text-center text-gray-400">
-            Loading dashboard...
+            Loading dashboard ticket...
           </div>
         ) : (
           <>
-            {/* KPI */}
-
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
               <SummaryCard
                 title="Total Ticket"
@@ -190,7 +199,7 @@ export default function Dashboard() {
                   summary.ticket_open ||
                   0
                 }
-                subtitle="Masih membutuhkan penanganan"
+                subtitle="Masih open"
                 tone="red"
               />
 
@@ -200,7 +209,7 @@ export default function Dashboard() {
                   summary.ticket_onhold ||
                   0
                 }
-                subtitle="Ticket yang sedang ditunda"
+                subtitle="Sedang ditunda"
                 tone="orange"
               />
 
@@ -217,91 +226,52 @@ export default function Dashboard() {
               />
             </div>
 
-            {/* SECONDARY METRIC */}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
-                    <FiAlertTriangle
-                      size={19}
-                    />
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-400">
-                      SLA Breach
-                    </p>
-
-                    <p className="text-xl font-bold text-gray-800">
-                      {summary.sla_breach ||
-                        0}
-                    </p>
-                  </div>
-                </div>
-
-                <span className="text-xs text-gray-400">
-                  Open melewati SLA
-                </span>
-              </div>
-
-              <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
-                    <FiClock
-                      size={19}
-                    />
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-400">
-                      Rata-rata Resolusi
-                    </p>
-
-                    <p className="text-xl font-bold text-gray-800">
-                      {formatHoursToHM(
-                        summary.avg_resolution_time,
-                      )}
-                    </p>
-                  </div>
-                </div>
-
-                <span className="text-xs text-gray-400">
-                  Waktu penanganan
-                </span>
-              </div>
-            </div>
-
-            {/* STATUS + TREND */}
-
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
               <StatusDistributionCard
                 statusData={statusData}
               />
 
-              <TrendChartCard
-                data={incidentTrend}
+              <PriorityDistributionCard
+                data={priorityData}
               />
             </div>
 
-            {/* PROJECT + LOCATION */}
+            <RankingCard
+              title="Volume Ticket per Project"
+              subtitle="Project dengan ticket terbanyak"
+              icon={FiLayers}
+              data={volumeData.slice(
+                0,
+                10,
+              )}
+              labelKey="project"
+              tone="blue"
+            />
+
+            <TrendChartCard
+              data={trendData}
+            />
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-              <RankingCard
-                title="Project Ticket Terbanyak"
-                subtitle="5 project dengan ticket terbanyak"
-                icon={FiLayers}
-                data={topProjects}
-                labelKey="project"
-                tone="blue"
+              <TicketListCard
+                title="Ticket Open"
+                subtitle="5 ticket terbaru yang masih open"
+                total={
+                  summary.ticket_open ||
+                  0
+                }
+                data={openTickets}
+                tone="red"
               />
 
-              <RankingCard
-                title="Lokasi Ticket Terbanyak"
-                subtitle="5 lokasi dengan ticket terbanyak"
-                icon={FiMapPin}
-                data={topLocations}
-                labelKey="location"
+              <TicketListCard
+                title="Ticket Onhold"
+                subtitle="5 ticket terbaru yang sedang ditunda"
+                total={
+                  summary.ticket_onhold ||
+                  0
+                }
+                data={onholdTickets}
                 tone="orange"
               />
             </div>

@@ -1,10 +1,25 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+
 import { useAuth } from "../../context/AuthContext";
-import { useNavigate, NavLink } from "react-router-dom";
+import {
+  NavLink,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 
-import { FiLogOut, FiBell, FiMenu, FiX, FiUser } from "react-icons/fi";
+import {
+  FiLogOut,
+  FiBell,
+  FiMenu,
+  FiX,
+  FiUser,
+  FiChevronDown,
+} from "react-icons/fi";
 
-import { updateOnlineStatus, getCurrentUser } from "../../services/userService";
+import {
+  updateOnlineStatus,
+  getCurrentUser,
+} from "../../services/userService";
 
 import { isTokenExpired } from "../../utils/auth";
 
@@ -18,19 +33,224 @@ import {
 import toast from "react-hot-toast";
 import useTicketSocket from "../../hooks/useTicketSocket";
 
-export default function DashboardLayout({ title, children, menu }) {
+/* =========================================================
+   SIDEBAR MENU ITEM
+========================================================= */
+
+function SidebarMenuItem({
+  item,
+  sidebarOpen,
+  setSidebarOpen,
+}) {
+  const location = useLocation();
+
+  const [isOpen, setIsOpen] = useState(false);
+
+  const hasChildren =
+    Array.isArray(item.children) &&
+    item.children.length > 0;
+
+  const isChildActive = useMemo(() => {
+    if (!hasChildren) {
+      return false;
+    }
+
+    return item.children.some(
+      (child) =>
+        location.pathname === child.path,
+    );
+  }, [
+    hasChildren,
+    item.children,
+    location.pathname,
+  ]);
+
+  const isParentActive =
+    location.pathname === item.path ||
+    location.pathname.startsWith(`${item.path}/`);
+  useEffect(() => {
+    if (hasChildren && isParentActive) {
+      setIsOpen(true);
+    }
+  }, [hasChildren, isParentActive]);
+
+  const Icon = item.icon;
+
+  if (!hasChildren) {
+    return (
+      <NavLink
+        to={item.path}
+        onClick={() => setSidebarOpen(false)}
+        className={({ isActive }) =>
+          `
+            w-full
+            flex
+            items-center
+            gap-3
+            px-4
+            py-3
+            rounded-lg
+            transition-all
+            duration-200
+            text-sm
+
+            ${
+              isActive
+                ? "bg-orange-100 text-orange-600 font-medium"
+                : "text-gray-700 hover:bg-orange-50 hover:text-orange-600"
+            }
+          `
+        }
+      >
+        {Icon && (
+          <Icon
+            size={18}
+            className="shrink-0"
+          />
+        )}
+
+        <span className="truncate">
+          {item.label}
+        </span>
+      </NavLink>
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      <div
+        className={`
+          flex
+          items-center
+          rounded-lg
+          transition-all
+          duration-200
+
+          ${
+            isParentActive
+              ? "bg-orange-50 text-orange-600"
+              : "text-gray-700 hover:bg-orange-50 hover:text-orange-600"
+          }
+        `}
+      >
+        <NavLink
+          to={item.path}
+          onClick={() =>
+            setSidebarOpen(false)
+          }
+          className="
+            flex-1
+            min-w-0
+            flex
+            items-center
+            gap-3
+            px-4
+            py-3
+            text-sm
+          "
+        >
+          {Icon && (
+            <Icon
+              size={18}
+              className="shrink-0"
+            />
+          )}
+
+          <span className="truncate">
+            {item.label}
+          </span>
+        </NavLink>
+
+        <button
+          type="button"
+          onClick={() =>
+            setIsOpen((prev) => !prev)
+          }
+          className="
+            p-3
+            shrink-0
+            hover:bg-orange-100
+            rounded-r-lg
+            transition
+          "
+          aria-label={`Toggle ${item.label}`}
+        >
+          <FiChevronDown
+            size={17}
+            className={`
+              transition-transform
+              duration-200
+              ${isOpen ? "rotate-180" : ""}
+            `}
+          />
+        </button>
+      </div>
+
+      {isOpen && (
+        <div className="ml-7 pl-3 border-l border-gray-200 space-y-1">
+          {item.children.map((child) => (
+            <NavLink
+              key={child.path}
+              to={child.path}
+              end
+              onClick={() =>
+                setSidebarOpen(false)
+              }
+              className={({ isActive }) =>
+                `
+                  block
+                  px-3
+                  py-2.5
+                  rounded-lg
+                  text-sm
+                  transition-all
+                  duration-200
+
+                  ${
+                    isActive
+                      ? "bg-orange-100 text-orange-600 font-medium"
+                      : "text-gray-500 hover:bg-orange-50 hover:text-orange-600"
+                  }
+                `
+              }
+            >
+              {child.label}
+            </NavLink>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function DashboardLayout({
+  title,
+  children,
+  menu,
+}) {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isOnline, setIsOnline] = useState(null);
+  const [sidebarOpen, setSidebarOpen] =
+    useState(false);
 
-  const [openNotif, setOpenNotif] = useState(false);
-  const [openProfile, setOpenProfile] = useState(false);
+  const [isOnline, setIsOnline] =
+    useState(null);
 
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [loadingNotif, setLoadingNotif] = useState(false);
+  const [openNotif, setOpenNotif] =
+    useState(false);
+
+  const [openProfile, setOpenProfile] =
+    useState(false);
+
+  const [notifications, setNotifications] =
+    useState([]);
+
+  const [unreadCount, setUnreadCount] =
+    useState(0);
+
+  const [loadingNotif, setLoadingNotif] =
+    useState(false);
 
   const notifRef = useRef(null);
   const profileRef = useRef(null);
@@ -39,30 +259,47 @@ export default function DashboardLayout({ title, children, menu }) {
 
   const handleLogout = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token =
+        localStorage.getItem("token");
 
-      await fetch(`${import.meta.env.VITE_API_URL}/v1/users/logout`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
+      await fetch(
+        `${import.meta.env.VITE_API_URL}/v1/users/logout`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            token,
+          }),
         },
-        body: JSON.stringify({ token }),
-      });
+      );
     } catch (err) {
-      console.error("Logout API error:", err);
+      console.error(
+        "Logout API error:",
+        err,
+      );
     }
 
     logout();
     navigate("/");
   };
-  
+
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const userData = await getCurrentUser();
-        setIsOnline(userData.is_online);
+        const userData =
+          await getCurrentUser();
+
+        setIsOnline(
+          userData?.is_online ?? false,
+        );
       } catch (err) {
-        console.error("Gagal fetch status:", err);
+        console.error(
+          "Gagal fetch status:",
+          err,
+        );
       }
     };
 
@@ -70,20 +307,38 @@ export default function DashboardLayout({ title, children, menu }) {
   }, []);
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (notifRef.current && !notifRef.current.contains(event.target)) {
+    const handleClickOutside = (
+      event,
+    ) => {
+      if (
+        notifRef.current &&
+        !notifRef.current.contains(
+          event.target,
+        )
+      ) {
         setOpenNotif(false);
       }
 
-      if (profileRef.current && !profileRef.current.contains(event.target)) {
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(
+          event.target,
+        )
+      ) {
         setOpenProfile(false);
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener(
+      "mousedown",
+      handleClickOutside,
+    );
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener(
+        "mousedown",
+        handleClickOutside,
+      );
     };
   }, []);
 
@@ -91,42 +346,168 @@ export default function DashboardLayout({ title, children, menu }) {
     const interval = setInterval(() => {
       if (isTokenExpired()) {
         logout();
+        navigate("/");
       }
     }, 10000);
 
-    return () => clearInterval(interval);
-  }, [logout]);
+    return () =>
+      clearInterval(interval);
+  }, [logout, navigate]);
+
+  const fetchNotifications =
+    async () => {
+      try {
+        setLoadingNotif(true);
+
+        const [
+          notifData,
+          unreadData,
+        ] = await Promise.all([
+          getNotifications(),
+          getUnreadCount(),
+        ]);
+
+        const unread =
+          unreadData || 0;
+
+        const safeNotif =
+          notifData || [];
+
+        if (
+          unread >
+          prevUnreadRef.current
+        ) {
+          const latestNotif =
+            safeNotif[0];
+
+          if (latestNotif) {
+            playNotificationSound();
+
+            showBrowserNotification(
+              latestNotif,
+            );
+
+            toast.dismiss();
+
+            toast.custom(
+              (t) => (
+                <div
+                  className={`
+                    w-[calc(100vw-2rem)]
+                    max-w-sm
+                    bg-white
+                    shadow-lg
+                    rounded-xl
+                    border
+                    p-4
+                    flex
+                    items-start
+                    gap-3
+
+                    ${
+                      t.visible
+                        ? "animate-enter"
+                        : "animate-leave"
+                    }
+                  `}
+                >
+                  <div className="mt-1 text-green-500 shrink-0">
+                    ✅
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-800 break-words">
+                      {latestNotif.title}
+                    </p>
+
+                    <p className="text-sm text-gray-600 mt-1 break-words">
+                      {latestNotif.message}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      toast.dismiss(t.id)
+                    }
+                    className="text-gray-400 hover:text-red-500 transition shrink-0"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ),
+              {
+                duration: 5000,
+              },
+            );
+          }
+        }
+
+        prevUnreadRef.current =
+          unread;
+
+        setNotifications(
+          safeNotif,
+        );
+
+        setUnreadCount(unread);
+      } catch (err) {
+        console.error(
+          "Failed fetch notification:",
+          err,
+        );
+      } finally {
+        setLoadingNotif(false);
+      }
+    };
 
   useEffect(() => {
     fetchNotifications();
 
-    const interval = setInterval(() => {
-      fetchNotifications();
-    }, 10000);
+    const interval = setInterval(
+      fetchNotifications,
+      10000,
+    );
 
-    return () => clearInterval(interval);
+    return () =>
+      clearInterval(interval);
   }, []);
 
   useEffect(() => {
-    const requestPermission = async () => {
-      if ("Notification" in window && Notification.permission === "default") {
-        try {
-          const permission = await Notification.requestPermission();
+    const requestPermission =
+      async () => {
+        if (
+          "Notification" in
+            window &&
+          Notification.permission ===
+            "default"
+        ) {
+          try {
+            const permission =
+              await Notification.requestPermission();
 
-          console.log("Notification permission:", permission);
-        } catch (error) {
-          console.error("Notification permission error:", error);
+            console.log(
+              "Notification permission:",
+              permission,
+            );
+          } catch (error) {
+            console.error(
+              "Notification permission error:",
+              error,
+            );
+          }
         }
-      }
-    };
+      };
 
     requestPermission();
   }, []);
 
   useEffect(() => {
-    audioRef.current = new Audio("/sounds/bell.wav");
+    audioRef.current =
+      new Audio("/sounds/bell.wav");
 
-    audioRef.current.preload = "auto";
+    audioRef.current.preload =
+      "auto";
 
     return () => {
       if (audioRef.current) {
@@ -136,165 +517,142 @@ export default function DashboardLayout({ title, children, menu }) {
     };
   }, []);
 
-  const showBrowserNotification = (notif) => {
-    if ("Notification" in window && Notification.permission === "granted") {
-      new Notification(notif.title, {
-        body: notif.message,
-        icon: "/vite.svg",
-      });
-    }
-  };
-
-  const playNotificationSound = async () => {
-    try {
-      if (!audioRef.current) {
-        return;
-      }
-
-      audioRef.current.currentTime = 0;
-
-      await audioRef.current.play();
-    } catch (error) {
-      console.log("Audio blocked:", error);
-    }
-  };
-
-  const fetchNotifications = async () => {
-    try {
-      setLoadingNotif(true);
-
-      const [notifData, unreadData] = await Promise.all([
-        getNotifications(),
-        getUnreadCount(),
-      ]);
-
-      const unread = unreadData || 0;
-      const safeNotif = notifData || [];
-
-      if (unread > prevUnreadRef.current) {
-        const latestNotif = safeNotif[0];
-
-        if (latestNotif) {
-          playNotificationSound();
-
-          showBrowserNotification(latestNotif);
-
-          toast.dismiss();
-
-          toast.custom(
-            (t) => (
-              <div
-                className={`
-                  w-[calc(100vw-2rem)]
-                  max-w-sm
-                  bg-white
-                  shadow-lg
-                  rounded-xl
-                  border
-                  p-4
-                  flex
-                  items-start
-                  gap-3
-                  ${t.visible ? "animate-enter" : "animate-leave"}
-                `}
-              >
-                <div className="mt-1 text-green-500 shrink-0">✅</div>
-
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-800 break-words">
-                    {latestNotif.title}
-                  </p>
-
-                  <p className="text-sm text-gray-600 mt-1 break-words">
-                    {latestNotif.message}
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => toast.dismiss(t.id)}
-                  className="text-gray-400 hover:text-red-500 transition shrink-0"
-                >
-                  ✕
-                </button>
-              </div>
-            ),
-            {
-              duration: 5000,
-            },
-          );
-        }
-      }
-
-      prevUnreadRef.current = unread;
-
-      setNotifications(safeNotif);
-      setUnreadCount(unread);
-    } catch (err) {
-      console.error("Failed fetch notification:", err);
-    } finally {
-      setLoadingNotif(false);
-    }
-  };
-
-  const handleReadNotification = async (id) => {
-    try {
-      await markNotificationRead(id);
-
-      setNotifications((prev) =>
-        prev.map((item) =>
-          item.id === id
-            ? {
-                ...item,
-                is_read: true,
-              }
-            : item,
-        ),
+  const showBrowserNotification = (
+    notif,
+  ) => {
+    if (
+      "Notification" in
+        window &&
+      Notification.permission ===
+        "granted"
+    ) {
+      new Notification(
+        notif.title,
+        {
+          body: notif.message,
+          icon: "/vite.svg",
+        },
       );
-
-      setUnreadCount((prev) => Math.max(prev - 1, 0));
-    } catch (err) {
-      console.error(err);
     }
   };
 
-  const handleDeleteNotification = async (id) => {
-    try {
-      await deleteNotification(id);
+  const playNotificationSound =
+    async () => {
+      try {
+        if (!audioRef.current) {
+          return;
+        }
 
-      setNotifications((prev) => prev.filter((item) => item.id !== id));
+        audioRef.current.currentTime =
+          0;
 
-      setUnreadCount((prev) => Math.max(prev - 1, 0));
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleNotificationClick = async (notif) => {
-    try {
-      await handleReadNotification(notif.id);
-
-      if (notif.ticket_id) {
-        navigate(`/tickets/${notif.ticket_id}`);
-
-        setOpenNotif(false);
+        await audioRef.current.play();
+      } catch (error) {
+        console.log(
+          "Audio blocked:",
+          error,
+        );
       }
-    } catch (error) {
-      console.error("Failed to handle notification:", error);
-    }
-  };
+    };
+
+  const handleReadNotification =
+    async (id) => {
+      try {
+        await markNotificationRead(
+          id,
+        );
+
+        setNotifications(
+          (prev) =>
+            prev.map((item) =>
+              item.id === id
+                ? {
+                    ...item,
+                    is_read: true,
+                  }
+                : item,
+            ),
+        );
+
+        setUnreadCount(
+          (prev) =>
+            Math.max(prev - 1, 0),
+        );
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+  const handleDeleteNotification =
+    async (id) => {
+      try {
+        await deleteNotification(id);
+
+        setNotifications(
+          (prev) =>
+            prev.filter(
+              (item) =>
+                item.id !== id,
+            ),
+        );
+
+        setUnreadCount(
+          (prev) =>
+            Math.max(prev - 1, 0),
+        );
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+  const handleNotificationClick =
+    async (notif) => {
+      try {
+        await handleReadNotification(
+          notif.id,
+        );
+
+        if (notif.ticket_id) {
+          navigate(
+            `/tickets/${notif.ticket_id}`,
+          );
+
+          setOpenNotif(false);
+        }
+      } catch (error) {
+        console.error(
+          "Failed to handle notification:",
+          error,
+        );
+      }
+    };
+
+  /* =======================================================
+     SOCKET
+  ======================================================= */
 
   useTicketSocket({
     onNotification: (notif) => {
-      setNotifications((prev) => [notif, ...prev]);
+      setNotifications(
+        (prev) => [
+          notif,
+          ...prev,
+        ],
+      );
 
-      setUnreadCount((prev) => prev + 1);
+      setUnreadCount(
+        (prev) => prev + 1,
+      );
 
       playNotificationSound();
 
       showBrowserNotification(notif);
     },
   });
+
+  /* =======================================================
+     RENDER
+  ======================================================= */
 
   return (
     <div
@@ -308,6 +666,7 @@ export default function DashboardLayout({ title, children, menu }) {
         min-w-0
       "
     >
+
       {sidebarOpen && (
         <div
           className="
@@ -317,7 +676,9 @@ export default function DashboardLayout({ title, children, menu }) {
             z-40
             lg:hidden
           "
-          onClick={() => setSidebarOpen(false)}
+          onClick={() =>
+            setSidebarOpen(false)
+          }
         />
       )}
 
@@ -339,12 +700,17 @@ export default function DashboardLayout({ title, children, menu }) {
           flex
           flex-col
 
-          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+          ${
+            sidebarOpen
+              ? "translate-x-0"
+              : "-translate-x-full"
+          }
 
           lg:translate-x-0
         `}
       >
         {/* SIDEBAR HEADER */}
+
         <div
           className="
             p-4
@@ -363,13 +729,16 @@ export default function DashboardLayout({ title, children, menu }) {
           <button
             type="button"
             className="lg:hidden"
-            onClick={() => setSidebarOpen(false)}
+            onClick={() =>
+              setSidebarOpen(false)
+            }
           >
             <FiX size={22} />
           </button>
         </div>
 
         {/* USER INFO */}
+
         <div className="p-4 sm:p-6 border-b shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <div className="relative shrink-0">
@@ -386,7 +755,9 @@ export default function DashboardLayout({ title, children, menu }) {
                   font-semibold
                 "
               >
-                {user?.name?.charAt(0)?.toUpperCase()}
+                {user?.name
+                  ?.charAt(0)
+                  ?.toUpperCase()}
               </div>
 
               <span
@@ -400,7 +771,11 @@ export default function DashboardLayout({ title, children, menu }) {
                   border-white
                   rounded-full
 
-                  ${isOnline ? "bg-green-500" : "bg-gray-400"}
+                  ${
+                    isOnline
+                      ? "bg-green-500"
+                      : "bg-gray-400"
+                  }
                 `}
               />
             </div>
@@ -418,6 +793,7 @@ export default function DashboardLayout({ title, children, menu }) {
         </div>
 
         {/* NAVIGATION */}
+
         <nav
           className="
             flex-1
@@ -427,43 +803,22 @@ export default function DashboardLayout({ title, children, menu }) {
             overflow-y-auto
           "
         >
-          {menu.map((item, i) => {
-            const Icon = item.icon;
-
-            return (
-              <NavLink
-                key={i}
-                to={item.path}
-                onClick={() => setSidebarOpen(false)}
-                className={({ isActive }) =>
-                  `
-                    w-full
-                    flex
-                    items-center
-                    gap-3
-                    px-4
-                    py-3
-                    rounded-lg
-                    transition-all
-                    duration-200
-                    text-sm
-                    ${
-                      isActive
-                        ? "bg-orange-100 text-orange-600"
-                        : "hover:bg-orange-50 hover:text-orange-600"
-                    }
-                  `
-                }
-              >
-                <Icon size={18} className="shrink-0" />
-
-                <span className="truncate">{item.label}</span>
-              </NavLink>
-            );
-          })}
+          {menu?.map((item) => (
+            <SidebarMenuItem
+              key={item.path}
+              item={item}
+              sidebarOpen={
+                sidebarOpen
+              }
+              setSidebarOpen={
+                setSidebarOpen
+              }
+            />
+          ))}
         </nav>
 
         {/* LOGOUT */}
+
         <div className="p-3 sm:p-4 border-t shrink-0">
           <button
             type="button"
@@ -483,7 +838,10 @@ export default function DashboardLayout({ title, children, menu }) {
               text-sm
             "
           >
-            <FiLogOut size={18} className="shrink-0" />
+            <FiLogOut
+              size={18}
+              className="shrink-0"
+            />
 
             <span>Keluar</span>
           </button>
@@ -499,6 +857,7 @@ export default function DashboardLayout({ title, children, menu }) {
           h-full
         "
       >
+
         <header
           className="
             bg-white
@@ -517,6 +876,7 @@ export default function DashboardLayout({ title, children, menu }) {
           "
         >
           {/* LEFT */}
+
           <div
             className="
               flex
@@ -533,7 +893,9 @@ export default function DashboardLayout({ title, children, menu }) {
                 shrink-0
                 p-1
               "
-              onClick={() => setSidebarOpen(true)}
+              onClick={() =>
+                setSidebarOpen(true)
+              }
             >
               <FiMenu size={22} />
             </button>
@@ -552,6 +914,7 @@ export default function DashboardLayout({ title, children, menu }) {
           </div>
 
           {/* RIGHT */}
+
           <div
             className="
               flex
@@ -563,22 +926,32 @@ export default function DashboardLayout({ title, children, menu }) {
             "
           >
             {/* ONLINE STATUS */}
+
             <button
               type="button"
               onClick={async () => {
-                const newStatus = !isOnline;
+                const newStatus =
+                  !isOnline;
 
                 setIsOnline(newStatus);
 
                 try {
-                  await updateOnlineStatus(newStatus);
+                  await updateOnlineStatus(
+                    newStatus,
+                  );
                 } catch (err) {
                   console.error(err);
 
-                  setIsOnline(!newStatus);
+                  setIsOnline(
+                    !newStatus,
+                  );
                 }
               }}
-              title={isOnline ? "Klik untuk offline" : "Klik untuk online"}
+              title={
+                isOnline
+                  ? "Klik untuk offline"
+                  : "Klik untuk online"
+              }
               className={`
                 flex
                 items-center
@@ -605,20 +978,33 @@ export default function DashboardLayout({ title, children, menu }) {
                   rounded-full
                   shrink-0
 
-                  ${isOnline ? "bg-green-500" : "bg-gray-500"}
+                  ${
+                    isOnline
+                      ? "bg-green-500"
+                      : "bg-gray-500"
+                  }
                 `}
               />
 
               <span className="hidden sm:inline">
-                {isOnline ? "Online" : "Offline"}
+                {isOnline
+                  ? "Online"
+                  : "Offline"}
               </span>
             </button>
 
-            <div className="relative shrink-0" ref={notifRef}>
+            {/* NOTIFICATION */}
+
+            <div
+              className="relative shrink-0"
+              ref={notifRef}
+            >
               <button
                 type="button"
                 onClick={() => {
-                  setOpenNotif((prev) => !prev);
+                  setOpenNotif(
+                    (prev) => !prev,
+                  );
 
                   setOpenProfile(false);
                 }}
@@ -676,7 +1062,6 @@ export default function DashboardLayout({ title, children, menu }) {
                     overflow-hidden
                   "
                 >
-                  {/* NOTIF HEADER */}
                   <div
                     className="
                       p-3
@@ -689,29 +1074,46 @@ export default function DashboardLayout({ title, children, menu }) {
                       gap-3
                     "
                   >
-                    <span>Notifikasi</span>
+                    <span>
+                      Notifikasi
+                    </span>
 
                     <span className="text-xs text-gray-500 whitespace-nowrap">
-                      {unreadCount} Belum dibaca
+                      {unreadCount} Belum
+                      dibaca
                     </span>
                   </div>
 
-                  {/* NOTIF BODY */}
-                  <div className="max-h-[70vh] sm:max-h-[400px] overflow-y-auto">
+                  <div
+                    className="
+                      max-h-[70vh]
+                      sm:max-h-[400px]
+                      overflow-y-auto
+                    "
+                  >
                     {loadingNotif ? (
                       <div className="p-6 text-center text-gray-400 text-sm">
                         Loading...
                       </div>
-                    ) : notifications?.length === 0 ? (
+                    ) : notifications?.length ===
+                      0 ? (
                       <div className="p-6 text-center text-gray-400 text-sm">
-                        <FiBell size={28} className="mx-auto mb-2" />
-                        Tidak ada notifikasi.
+                        <FiBell
+                          size={28}
+                          className="mx-auto mb-2"
+                        />
+
+                        Tidak ada
+                        notifikasi.
                       </div>
                     ) : (
-                      notifications.map((notif) => (
-                        <div
-                          key={notif.id}
-                          className={`
+                      notifications.map(
+                        (notif) => (
+                          <div
+                            key={
+                              notif.id
+                            }
+                            className={`
                               w-full
                               text-left
                               p-3
@@ -720,81 +1122,100 @@ export default function DashboardLayout({ title, children, menu }) {
                               hover:bg-gray-50
                               transition
 
-                              ${!notif.is_read ? "bg-orange-50" : ""}
+                              ${
+                                !notif.is_read
+                                  ? "bg-orange-50"
+                                  : ""
+                              }
                             `}
-                        >
-                          <div className="flex justify-between items-start gap-3">
-                            {/* CONTENT */}
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-sm text-gray-800 break-words">
-                                {notif.title}
-                              </p>
+                          >
+                            <div className="flex justify-between items-start gap-3">
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-sm text-gray-800 break-words">
+                                  {
+                                    notif.title
+                                  }
+                                </p>
 
-                              <p className="text-sm text-gray-600 mt-1 break-words">
-                                {notif.message}
-                              </p>
+                                <p className="text-sm text-gray-600 mt-1 break-words">
+                                  {
+                                    notif.message
+                                  }
+                                </p>
 
-                              {notif.ticket_id && notif.ticket_code && (
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    await handleReadNotification(notif.id);
-
-                                    setOpenNotif(false);
-
-                                    navigate(`/tickets/${notif.ticket_id}`);
-                                  }}
-                                  className="
+                                {notif.ticket_id &&
+                                  notif.ticket_code && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleNotificationClick(
+                                          notif,
+                                        )
+                                      }
+                                      className="
                                         text-sm
                                         text-orange-600
                                         hover:text-orange-800
                                         font-medium
                                         mt-2
                                       "
-                                >
-                                  Buka Tiket
-                                </button>
-                              )}
+                                    >
+                                      Buka Tiket
+                                    </button>
+                                  )}
 
-                              <p className="text-xs text-gray-400 mt-2 break-words">
-                                {new Date(notif.created_at).toLocaleString()}
-                              </p>
-                            </div>
+                                <p className="text-xs text-gray-400 mt-2 break-words">
+                                  {new Date(
+                                    notif.created_at,
+                                  ).toLocaleString(
+                                    "id-ID",
+                                  )}
+                                </p>
+                              </div>
 
-                            {/* ACTION */}
-                            <div className="flex items-start gap-2 shrink-0">
-                              {!notif.is_read && (
-                                <span className="w-2 h-2 rounded-full bg-orange-500 mt-2" />
-                              )}
+                              <div className="flex items-start gap-2 shrink-0">
+                                {!notif.is_read && (
+                                  <span className="w-2 h-2 rounded-full bg-orange-500 mt-2" />
+                                )}
 
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleDeleteNotification(notif.id)
-                                }
-                                className="
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleDeleteNotification(
+                                      notif.id,
+                                    )
+                                  }
+                                  className="
                                     text-gray-400
                                     hover:text-red-500
                                     transition
                                   "
-                              >
-                                <FiX size={14} />
-                              </button>
+                                >
+                                  <FiX size={14} />
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))
+                        ),
+                      )
                     )}
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="relative shrink-0" ref={profileRef}>
+            {/* PROFILE */}
+
+            <div
+              className="relative shrink-0"
+              ref={profileRef}
+            >
               <button
                 type="button"
                 onClick={() => {
-                  setOpenProfile((prev) => !prev);
+                  setOpenProfile(
+                    (prev) => !prev,
+                  );
 
                   setOpenNotif(false);
                 }}
@@ -813,7 +1234,9 @@ export default function DashboardLayout({ title, children, menu }) {
                     font-semibold
                   "
                 >
-                  {user?.name?.charAt(0)?.toUpperCase()}
+                  {user?.name
+                    ?.charAt(0)
+                    ?.toUpperCase()}
                 </div>
               </button>
 
@@ -835,9 +1258,13 @@ export default function DashboardLayout({ title, children, menu }) {
                   <button
                     type="button"
                     onClick={() => {
-                      navigate("/profile");
+                      navigate(
+                        "/profile",
+                      );
 
-                      setOpenProfile(false);
+                      setOpenProfile(
+                        false,
+                      );
                     }}
                     className="
                       w-full
@@ -917,7 +1344,10 @@ export default function DashboardLayout({ title, children, menu }) {
             shrink-0
           "
         >
-          <p className="break-words">© 2026 Helpdesk CCIT Nutech Integrasi</p>
+          <p className="break-words">
+            © 2026 Helpdesk CCIT Nutech
+            Integrasi
+          </p>
 
           <p>Version 1.0.0</p>
         </footer>

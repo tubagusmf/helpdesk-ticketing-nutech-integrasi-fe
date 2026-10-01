@@ -138,13 +138,24 @@ export default function Login() {
         </p>
 
         <a
-          href="https://wa.me/628123456789"
+          href={`https://wa.me/6281119521124?text=${encodeURIComponent(
+            `Halo Admin,
+
+        Mohon untuk mendaftar akun Helpdesk dengan mengisi data berikut:
+
+        *Nama Lengkap* :
+        *Email* :
+        *Password* :
+        *Project* :
+
+        Terima kasih.`
+          )}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-center gap-2 mt-2 text-green-600 font-semibold hover:text-green-700 transition"
         >
           <FaWhatsapp size={18} />
-          08123456789
+          081119521124
         </a>
       </div>
     </div>
