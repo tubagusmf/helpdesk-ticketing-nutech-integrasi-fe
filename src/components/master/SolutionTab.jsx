@@ -2,26 +2,27 @@ import { useEffect, useState } from "react";
 import { FiEdit2, FiTrash2 } from "react-icons/fi";
 import SolutionModal from "../modal/SolutionModal";
 import DeleteConfirmModal from "../modal/DeleteConfirmModal";
-import {
-  getSolutions,
-  createSolution,
-  updateSolution,
-  deleteSolution,
-} from "../../services/solutionService";
-import { getCauses } from "../../services/causeService";
+import { getSolutions, createSolution, updateSolution, deleteSolution } from "../../services/solutionService";
+import { getProjects } from "../../services/projectService";
 
 export default function SolutionTab() {
   const [data, setData] = useState([]);
-  const [causes, setCauses] = useState([]);
-
+  const [projects, setProjects] = useState([]);
   const [selectedData, setSelectedData] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
-
   const [isModalOpen, setIsModalOpen] = useState(false);
-
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [totalPage, setTotalPage] = useState(1);
+
+  const fetchProjects = async () => {
+    const res = await getProjects(1, "");
+    setProjects(res.data || []);
+  };
+  
+  useEffect(() => {
+    fetchProjects();
+  }, []);
 
   const fetchData = async () => {
     const res = await getSolutions(page, search);
@@ -29,18 +30,9 @@ export default function SolutionTab() {
     setTotalPage(res.total_page);
   };
 
-  const fetchCauses = async () => {
-    const res = await getCauses(1, "");
-    setCauses(res.data);
-  };
-
   useEffect(() => {
     fetchData();
   }, [page, search]);
-
-  useEffect(() => {
-    fetchCauses();
-  }, []);
 
   const handleSubmit = async (name, causeId) => {
     if (!name || !causeId) return;
@@ -173,7 +165,7 @@ export default function SolutionTab() {
         }}
         onSubmit={handleSubmit}
         initialData={selectedData}
-        causes={causes}
+        projects={projects}
       />
 
       {/* DELETE CONFIRM */}

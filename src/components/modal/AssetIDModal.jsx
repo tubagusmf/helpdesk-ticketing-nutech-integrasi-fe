@@ -1,38 +1,97 @@
 import Select from "react-select";
 import { useEffect, useState } from "react";
+import { getPartsByProjectId } from "../../services/partService";
 
 export default function AssetIDModal({
   isOpen,
   onClose,
   onSubmit,
   initialData,
-  parts,
+  projects,
 }) {
   const [name, setName] = useState("");
+  const [selectedProject, setSelectedProject] = useState(null);
   const [selectedPart, setSelectedPart] = useState(null);
+  const [parts, setParts] = useState([]);
+  const [loadingParts, setLoadingParts] = useState(false);
 
   useEffect(() => {
     if (initialData) {
       setName(initialData.name);
-      setSelectedPart({
-        value: initialData.part_id,
-        label: initialData.part?.name,
-        project: initialData.part?.project?.name,
-      });
+
+      const projectId = initialData.part?.project_id;
+
+      setSelectedProject(
+        projectId
+          ? {
+              value: projectId,
+              label: initialData.part?.project?.name || "-",
+            }
+          : null
+      );
+
+      setSelectedPart(
+        initialData.part_id
+          ? {
+              value: initialData.part_id,
+              label: initialData.part?.name || "-",
+            }
+          : null
+      );
     } else {
       setName("");
+      setSelectedProject(null);
       setSelectedPart(null);
+      setParts([]);
     }
   }, [initialData]);
 
+  useEffect(() => {
+    const fetchParts = async () => {
+      if (!selectedProject?.value) {
+        setParts([]);
+        setSelectedPart(null);
+        return;
+      }
+
+      try {
+        setLoadingParts(true);
+
+        const res = await getPartsByProjectId(selectedProject.value);
+
+        setParts(res.data || []);
+
+        if (
+          !initialData ||
+          selectedProject.value !== initialData.part?.project_id
+        ) {
+          setSelectedPart(null);
+        }
+      } catch (error) {
+        console.error("Failed to fetch parts:", error);
+
+        setParts([]);
+        setSelectedPart(null);
+      } finally {
+        setLoadingParts(false);
+      }
+    };
+
+    fetchParts();
+  }, [selectedProject, initialData]);
+
   if (!isOpen) return null;
 
+  const projectOptions =
+    projects?.map((project) => ({
+      value: project.id,
+      label: project.name,
+    })) || [];
+
   const partOptions =
-    parts?.map((p) => ({
-      value: p.id,
-      label: `${p.name} (${p.project?.name || "-"})`,
-      name: p.name,
-      project: p.project?.name,
+    parts?.map((part) => ({
+      value: part.id,
+      label: part.name,
     })) || [];
 
   return (
@@ -43,6 +102,7 @@ export default function AssetIDModal({
         </h2>
 
         <div className="space-y-4">
+          {/* ASSET ID */}
           <input
             type="text"
             placeholder="Contoh: GATE-01"
@@ -51,16 +111,35 @@ export default function AssetIDModal({
             className="w-full border px-3 py-2 rounded-lg"
           />
 
+          {/* PROJECT */}
+          <Select
+            options={projectOptions}
+            value={selectedProject}
+            onChange={setSelectedProject}
+            placeholder="Pilih atau ketik nama project..."
+            isSearchable
+          />
+
+          {/* PART */}
           <Select
             options={partOptions}
             value={selectedPart}
             onChange={setSelectedPart}
-            placeholder="Pilih atau ketik Part..."
+            placeholder={
+              selectedProject
+                ? "Pilih atau ketik Part..."
+                : "Pilih project terlebih dahulu..."
+            }
             isSearchable
+            isDisabled={!selectedProject || loadingParts}
+            isLoading={loadingParts}
           />
 
           <div className="flex justify-end gap-3">
-            <button onClick={onClose} className="px-4 py-2 border rounded-lg">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 border rounded-lg"
+            >
               Batal
             </button>
 
@@ -68,6 +147,11 @@ export default function AssetIDModal({
               onClick={() => {
                 if (!name) {
                   alert("Nama Asset wajib diisi");
+                  return;
+                }
+
+                if (!selectedProject?.value) {
+                  alert("Project wajib dipilih");
                   return;
                 }
 

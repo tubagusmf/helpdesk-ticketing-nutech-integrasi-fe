@@ -41,3 +41,11 @@ export async function deleteCause(id) {
 
   return res.json();
 }
+
+export async function getCausesByProjectId(projectId) {
+  const res = await fetch(`${BASE_URL}/project/${projectId}`, {
+    headers: getHeaders(),
+  });
+
+  return res.json();
+}

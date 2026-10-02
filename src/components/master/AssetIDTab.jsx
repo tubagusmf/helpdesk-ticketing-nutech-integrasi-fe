@@ -8,17 +8,14 @@ import {
   updateAssetID,
   deleteAssetID,
 } from "../../services/assetIDService";
-import { getParts } from "../../services/partService";
+import { getProjects } from "../../services/projectService";
 
 export default function AssetIDTab() {
   const [data, setData] = useState([]);
-  const [parts, setParts] = useState([]);
-
+  const [projects, setProjects] = useState([]);
   const [selectedData, setSelectedData] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
-
   const [isModalOpen, setIsModalOpen] = useState(false);
-
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [totalPage, setTotalPage] = useState(1);
@@ -29,18 +26,18 @@ export default function AssetIDTab() {
     setTotalPage(res.total_page);
   };
 
-  const fetchParts = async () => {
-    const res = await getParts(1, "");
-    setParts(res.data);
+  const fetchProjects = async () => {
+    const res = await getProjects(1, "");
+    setProjects(res.data || []);
   };
+
+  useEffect(() => {
+    fetchProjects();
+  }, []);
 
   useEffect(() => {
     fetchData();
   }, [page, search]);
-
-  useEffect(() => {
-    fetchParts();
-  }, []);
 
   const handleSubmit = async (name, partId) => {
     if (!name || !partId) return;
@@ -166,7 +163,7 @@ export default function AssetIDTab() {
         }}
         onSubmit={handleSubmit}
         initialData={selectedData}
-        parts={parts}
+        projects={projects}
       />
 
       {/* DELETE CONFIRM */}
