@@ -1,4 +1,4 @@
-import {BrowserRouter, Routes, Route} from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import Login from "./pages/Login";
 import Unauthorized from "./pages/Unauthorized";
@@ -55,21 +55,6 @@ const roleBases = [
   },
 ];
 
-const dashboardRoutes =
-  roleBases.flatMap(
-    ({ base, role }) =>
-      dashboardPages.map(
-        ({
-          suffix,
-          component: Component,
-        }) => ({
-          path: `${base}/dashboard${suffix}`,
-          role,
-          Component,
-        }),
-      ),
-  );
-
 const protectedRoutes = [
   {
     path: "/admin/users",
@@ -86,25 +71,21 @@ const protectedRoutes = [
     role: 1,
     component: TicketManagement,
   },
-
   {
     path: "/staff/tickets",
     role: 2,
     component: TicketManagement,
   },
-
   {
     path: "/user/tickets",
     role: 3,
     component: TicketManagement,
   },
-
   {
     path: "/executive/tickets",
     role: 4,
     component: TicketManagement,
   },
-
   {
     path: "/engineer/tickets",
     role: 5,
@@ -112,14 +93,35 @@ const protectedRoutes = [
   },
 ];
 
+const dashboardRoutes = roleBases.flatMap(
+  ({ base, role }) =>
+    dashboardPages.map(
+      ({ suffix, component: Component }) => ({
+        path: `${base}/dashboard${suffix}`,
+        role,
+        Component,
+      }),
+    ),
+);
+
+function ProtectedPage({ role, Component }) {
+  return (
+    <ProtectedRoute role={role}>
+      <Component />
+    </ProtectedRoute>
+  );
+}
+
 function App() {
   return (
     <BrowserRouter>
       <Toaster
         position="top-right"
+        reverseOrder={false}
       />
 
       <Routes>
+        {/* PUBLIC ROUTES */}
         <Route
           path="/"
           element={<Login />}
@@ -127,51 +129,42 @@ function App() {
 
         <Route
           path="/unauthorized"
-          element={
-            <Unauthorized />
-          }
+          element={<Unauthorized />}
         />
 
+        {/* DASHBOARD ROUTES */}
         {dashboardRoutes.map(
-          ({
-            path,
-            role,
-            Component,
-          }) => (
+          ({ path, role, Component }) => (
             <Route
               key={path}
               path={path}
               element={
-                <ProtectedRoute
+                <ProtectedPage
                   role={role}
-                >
-                  <Component />
-                </ProtectedRoute>
+                  Component={Component}
+                />
               }
             />
           ),
         )}
 
+        {/* PROTECTED ROUTES */}
         {protectedRoutes.map(
-          ({
-            path,
-            role,
-            component: Component,
-          }) => (
+          ({ path, role, component: Component }) => (
             <Route
               key={path}
               path={path}
               element={
-                <ProtectedRoute
+                <ProtectedPage
                   role={role}
-                >
-                  <Component />
-                </ProtectedRoute>
+                  Component={Component}
+                />
               }
             />
           ),
         )}
 
+        {/* PROFILE */}
         <Route
           path="/profile"
           element={
@@ -181,6 +174,7 @@ function App() {
           }
         />
 
+        {/* TICKET DETAIL */}
         <Route
           path="/tickets/:id"
           element={

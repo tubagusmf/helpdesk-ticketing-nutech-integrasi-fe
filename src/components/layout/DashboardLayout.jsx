@@ -1,73 +1,151 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-
-import { useAuth } from "../../context/AuthContext";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   NavLink,
   useLocation,
   useNavigate,
 } from "react-router-dom";
-
 import {
-  FiLogOut,
   FiBell,
-  FiMenu,
-  FiX,
-  FiUser,
   FiChevronDown,
+  FiLogOut,
+  FiMenu,
+  FiUser,
+  FiX,
 } from "react-icons/fi";
+import toast from "react-hot-toast";
 
+import { useAuth } from "../../context/AuthContext";
 import {
-  updateOnlineStatus,
   getCurrentUser,
+  updateOnlineStatus,
 } from "../../services/userService";
-
-import { isTokenExpired } from "../../utils/auth";
-
 import {
   getNotifications,
   getUnreadCount,
   markNotificationRead,
   deleteNotification,
 } from "../../services/notificationService";
-
-import toast from "react-hot-toast";
+import { isTokenExpired } from "../../utils/auth";
 import useTicketSocket from "../../hooks/useTicketSocket";
 
-/* =========================================================
-   SIDEBAR MENU ITEM
-========================================================= */
+const NOTIFICATION_POLL_INTERVAL = 10_000;
+const NOTIFICATION_STORAGE_PREFIX =
+  "helpdesk_notification_popup_";
+const NOTIFICATION_HISTORY_LIMIT = 100;
+const TOAST_DURATION = 5_000;
+
+const getUserId = (user) => {
+  return (
+    user?.id ??
+    user?.user_id ??
+    user?.userId ??
+    user?.sub ??
+    null
+  );
+};
+
+const getNotificationStorageKey = (userId) => {
+  return `${NOTIFICATION_STORAGE_PREFIX}${userId}`;
+};
+
+const normalizeNotificationId = (id) => {
+  if (id === null || id === undefined || id === "") {
+    return "";
+  }
+
+  return String(id);
+};
+
+const getNotificationKey = (notif) => {
+  const notificationId = normalizeNotificationId(notif?.id);
+
+  if (notificationId) {
+    return `id:${notificationId}`;
+  }
+
+  return [
+    notif?.type ?? "",
+    notif?.ticket_id ?? "",
+    notif?.title ?? "",
+    notif?.message ?? "",
+    notif?.created_at ?? "",
+  ].join("|");
+};
+
+const getShownNotificationKeys = (userId) => {
+  if (!userId) {
+    return new Set();
+  }
+
+  try {
+    const stored = sessionStorage.getItem(
+      getNotificationStorageKey(userId),
+    );
+
+    if (!stored) {
+      return new Set();
+    }
+
+    const parsed = JSON.parse(stored);
+
+    if (!Array.isArray(parsed)) {
+      return new Set();
+    }
+
+    return new Set(parsed.map(String));
+  } catch (error) {
+    console.error(
+      "Failed to read notification popup history:",
+      error,
+    );
+
+    return new Set();
+  }
+};
+
+const saveShownNotificationKeys = (userId, keys) => {
+  if (!userId) {
+    return;
+  }
+
+  try {
+    const limitedKeys = Array.from(keys)
+      .map(String)
+      .slice(-NOTIFICATION_HISTORY_LIMIT);
+
+    sessionStorage.setItem(
+      getNotificationStorageKey(userId),
+      JSON.stringify(limitedKeys),
+    );
+  } catch (error) {
+    console.error(
+      "Failed to save notification popup history:",
+      error,
+    );
+  }
+};
 
 function SidebarMenuItem({
   item,
-  sidebarOpen,
   setSidebarOpen,
 }) {
   const location = useLocation();
-
   const [isOpen, setIsOpen] = useState(false);
 
   const hasChildren =
     Array.isArray(item.children) &&
     item.children.length > 0;
 
-  const isChildActive = useMemo(() => {
-    if (!hasChildren) {
-      return false;
-    }
-
-    return item.children.some(
-      (child) =>
-        location.pathname === child.path,
-    );
-  }, [
-    hasChildren,
-    item.children,
-    location.pathname,
-  ]);
-
   const isParentActive =
-    location.pathname === item.path ||
-    location.pathname.startsWith(`${item.path}/`);
+    Boolean(item.path) &&
+    (location.pathname === item.path ||
+      location.pathname.startsWith(`${item.path}/`));
+
   useEffect(() => {
     if (hasChildren && isParentActive) {
       setIsOpen(true);
@@ -76,11 +154,15 @@ function SidebarMenuItem({
 
   const Icon = item.icon;
 
+  const handleMenuClick = () => {
+    setSidebarOpen(false);
+  };
+
   if (!hasChildren) {
     return (
       <NavLink
         to={item.path}
-        onClick={() => setSidebarOpen(false)}
+        onClick={handleMenuClick}
         className={({ isActive }) =>
           `
             w-full
@@ -93,7 +175,6 @@ function SidebarMenuItem({
             transition-all
             duration-200
             text-sm
-
             ${
               isActive
                 ? "bg-orange-100 text-orange-600 font-medium"
@@ -102,16 +183,9 @@ function SidebarMenuItem({
           `
         }
       >
-        {Icon && (
-          <Icon
-            size={18}
-            className="shrink-0"
-          />
-        )}
+        {Icon && <Icon size={18} className="shrink-0" />}
 
-        <span className="truncate">
-          {item.label}
-        </span>
+        <span className="truncate">{item.label}</span>
       </NavLink>
     );
   }
@@ -125,7 +199,6 @@ function SidebarMenuItem({
           rounded-lg
           transition-all
           duration-200
-
           ${
             isParentActive
               ? "bg-orange-50 text-orange-600"
@@ -135,9 +208,7 @@ function SidebarMenuItem({
       >
         <NavLink
           to={item.path}
-          onClick={() =>
-            setSidebarOpen(false)
-          }
+          onClick={handleMenuClick}
           className="
             flex-1
             min-w-0
@@ -149,23 +220,14 @@ function SidebarMenuItem({
             text-sm
           "
         >
-          {Icon && (
-            <Icon
-              size={18}
-              className="shrink-0"
-            />
-          )}
+          {Icon && <Icon size={18} className="shrink-0" />}
 
-          <span className="truncate">
-            {item.label}
-          </span>
+          <span className="truncate">{item.label}</span>
         </NavLink>
 
         <button
           type="button"
-          onClick={() =>
-            setIsOpen((prev) => !prev)
-          }
+          onClick={() => setIsOpen((prev) => !prev)}
           className="
             p-3
             shrink-0
@@ -174,6 +236,7 @@ function SidebarMenuItem({
             transition
           "
           aria-label={`Toggle ${item.label}`}
+          aria-expanded={isOpen}
         >
           <FiChevronDown
             size={17}
@@ -193,9 +256,7 @@ function SidebarMenuItem({
               key={child.path}
               to={child.path}
               end
-              onClick={() =>
-                setSidebarOpen(false)
-              }
+              onClick={handleMenuClick}
               className={({ isActive }) =>
                 `
                   block
@@ -205,7 +266,6 @@ function SidebarMenuItem({
                   text-sm
                   transition-all
                   duration-200
-
                   ${
                     isActive
                       ? "bg-orange-100 text-orange-600 font-medium"
@@ -231,393 +291,493 @@ export default function DashboardLayout({
   const { logout, user } = useAuth();
   const navigate = useNavigate();
 
-  const [sidebarOpen, setSidebarOpen] =
-    useState(false);
-
-  const [isOnline, setIsOnline] =
-    useState(null);
-
-  const [openNotif, setOpenNotif] =
-    useState(false);
-
-  const [openProfile, setOpenProfile] =
-    useState(false);
-
-  const [notifications, setNotifications] =
-    useState([]);
-
-  const [unreadCount, setUnreadCount] =
-    useState(0);
-
-  const [loadingNotif, setLoadingNotif] =
-    useState(false);
-
+  const userId = getUserId(user);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState(null);
+  const [openNotif, setOpenNotif] = useState(false);
+  const [openProfile, setOpenProfile] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loadingNotif, setLoadingNotif] = useState(false);
   const notifRef = useRef(null);
   const profileRef = useRef(null);
-  const prevUnreadRef = useRef(0);
   const audioRef = useRef(null);
-
-  const handleLogout = async () => {
+  const fetchingNotifRef = useRef(false);
+  const notificationKeysRef = useRef(new Set());
+  
+  const handleLogout = useCallback(async () => {
     try {
-      const token =
-        localStorage.getItem("token");
+      const token = localStorage.getItem("token");
 
-      await fetch(
-        `${import.meta.env.VITE_API_URL}/v1/users/logout`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type":
-              "application/json",
+      if (token) {
+        await fetch(
+          `${import.meta.env.VITE_API_URL}/v1/users/logout`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ token }),
           },
-          body: JSON.stringify({
-            token,
-          }),
-        },
-      );
-    } catch (err) {
-      console.error(
-        "Logout API error:",
-        err,
-      );
+        );
+      }
+    } catch (error) {
+      console.error("Logout API error:", error);
+    } finally {
+      toast.dismiss();
+      await logout();
+      navigate("/");
     }
-
-    logout();
-    navigate("/");
-  };
+  }, [logout, navigate]);
 
   useEffect(() => {
+    if (!userId) {
+      return undefined;
+    }
+
+    let mounted = true;
+
     const fetchStatus = async () => {
       try {
-        const userData =
-          await getCurrentUser();
+        const userData = await getCurrentUser();
 
-        setIsOnline(
-          userData?.is_online ?? false,
-        );
-      } catch (err) {
-        console.error(
-          "Gagal fetch status:",
-          err,
-        );
+        if (!mounted) {
+          return;
+        }
+
+        setIsOnline(userData?.is_online ?? false);
+      } catch (error) {
+        console.error("Gagal fetch status:", error);
       }
     };
 
     fetchStatus();
-  }, []);
+
+    return () => {
+      mounted = false;
+    };
+  }, [userId]);
+
+  const handleToggleOnline = useCallback(async () => {
+    const newStatus = !isOnline;
+
+    setIsOnline(newStatus);
+
+    try {
+      await updateOnlineStatus(newStatus);
+    } catch (error) {
+      console.error(error);
+      setIsOnline(!newStatus);
+    }
+  }, [isOnline]);
 
   useEffect(() => {
-    const handleClickOutside = (
-      event,
-    ) => {
+    const handleClickOutside = (event) => {
       if (
         notifRef.current &&
-        !notifRef.current.contains(
-          event.target,
-        )
+        !notifRef.current.contains(event.target)
       ) {
         setOpenNotif(false);
       }
 
       if (
         profileRef.current &&
-        !profileRef.current.contains(
-          event.target,
-        )
+        !profileRef.current.contains(event.target)
       ) {
         setOpenProfile(false);
       }
     };
 
-    document.addEventListener(
-      "mousedown",
-      handleClickOutside,
-    );
+    document.addEventListener("mousedown", handleClickOutside);
 
     return () => {
-      document.removeEventListener(
-        "mousedown",
-        handleClickOutside,
-      );
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
   useEffect(() => {
+    if (!userId) {
+      return undefined;
+    }
+
     const interval = setInterval(() => {
       if (isTokenExpired()) {
+        toast.dismiss();
         logout();
         navigate("/");
       }
-    }, 10000);
+    }, 10_000);
 
-    return () =>
-      clearInterval(interval);
-  }, [logout, navigate]);
-
-  const fetchNotifications =
-    async () => {
-      try {
-        setLoadingNotif(true);
-
-        const [
-          notifData,
-          unreadData,
-        ] = await Promise.all([
-          getNotifications(),
-          getUnreadCount(),
-        ]);
-
-        const unread =
-          unreadData || 0;
-
-        const safeNotif =
-          notifData || [];
-
-        if (
-          unread >
-          prevUnreadRef.current
-        ) {
-          const latestNotif =
-            safeNotif[0];
-
-          if (latestNotif) {
-            playNotificationSound();
-
-            showBrowserNotification(
-              latestNotif,
-            );
-
-            toast.dismiss();
-
-            toast.custom(
-              (t) => (
-                <div
-                  className={`
-                    w-[calc(100vw-2rem)]
-                    max-w-sm
-                    bg-white
-                    shadow-lg
-                    rounded-xl
-                    border
-                    p-4
-                    flex
-                    items-start
-                    gap-3
-
-                    ${
-                      t.visible
-                        ? "animate-enter"
-                        : "animate-leave"
-                    }
-                  `}
-                >
-                  <div className="mt-1 text-green-500 shrink-0">
-                    ✅
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-800 break-words">
-                      {latestNotif.title}
-                    </p>
-
-                    <p className="text-sm text-gray-600 mt-1 break-words">
-                      {latestNotif.message}
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      toast.dismiss(t.id)
-                    }
-                    className="text-gray-400 hover:text-red-500 transition shrink-0"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ),
-              {
-                duration: 5000,
-              },
-            );
-          }
-        }
-
-        prevUnreadRef.current =
-          unread;
-
-        setNotifications(
-          safeNotif,
-        );
-
-        setUnreadCount(unread);
-      } catch (err) {
-        console.error(
-          "Failed fetch notification:",
-          err,
-        );
-      } finally {
-        setLoadingNotif(false);
-      }
-    };
+    return () => clearInterval(interval);
+  }, [userId, logout, navigate]);
 
   useEffect(() => {
-    fetchNotifications();
+    const audio = new Audio("/sounds/bell.wav");
+    audio.preload = "auto";
+    audioRef.current = audio;
 
-    const interval = setInterval(
-      fetchNotifications,
-      10000,
-    );
+    return () => {
+      audio.pause();
+      audio.src = "";
+      audioRef.current = null;
+    };
+  }, []);
 
-    return () =>
-      clearInterval(interval);
+  const playNotificationSound = useCallback(async () => {
+    try {
+      if (!audioRef.current) {
+        return;
+      }
+
+      audioRef.current.currentTime = 0;
+      await audioRef.current.play();
+    } catch (error) {
+      console.log("Audio blocked:", error);
+    }
+  }, []);
+
+  const showBrowserNotification = useCallback((notif) => {
+    if (
+      "Notification" in window &&
+      Notification.permission === "granted"
+    ) {
+      new Notification(notif.title || "Notifikasi Baru", {
+        body:
+          notif.message ||
+          "Anda memiliki notifikasi baru.",
+        icon: "/vite.svg",
+      });
+    }
   }, []);
 
   useEffect(() => {
-    const requestPermission =
-      async () => {
-        if (
-          "Notification" in
-            window &&
-          Notification.permission ===
-            "default"
-        ) {
-          try {
-            const permission =
-              await Notification.requestPermission();
+    const requestPermission = async () => {
+      if (
+        "Notification" in window &&
+        Notification.permission === "default"
+      ) {
+        try {
+          const permission =
+            await Notification.requestPermission();
 
-            console.log(
-              "Notification permission:",
-              permission,
-            );
-          } catch (error) {
-            console.error(
-              "Notification permission error:",
-              error,
-            );
-          }
+          console.log(
+            "Notification permission:",
+            permission,
+          );
+        } catch (error) {
+          console.error(
+            "Notification permission error:",
+            error,
+          );
         }
-      };
+      }
+    };
 
     requestPermission();
   }, []);
 
-  useEffect(() => {
-    audioRef.current =
-      new Audio("/sounds/bell.wav");
-
-    audioRef.current.preload =
-      "auto";
-
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
+  const showNotificationPopup = useCallback(
+    (notif) => {
+      if (!userId || !notif) {
+        console.warn(
+          "[NOTIFICATION] Missing user or notification:",
+          {
+            userId,
+            notif,
+          },
+        );
+        return false;
       }
-    };
-  }, []);
 
-  const showBrowserNotification = (
-    notif,
-  ) => {
-    if (
-      "Notification" in
-        window &&
-      Notification.permission ===
-        "granted"
-    ) {
-      new Notification(
-        notif.title,
+      const notificationKey = getNotificationKey(notif);
+
+      if (!notificationKey) {
+        console.warn(
+          "[NOTIFICATION] Missing notification key:",
+          notif,
+        );
+        return false;
+      }
+
+      const shownKeys = getShownNotificationKeys(userId);
+
+      if (shownKeys.has(notificationKey)) {
+        return false;
+      }
+
+      shownKeys.add(notificationKey);
+      saveShownNotificationKeys(userId, shownKeys);
+
+      playNotificationSound();
+      showBrowserNotification(notif);
+
+      toast.custom(
+        (t) => (
+          <div
+            className={`
+              w-[calc(100vw-2rem)]
+              max-w-sm
+              bg-white
+              shadow-lg
+              rounded-xl
+              border
+              p-4
+              flex
+              items-start
+              gap-3
+              ${
+                t.visible
+                  ? "animate-enter"
+                  : "animate-leave"
+              }
+            `}
+          >
+            <div className="mt-1 text-green-500 shrink-0 text-lg">
+              ✅
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-gray-800 break-words">
+                {notif.title || "Notifikasi Baru"}
+              </p>
+
+              <p className="text-sm text-gray-600 mt-1 break-words">
+                {notif.message ||
+                  "Anda memiliki notifikasi baru."}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => toast.dismiss(t.id)}
+              className="text-gray-400 hover:text-red-500 transition shrink-0"
+              aria-label="Tutup notifikasi"
+            >
+              <FiX size={18} />
+            </button>
+          </div>
+        ),
         {
-          body: notif.message,
-          icon: "/vite.svg",
+          id: `notification-${notificationKey}`,
+          duration: TOAST_DURATION,
         },
       );
-    }
-  };
 
-  const playNotificationSound =
-    async () => {
-      try {
-        if (!audioRef.current) {
-          return;
+      return true;
+    },
+    [
+      userId,
+      playNotificationSound,
+      showBrowserNotification,
+    ],
+  );
+
+  const fetchNotifications = useCallback(async () => {
+    if (!userId) {
+      console.warn(
+        "[NOTIFICATION] User ID tidak ditemukan:",
+        user,
+      );
+      return;
+    }
+
+    if (fetchingNotifRef.current) {
+      return;
+    }
+
+    try {
+      fetchingNotifRef.current = true;
+      setLoadingNotif(true);
+
+      const [notifData, unreadData] = await Promise.all([
+        getNotifications(),
+        getUnreadCount(),
+      ]);
+
+      const safeNotifications = Array.isArray(notifData)
+        ? notifData
+        : [];
+
+      const unread = Number(unreadData) || 0;
+
+      notificationKeysRef.current = new Set(
+        safeNotifications
+          .map(getNotificationKey)
+          .filter(Boolean),
+      );
+
+      setNotifications(safeNotifications);
+      setUnreadCount(unread);
+
+      const latestUnread = safeNotifications.find(
+        (notif) => !notif.is_read,
+      );
+
+      if (latestUnread) {
+        showNotificationPopup(latestUnread);
+      }
+    } catch (error) {
+      console.error(
+        "[NOTIFICATION] Failed fetch notification:",
+        error,
+      );
+    } finally {
+      fetchingNotifRef.current = false;
+      setLoadingNotif(false);
+    }
+  }, [userId, user, showNotificationPopup]);
+
+  useEffect(() => {
+    if (!userId) {
+      return undefined;
+    }
+
+    fetchNotifications();
+
+    const interval = setInterval(
+      fetchNotifications,
+      NOTIFICATION_POLL_INTERVAL,
+    );
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [userId, fetchNotifications]);
+
+  const handleSocketNotification = useCallback(
+    (notif) => {
+      if (!notif) {
+        return;
+      }
+
+      const notificationKey = getNotificationKey(notif);
+
+      if (!notificationKey) {
+        return;
+      }
+
+      showNotificationPopup(notif);
+
+      if (notificationKeysRef.current.has(notificationKey)) {
+        return;
+      }
+
+      notificationKeysRef.current.add(notificationKey);
+
+      setNotifications((prev) => {
+        const exists = prev.some(
+          (item) => getNotificationKey(item) === notificationKey,
+        );
+
+        if (exists) {
+          return prev;
         }
 
-        audioRef.current.currentTime =
-          0;
+        return [notif, ...prev];
+      });
 
-        await audioRef.current.play();
+      if (!notif.is_read) {
+        setUnreadCount((prev) => prev + 1);
+      }
+    },
+    [showNotificationPopup],
+  );
+
+  useTicketSocket({
+    onNotification: handleSocketNotification,
+  });
+
+  const handleReadNotification = useCallback(
+    async (id) => {
+      try {
+        const notificationId = normalizeNotificationId(id);
+
+        const target = notifications.find(
+          (item) =>
+            normalizeNotificationId(item.id) ===
+            notificationId,
+        );
+
+        await markNotificationRead(id);
+
+        setNotifications((prev) =>
+          prev.map((item) =>
+            normalizeNotificationId(item.id) ===
+            notificationId
+              ? {
+                  ...item,
+                  is_read: true,
+                }
+              : item,
+          ),
+        );
+
+        if (target && !target.is_read) {
+          setUnreadCount((prev) =>
+            Math.max(prev - 1, 0),
+          );
+        }
       } catch (error) {
-        console.log(
-          "Audio blocked:",
+        console.error(
+          "Failed to mark notification as read:",
           error,
         );
       }
-    };
+    },
+    [notifications],
+  );
 
-  const handleReadNotification =
+  const handleDeleteNotification = useCallback(
     async (id) => {
       try {
-        await markNotificationRead(
-          id,
+        const notificationId = normalizeNotificationId(id);
+
+        const target = notifications.find(
+          (item) =>
+            normalizeNotificationId(item.id) ===
+            notificationId,
         );
 
-        setNotifications(
-          (prev) =>
-            prev.map((item) =>
-              item.id === id
-                ? {
-                    ...item,
-                    is_read: true,
-                  }
-                : item,
-            ),
-        );
-
-        setUnreadCount(
-          (prev) =>
-            Math.max(prev - 1, 0),
-        );
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-  const handleDeleteNotification =
-    async (id) => {
-      try {
         await deleteNotification(id);
 
-        setNotifications(
-          (prev) =>
-            prev.filter(
-              (item) =>
-                item.id !== id,
-            ),
+        setNotifications((prev) =>
+          prev.filter(
+            (item) =>
+              normalizeNotificationId(item.id) !==
+              notificationId,
+          ),
         );
 
-        setUnreadCount(
-          (prev) =>
+        notificationKeysRef.current.delete(
+          getNotificationKey(target),
+        );
+
+        if (target && !target.is_read) {
+          setUnreadCount((prev) =>
             Math.max(prev - 1, 0),
+          );
+        }
+      } catch (error) {
+        console.error(
+          "Failed to delete notification:",
+          error,
         );
-      } catch (err) {
-        console.error(err);
       }
-    };
+    },
+    [notifications],
+  );
 
-  const handleNotificationClick =
+  const handleNotificationClick = useCallback(
     async (notif) => {
       try {
-        await handleReadNotification(
-          notif.id,
-        );
+        if (!notif.is_read) {
+          await handleReadNotification(notif.id);
+        }
+
+        setOpenNotif(false);
 
         if (notif.ticket_id) {
-          navigate(
-            `/tickets/${notif.ticket_id}`,
-          );
-
-          setOpenNotif(false);
+          navigate(`/tickets/${notif.ticket_id}`);
         }
       } catch (error) {
         console.error(
@@ -625,35 +785,10 @@ export default function DashboardLayout({
           error,
         );
       }
-    };
-
-  /* =======================================================
-     SOCKET
-  ======================================================= */
-
-  useTicketSocket({
-    onNotification: (notif) => {
-      setNotifications(
-        (prev) => [
-          notif,
-          ...prev,
-        ],
-      );
-
-      setUnreadCount(
-        (prev) => prev + 1,
-      );
-
-      playNotificationSound();
-
-      showBrowserNotification(notif);
     },
-  });
-
-  /* =======================================================
-     RENDER
-  ======================================================= */
-
+    [handleReadNotification, navigate],
+  );
+  
   return (
     <div
       className="
@@ -666,7 +801,7 @@ export default function DashboardLayout({
         min-w-0
       "
     >
-
+      {/* MOBILE SIDEBAR OVERLAY */}
       {sidebarOpen && (
         <div
           className="
@@ -676,12 +811,12 @@ export default function DashboardLayout({
             z-40
             lg:hidden
           "
-          onClick={() =>
-            setSidebarOpen(false)
-          }
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
         />
       )}
 
+      {/* SIDEBAR */}
       <aside
         className={`
           fixed
@@ -699,18 +834,14 @@ export default function DashboardLayout({
           duration-300
           flex
           flex-col
-
           ${
             sidebarOpen
               ? "translate-x-0"
               : "-translate-x-full"
           }
-
           lg:translate-x-0
         `}
       >
-        {/* SIDEBAR HEADER */}
-
         <div
           className="
             p-4
@@ -729,15 +860,12 @@ export default function DashboardLayout({
           <button
             type="button"
             className="lg:hidden"
-            onClick={() =>
-              setSidebarOpen(false)
-            }
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Tutup menu"
           >
             <FiX size={22} />
           </button>
         </div>
-
-        {/* USER INFO */}
 
         <div className="p-4 sm:p-6 border-b shrink-0">
           <div className="flex items-center gap-3 min-w-0">
@@ -770,7 +898,6 @@ export default function DashboardLayout({
                   border-2
                   border-white
                   rounded-full
-
                   ${
                     isOnline
                       ? "bg-green-500"
@@ -792,8 +919,6 @@ export default function DashboardLayout({
           </div>
         </div>
 
-        {/* NAVIGATION */}
-
         <nav
           className="
             flex-1
@@ -807,17 +932,10 @@ export default function DashboardLayout({
             <SidebarMenuItem
               key={item.path}
               item={item}
-              sidebarOpen={
-                sidebarOpen
-              }
-              setSidebarOpen={
-                setSidebarOpen
-              }
+              setSidebarOpen={setSidebarOpen}
             />
           ))}
         </nav>
-
-        {/* LOGOUT */}
 
         <div className="p-3 sm:p-4 border-t shrink-0">
           <button
@@ -848,6 +966,7 @@ export default function DashboardLayout({
         </div>
       </aside>
 
+      {/* MAIN AREA */}
       <div
         className="
           flex-1
@@ -857,7 +976,7 @@ export default function DashboardLayout({
           h-full
         "
       >
-
+        {/* HEADER */}
         <header
           className="
             bg-white
@@ -875,8 +994,6 @@ export default function DashboardLayout({
             min-w-0
           "
         >
-          {/* LEFT */}
-
           <div
             className="
               flex
@@ -893,9 +1010,8 @@ export default function DashboardLayout({
                 shrink-0
                 p-1
               "
-              onClick={() =>
-                setSidebarOpen(true)
-              }
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Buka menu"
             >
               <FiMenu size={22} />
             </button>
@@ -913,8 +1029,6 @@ export default function DashboardLayout({
             </h1>
           </div>
 
-          {/* RIGHT */}
-
           <div
             className="
               flex
@@ -926,27 +1040,9 @@ export default function DashboardLayout({
             "
           >
             {/* ONLINE STATUS */}
-
             <button
               type="button"
-              onClick={async () => {
-                const newStatus =
-                  !isOnline;
-
-                setIsOnline(newStatus);
-
-                try {
-                  await updateOnlineStatus(
-                    newStatus,
-                  );
-                } catch (err) {
-                  console.error(err);
-
-                  setIsOnline(
-                    !newStatus,
-                  );
-                }
-              }}
+              onClick={handleToggleOnline}
               title={
                 isOnline
                   ? "Klik untuk offline"
@@ -963,7 +1059,6 @@ export default function DashboardLayout({
                 sm:text-sm
                 rounded-full
                 shrink-0
-
                 ${
                   isOnline
                     ? "bg-green-100 text-green-600"
@@ -977,7 +1072,6 @@ export default function DashboardLayout({
                   h-2
                   rounded-full
                   shrink-0
-
                   ${
                     isOnline
                       ? "bg-green-500"
@@ -987,14 +1081,11 @@ export default function DashboardLayout({
               />
 
               <span className="hidden sm:inline">
-                {isOnline
-                  ? "Online"
-                  : "Offline"}
+                {isOnline ? "Online" : "Offline"}
               </span>
             </button>
 
             {/* NOTIFICATION */}
-
             <div
               className="relative shrink-0"
               ref={notifRef}
@@ -1002,10 +1093,7 @@ export default function DashboardLayout({
               <button
                 type="button"
                 onClick={() => {
-                  setOpenNotif(
-                    (prev) => !prev,
-                  );
-
+                  setOpenNotif((prev) => !prev);
                   setOpenProfile(false);
                 }}
                 className="
@@ -1014,6 +1102,8 @@ export default function DashboardLayout({
                   hover:bg-gray-100
                   relative
                 "
+                aria-label="Notifikasi"
+                aria-expanded={openNotif}
               >
                 <FiBell size={20} />
 
@@ -1074,13 +1164,10 @@ export default function DashboardLayout({
                       gap-3
                     "
                   >
-                    <span>
-                      Notifikasi
-                    </span>
+                    <span>Notifikasi</span>
 
                     <span className="text-xs text-gray-500 whitespace-nowrap">
-                      {unreadCount} Belum
-                      dibaca
+                      {unreadCount} Belum dibaca
                     </span>
                   </div>
 
@@ -1095,109 +1182,104 @@ export default function DashboardLayout({
                       <div className="p-6 text-center text-gray-400 text-sm">
                         Loading...
                       </div>
-                    ) : notifications?.length ===
-                      0 ? (
+                    ) : notifications.length === 0 ? (
                       <div className="p-6 text-center text-gray-400 text-sm">
                         <FiBell
                           size={28}
                           className="mx-auto mb-2"
                         />
-
-                        Tidak ada
-                        notifikasi.
+                        Tidak ada notifikasi.
                       </div>
                     ) : (
-                      notifications.map(
-                        (notif) => (
-                          <div
-                            key={
-                              notif.id
+                      notifications.map((notif) => (
+                        <div
+                          key={getNotificationKey(notif)}
+                          className={`
+                            w-full
+                            text-left
+                            p-3
+                            sm:p-4
+                            border-b
+                            hover:bg-gray-50
+                            transition
+                            ${
+                              !notif.is_read
+                                ? "bg-orange-50"
+                                : ""
                             }
-                            className={`
-                              w-full
-                              text-left
-                              p-3
-                              sm:p-4
-                              border-b
-                              hover:bg-gray-50
-                              transition
+                          `}
+                        >
+                          <div className="flex justify-between items-start gap-3">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-sm text-gray-800 break-words">
+                                {notif.title}
+                              </p>
 
-                              ${
-                                !notif.is_read
-                                  ? "bg-orange-50"
-                                  : ""
-                              }
-                            `}
-                          >
-                            <div className="flex justify-between items-start gap-3">
-                              <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-sm text-gray-800 break-words">
-                                  {
-                                    notif.title
-                                  }
-                                </p>
+                              <p className="text-sm text-gray-600 mt-1 break-words">
+                                {notif.message}
+                              </p>
 
-                                <p className="text-sm text-gray-600 mt-1 break-words">
-                                  {
-                                    notif.message
-                                  }
-                                </p>
-
-                                {notif.ticket_id &&
-                                  notif.ticket_code && (
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        handleNotificationClick(
-                                          notif,
-                                        )
-                                      }
-                                      className="
-                                        text-sm
-                                        text-orange-600
-                                        hover:text-orange-800
-                                        font-medium
-                                        mt-2
-                                      "
-                                    >
-                                      Buka Tiket
-                                    </button>
-                                  )}
-
-                                <p className="text-xs text-gray-400 mt-2 break-words">
-                                  {new Date(
-                                    notif.created_at,
-                                  ).toLocaleString(
-                                    "id-ID",
-                                  )}
-                                </p>
-                              </div>
-
-                              <div className="flex items-start gap-2 shrink-0">
-                                {!notif.is_read && (
-                                  <span className="w-2 h-2 rounded-full bg-orange-500 mt-2" />
+                              {notif.ticket_id &&
+                                notif.ticket_code && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleNotificationClick(
+                                        notif,
+                                      )
+                                    }
+                                    className="
+                                      text-sm
+                                      text-orange-600
+                                      hover:text-orange-800
+                                      font-medium
+                                      mt-2
+                                    "
+                                  >
+                                    Buka Tiket
+                                  </button>
                                 )}
 
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleDeleteNotification(
-                                      notif.id,
-                                    )
-                                  }
+                              <p className="text-xs text-gray-400 mt-2 break-words">
+                                {new Date(
+                                  notif.created_at,
+                                ).toLocaleString("id-ID")}
+                              </p>
+                            </div>
+
+                            <div className="flex items-start gap-2 shrink-0">
+                              {!notif.is_read && (
+                                <span
                                   className="
-                                    text-gray-400
-                                    hover:text-red-500
-                                    transition
+                                    w-2
+                                    h-2
+                                    rounded-full
+                                    bg-orange-500
+                                    mt-2
                                   "
-                                >
-                                  <FiX size={14} />
-                                </button>
-                              </div>
+                                />
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleDeleteNotification(
+                                    notif.id,
+                                  )
+                                }
+                                className="
+                                  text-gray-400
+                                  hover:text-red-500
+                                  transition
+                                "
+                                aria-label="Hapus notifikasi"
+                              >
+                                <FiX size={14} />
+                              </button>
                             </div>
                           </div>
-                        ),
-                      )
+                        </div>
+                      ))
                     )}
                   </div>
                 </div>
@@ -1205,7 +1287,6 @@ export default function DashboardLayout({
             </div>
 
             {/* PROFILE */}
-
             <div
               className="relative shrink-0"
               ref={profileRef}
@@ -1213,12 +1294,11 @@ export default function DashboardLayout({
               <button
                 type="button"
                 onClick={() => {
-                  setOpenProfile(
-                    (prev) => !prev,
-                  );
-
+                  setOpenProfile((prev) => !prev);
                   setOpenNotif(false);
                 }}
+                aria-label="Profil"
+                aria-expanded={openProfile}
               >
                 <div
                   className="
@@ -1258,13 +1338,8 @@ export default function DashboardLayout({
                   <button
                     type="button"
                     onClick={() => {
-                      navigate(
-                        "/profile",
-                      );
-
-                      setOpenProfile(
-                        false,
-                      );
+                      navigate("/profile");
+                      setOpenProfile(false);
                     }}
                     className="
                       w-full
@@ -1308,6 +1383,7 @@ export default function DashboardLayout({
           </div>
         </header>
 
+        {/* MAIN CONTENT */}
         <main
           className="
             flex-1
@@ -1323,6 +1399,7 @@ export default function DashboardLayout({
           {children}
         </main>
 
+        {/* FOOTER */}
         <footer
           className="
             bg-white
@@ -1345,8 +1422,7 @@ export default function DashboardLayout({
           "
         >
           <p className="break-words">
-            © 2026 Helpdesk CCIT Nutech
-            Integrasi
+            © 2026 Helpdesk CCIT Nutech Integrasi
           </p>
 
           <p>Version 1.0.0</p>

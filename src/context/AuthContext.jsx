@@ -10,38 +10,46 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const token = localStorage.getItem("token");
 
-    if (token) {
-      try {
-        const decoded = jwtDecode(token);
+    if (!token) {
+      setLoading(false);
+      return;
+    }
 
-        const currentTime = Date.now() / 1000;
+    try {
+      const decoded = jwtDecode(token);
+      const currentTime = Date.now() / 1000;
 
-        if (decoded.exp < currentTime) {
-          fetch(`${import.meta.env.VITE_API_URL}/v1/users/logout`, {
+      if (decoded.exp && decoded.exp < currentTime) {
+        fetch(
+          `${import.meta.env.VITE_API_URL}/v1/users/logout`,
+          {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({ token }),
-          });
+          },
+        ).catch((error) => {
+          console.error("Logout expired token error:", error);
+        });
 
-          localStorage.removeItem("token");
-          setUser(null);
-        } else {
-          setUser(decoded);
-        }
-      } catch (err) {
-        console.log("TOKEN INVALID");
         localStorage.removeItem("token");
         setUser(null);
+      } else {
+        setUser(decoded);
       }
+    } catch (error) {
+      console.error("TOKEN INVALID", error);
+      localStorage.removeItem("token");
+      setUser(null);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }, []);
 
   const login = (token) => {
     localStorage.setItem("token", token);
+
     const decoded = jwtDecode(token);
     setUser(decoded);
   };
@@ -51,15 +59,18 @@ export function AuthProvider({ children }) {
 
     if (token) {
       try {
-        await fetch("${import.meta.env.VITE_API_URL}/v1/users/logout", {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
+        await fetch(
+          `${import.meta.env.VITE_API_URL}/v1/users/logout`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ token }),
           },
-          body: JSON.stringify({ token }),
-        });
-      } catch (err) {
-        console.error("Logout API error:", err);
+        );
+      } catch (error) {
+        console.error("Logout API error:", error);
       }
     }
 
@@ -68,7 +79,14 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        logout,
+        loading,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

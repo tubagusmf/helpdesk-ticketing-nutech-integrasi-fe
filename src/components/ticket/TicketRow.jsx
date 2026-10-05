@@ -1,16 +1,20 @@
 import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  FiAlertCircle,
+  FiClock,
   FiEdit,
   FiEye,
+  FiMapPin,
   FiMessageCircle,
   FiSend,
-  FiClock,
-  FiMapPin,
   FiUser,
-  FiAlertCircle,
 } from "react-icons/fi";
-
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 
 import TicketResolutionModal from "../modal/TicketResolutionModal";
 import TicketCommentModal from "../modal/TicketCommentModal";
@@ -22,131 +26,416 @@ import {
   markTicketCommentsAsRead,
   responseTicket,
 } from "../../services/ticketService";
-
 import { ROLE } from "../../constants/role";
-import { toast } from "react-hot-toast";
 
-export default function TicketRow({ ticket, role, userId }) {
-  const [showResolution, setShowResolution] = useState(false);
-  const [showComment, setShowComment] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
-  const [showReassignModal, setShowReassignModal] = useState(false);
-  const [showEngineerResolution, setShowEngineerResolution] = useState(false);
+const RESPONSE_SLA_SECONDS = 3 * 60;
 
-  const [now, setNow] = useState(new Date());
+const PRIORITY_COLOR = {
+  LOW: "bg-gray-100 text-gray-600 ring-gray-200",
+  MEDIUM: "bg-blue-50 text-blue-600 ring-blue-100",
+  HIGH: "bg-orange-50 text-orange-600 ring-orange-100",
+  URGENT: "bg-red-50 text-red-600 ring-red-100",
+};
 
+const STATUS_COLOR = {
+  OPEN: "bg-red-50 text-red-600 ring-red-100",
+  IN_PROGRESS: "bg-orange-50 text-orange-600 ring-orange-100",
+  ONHOLD: "bg-blue-50 text-blue-600 ring-blue-100",
+  RESOLVED: "bg-green-50 text-green-600 ring-green-100",
+  CLOSED: "bg-gray-100 text-gray-600 ring-gray-200",
+};
+
+const normalizeStatus = (status) =>
+  String(status || "").toUpperCase();
+
+const getPriorityClass = (priority) =>
+  PRIORITY_COLOR[normalizeStatus(priority)] || PRIORITY_COLOR.LOW;
+
+const getStatusClass = (status) =>
+  STATUS_COLOR[normalizeStatus(status)] ||
+  "bg-gray-100 text-gray-600 ring-gray-200";
+
+const parseLocalDate = (dateValue) => {
+  if (!dateValue) {
+    return null;
+  }
+
+  if (dateValue instanceof Date) {
+    return Number.isNaN(dateValue.getTime())
+      ? null
+      : dateValue;
+  }
+
+  const value = String(dateValue).trim();
+
+  if (!value) {
+    return null;
+  }
+
+  // Try normal ISO / browser date parsing first.
+  const parsedDate = new Date(value);
+
+  if (!Number.isNaN(parsedDate.getTime())) {
+    return parsedDate;
+  }
+
+  // Fallback for "YYYY-MM-DD HH:mm:ss" without timezone.
+  const normalized = value
+    .replace(" ", "T")
+    .slice(0, 19);
+
+  const [datePart, timePart] = normalized.split("T");
+
+  if (!datePart) {
+    return null;
+  }
+
+  const [year, month, day] = datePart
+    .split("-")
+    .map(Number);
+
+  const [hour = 0, minute = 0, second = 0] = (
+    timePart || ""
+  )
+    .split(":")
+    .map(Number);
+
+  if (
+    !year ||
+    !month ||
+    !day ||
+    [hour, minute, second].some(Number.isNaN)
+  ) {
+    return null;
+  }
+
+  const localDate = new Date(
+    year,
+    month - 1,
+    day,
+    hour,
+    minute,
+    second,
+  );
+
+  return Number.isNaN(localDate.getTime())
+    ? null
+    : localDate;
+};
+
+const formatDateTime = (dateValue) => {
+  if (!dateValue) {
+    return "-";
+  }
+
+  const date = new Date(dateValue);
+
+  return Number.isNaN(date.getTime())
+    ? "-"
+    : date.toLocaleString();
+};
+
+const ActionButton = ({
+  onClick,
+  icon,
+  color,
+  title,
+  badge = null,
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    title={title}
+    aria-label={title}
+    className={`
+      relative
+      w-9
+      h-9
+      flex
+      items-center
+      justify-center
+      rounded-lg
+      transition
+      ${color}
+    `}
+  >
+    {icon}
+    {badge}
+  </button>
+);
+
+function StatusBadge({ status }) {
+  return (
+    <span
+      className={`
+        inline-flex
+        px-3
+        py-1
+        text-xs
+        rounded-full
+        ring-1
+        ring-inset
+        ${getStatusClass(status)}
+      `}
+    >
+      {status || "-"}
+    </span>
+  );
+}
+
+function EngineerStatusBadge({ status }) {
+  const isDone = normalizeStatus(status) === "DONE";
+
+  return (
+    <span
+      className={`
+        inline-flex
+        px-3
+        py-1
+        text-xs
+        rounded-full
+        ${
+          isDone
+            ? "bg-green-100 text-green-600"
+            : "bg-orange-100 text-orange-600"
+        }
+      `}
+    >
+      {isDone ? "DONE" : "PENDING"}
+    </span>
+  );
+}
+
+function ResponseSlaBadge({
+  responseSla,
+  mobile = false,
+}) {
+  if (!responseSla) {
+    return null;
+  }
+
+  if (mobile) {
+    return (
+      <div className="px-4 pt-3">
+        <div
+          className={`
+            rounded-lg
+            px-3
+            py-2
+            text-xs
+            ${
+              responseSla.overdue
+                ? "bg-red-50 text-red-600"
+                : "bg-blue-50 text-blue-600"
+            }
+          `}
+        >
+          {responseSla.overdue
+            ? `⚠ ${responseSla.text}`
+            : `⏱ Response SLA ${responseSla.text}`}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`
+        mt-1
+        text-xs
+        ${
+          responseSla.overdue
+            ? "text-red-500 font-medium"
+            : "text-blue-600"
+        }
+      `}
+    >
+      {responseSla.overdue
+        ? `⚠ ${responseSla.text}`
+        : `⏱ Response ${responseSla.text}`}
+    </div>
+  );
+}
+
+function TicketSla({
+  ticket,
+  now,
+  mobile = false,
+}) {
+  const status = normalizeStatus(ticket.status);
+
+  if (status !== "OPEN") {
+    return null;
+  }
+
+  const dueDate = parseLocalDate(ticket.due_at);
+
+  const isOverdue =
+    Boolean(dueDate) &&
+    dueDate.getTime() < now.getTime();
+
+  const diffMs = dueDate
+    ? dueDate.getTime() - now.getTime()
+    : 0;
+
+  if (!dueDate) {
+    return (
+      <div
+        className={`
+          flex
+          items-center
+          gap-1
+          ${mobile ? "mt-1" : "mt-1"}
+          text-xs
+          text-gray-500
+        `}
+      >
+        <FiClock size={13} />
+        -
+      </div>
+    );
+  }
+
+  const totalMinutes = Math.max(
+    0,
+    Math.floor(diffMs / 60000),
+  );
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  const text = isOverdue
+    ? "Overdue"
+    : hours > 0
+      ? `${hours}j ${minutes}m lagi`
+      : `${minutes}m lagi`;
+
+  return (
+    <div
+      className={`
+        flex
+        items-center
+        gap-1
+        ${mobile ? "mt-1" : "mt-1"}
+        text-xs
+        ${
+          isOverdue
+            ? "text-red-500 font-medium"
+            : "text-gray-500"
+        }
+      `}
+    >
+      {isOverdue ? (
+        <FiAlertCircle size={13} />
+      ) : (
+        <FiClock size={13} />
+      )}
+      {text}
+    </div>
+  );
+}
+
+export default function TicketRow({
+  ticket,
+  role,
+  userId,
+}) {
   const navigate = useNavigate();
 
-  const RESPONSE_SLA_SECONDS = 3 * 60;
+  const [showResolution, setShowResolution] =
+    useState(false);
+  const [showComment, setShowComment] =
+    useState(false);
+  const [showHistory, setShowHistory] =
+    useState(false);
+  const [showReassignModal, setShowReassignModal] =
+    useState(false);
+  const [showEngineerResolution, setShowEngineerResolution] =
+    useState(false);
 
-  const priorityColor = {
-    LOW: "bg-gray-100 text-gray-600 ring-gray-200",
-    MEDIUM: "bg-blue-50 text-blue-600 ring-blue-100",
-    HIGH: "bg-orange-50 text-orange-600 ring-orange-100",
-    URGENT: "bg-red-50 text-red-600 ring-red-100",
-  };
+  const [now, setNow] = useState(
+    () => new Date(),
+  );
 
-  const statusColor = {
-    OPEN: "bg-red-50 text-red-600 ring-red-100",
-    IN_PROGRESS: "bg-orange-50 text-orange-600 ring-orange-100",
-    ONHOLD: "bg-blue-50 text-blue-600 ring-blue-100",
-    RESOLVED: "bg-green-50 text-green-600 ring-green-100",
-    CLOSED: "bg-gray-100 text-gray-600 ring-gray-200",
-  };
+  const [responded, setResponded] = useState(
+    Boolean(ticket.staff_first_response_at),
+  );
+
+  const [unreadCommentCount, setUnreadCommentCount] = useState(
+    Number(ticket.unread_comment_count) || 0,
+  );
+
+  /* =======================================================
+     REAL-TIME CLOCK
+  ======================================================= */
 
   useEffect(() => {
     const interval = setInterval(() => {
       setNow(new Date());
     }, 1000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+    };
   }, []);
 
-  const parseLocalDate = (dateString) => {
-    if (!dateString) {
+  /* =======================================================
+     SYNC RESPONSE STATE WITH TICKET PROP
+  ======================================================= */
+
+  useEffect(() => {
+    setResponded(Boolean(ticket.staff_first_response_at));
+  }, [ticket.staff_first_response_at]);
+
+  useEffect(() => {
+    setUnreadCommentCount(
+      Number(ticket.unread_comment_count) || 0,
+    );
+  }, [ticket.unread_comment_count]);
+
+  const status = normalizeStatus(ticket.status);
+
+  const isStaff = role === ROLE.STAFF;
+
+  const isAssignedToCurrentStaff =
+    Boolean(ticket.staff_assigned_to_id) &&
+    Number(ticket.staff_assigned_to_id) ===
+      Number(userId);
+
+  const canRespond =
+    isStaff &&
+    isAssignedToCurrentStaff &&
+    !responded;
+
+  const hasUnreadEngineerResolution =
+    Boolean(ticket.engineer_resolution_unread);
+
+  const canShowResponseSla =
+    canRespond && status === "OPEN";
+
+  const responseSla = useMemo(() => {
+    if (!canShowResponseSla) {
       return null;
     }
 
-    // Jika sudah berupa Date
-    if (dateString instanceof Date) {
-      return Number.isNaN(dateString.getTime()) ? null : dateString;
-    }
-
-    const value = String(dateString).trim();
-
-    if (!value) {
+    if (!ticket.staff_assigned_at) {
       return null;
     }
 
-    const isoDate = new Date(value);
-
-    if (!Number.isNaN(isoDate.getTime())) {
-      return isoDate;
-    }
-
-    const normalized = value.replace(" ", "T").slice(0, 19);
-
-    const [datePart, timePart] = normalized.split("T");
-
-    if (!datePart) {
-      return null;
-    }
-
-    const [year, month, day] = datePart.split("-").map(Number);
-
-    const [hour = 0, minute = 0, second = 0] = (timePart || "")
-      .split(":")
-      .map(Number);
-
-    if (!year || !month || !day || [hour, minute, second].some(Number.isNaN)) {
-      return null;
-    }
-
-    const localDate = new Date(year, month - 1, day, hour, minute, second);
-
-    return Number.isNaN(localDate.getTime()) ? null : localDate;
-  };
-
-  const getSLA = (dueAt) => {
-    const due = parseLocalDate(dueAt);
-
-    if (!due) {
-      return "-";
-    }
-
-    const diffMs = due.getTime() - now.getTime();
-
-    if (diffMs <= 0) {
-      return "Overdue";
-    }
-
-    const totalMinutes = Math.floor(diffMs / 60000);
-
-    const hours = Math.floor(totalMinutes / 60);
-
-    const minutes = totalMinutes % 60;
-
-    if (hours > 0) {
-      return `${hours}j ${minutes}m lagi`;
-    }
-
-    return `${minutes}m lagi`;
-  };
-
-  const getResponseSLA = () => {
-    if (!ticket.staff_assigned_at || ticket.staff_first_response_at) {
-      return null;
-    }
-
-    const assignedAt = new Date(ticket.staff_assigned_at).getTime();
+    const assignedAt = new Date(
+      ticket.staff_assigned_at,
+    ).getTime();
 
     if (Number.isNaN(assignedAt)) {
       return null;
     }
 
-    const elapsedSeconds = Math.floor((now.getTime() - assignedAt) / 1000);
+    const elapsedSeconds = Math.floor(
+      (now.getTime() - assignedAt) / 1000,
+    );
 
-    const remainingSeconds = RESPONSE_SLA_SECONDS - elapsedSeconds;
+    const remainingSeconds =
+      RESPONSE_SLA_SECONDS - elapsedSeconds;
 
     if (remainingSeconds <= 0) {
       return {
@@ -155,73 +444,173 @@ export default function TicketRow({ ticket, role, userId }) {
       };
     }
 
-    const minutes = Math.floor(remainingSeconds / 60);
+    const minutes = Math.floor(
+      remainingSeconds / 60,
+    );
 
-    const seconds = remainingSeconds % 60;
+    const seconds =
+      remainingSeconds % 60;
 
     return {
       overdue: false,
-      text: `${minutes}:${String(seconds).padStart(2, "0")}`,
+      text: `${minutes}:${String(seconds).padStart(
+        2,
+        "0",
+      )}`,
     };
+  }, [
+    canShowResponseSla,
+    ticket.staff_assigned_at,
+    now,
+  ]);
+
+  /* =======================================================
+     TICKET STATUS / SLA
+  ======================================================= */
+
+  const ticketOverdue = useMemo(() => {
+    if (status !== "OPEN") {
+      return false;
+    }
+
+    const dueDate = parseLocalDate(
+      ticket.due_at,
+    );
+
+    return Boolean(dueDate) &&
+      dueDate.getTime() < now.getTime();
+  }, [
+    status,
+    ticket.due_at,
+    now,
+  ]);
+
+  const handleTicketClick = () => {
+    navigate(`/tickets/${ticket.id}`);
   };
 
-  const dueDate = parseLocalDate(ticket.due_at);
-
-  const overdue =
-    Boolean(dueDate) &&
-    dueDate.getTime() < now.getTime() &&
-    ticket.status === "OPEN";
-
-  const hasUnreadEngineerResolution = Boolean(
-    ticket.engineer_resolution_unread,
-  );
-
   const handleResponse = async () => {
+    if (!canRespond) {
+      return;
+    }
+
     try {
       await responseTicket(ticket.id);
 
-      toast.success("Ticket berhasil diresponse");
-    } catch (error) {
-      console.error(error);
+      setResponded(true);
 
-      toast.error(error?.message || "Gagal melakukan response ticket");
+      toast.success(
+        "Ticket berhasil diresponse",
+      );
+    } catch (error) {
+      console.error(
+        "Response ticket error:",
+        error,
+      );
+
+      toast.error(
+        error?.message ||
+          "Gagal melakukan response ticket",
+      );
     }
   };
 
   const handleOpenComment = async () => {
     try {
-      await markTicketCommentsAsRead(ticket.id);
-
-      ticket.unread_comment_count = 0;
+      await markTicketCommentsAsRead(
+        ticket.id,
+      );
     } catch (error) {
-      console.error(error);
+      console.error(
+        "Mark comment as read error:",
+        error,
+      );
+    } finally {
+      // Preserve current behavior used by the existing table.
+      setUnreadCommentCount(0);
+      setShowComment(true);
     }
-
-    setShowComment(true);
   };
 
-  const ActionButton = ({ onClick, icon, color, title, badge }) => (
-    <button
-      type="button"
-      onClick={onClick}
-      title={title}
-      className={`
-        relative
-        w-9
-        h-9
-        flex
-        items-center
-        justify-center
-        rounded-lg
-        transition
-        ${color}
-      `}
-    >
-      {icon}
+  const openResolution = () => {
+    setShowResolution(true);
+  };
 
-      {badge}
-    </button>
-  );
+  const openHistory = () => {
+    setShowHistory(true);
+  };
+
+  const openEngineerResolution = () => {
+    setShowEngineerResolution(true);
+  };
+
+  const openReassign = () => {
+    setShowReassignModal(true);
+  };
+
+  const handleResolutionSuccess = () => {
+    window.location.reload();
+  };
+
+  const handleEngineerResolutionSuccess = () => {
+    setShowEngineerResolution(false);
+    window.location.reload();
+  };
+
+  const handleReassignSuccess = () => {
+    setShowReassignModal(false);
+  };
+
+  const renderCommentBadge = () => {
+    if (!(unreadCommentCount > 0)) {
+      return null;
+    }
+
+    return (
+      <span
+        className="
+          absolute
+          -top-1
+          -right-1
+          min-w-[16px]
+          h-4
+          px-1
+          flex
+          items-center
+          justify-center
+          rounded-full
+          bg-red-500
+          text-white
+          text-[9px]
+        "
+      >
+        {unreadCommentCount}
+      </span>
+    );
+  };
+
+  const canOpenResolution =
+    role === ROLE.ADMINISTRATOR ||
+    role === ROLE.STAFF ||
+    (role === ROLE.USER && status === "RESOLVED");
+
+  const canEngineerResolve =
+    role === ROLE.ENGINEER &&
+    Number(ticket.assigned_to_id) === Number(userId);
+
+  const canReassign =
+    [
+      ROLE.ADMINISTRATOR,
+      ROLE.STAFF,
+      ROLE.EXECUTIVE,
+    ].includes(role) &&
+    !["RESOLVED", "CLOSED"].includes(
+      status,
+    );
+
+  /* =======================================================
+     RENDER
+  ======================================================= */
 
   return (
     <>
@@ -229,23 +618,23 @@ export default function TicketRow({ ticket, role, userId }) {
         className="
           w-full
           min-w-0
-
           border-b
           md:border-b
-
           py-4
           md:py-5
-
           text-sm
         "
       >
+        {/* =================================================
+            DESKTOP
+        ================================================== */}
 
         <div className="hidden md:grid md:grid-cols-6 gap-4 items-start">
           {/* TICKET */}
           <div className="min-w-0">
             <button
               type="button"
-              onClick={() => navigate(`/tickets/${ticket.id}`)}
+              onClick={handleTicketClick}
               className="
                 font-semibold
                 text-gray-900
@@ -258,9 +647,7 @@ export default function TicketRow({ ticket, role, userId }) {
             </button>
 
             <div className="mt-1 text-xs text-gray-400">
-              {ticket.created_at
-                ? new Date(ticket.created_at).toLocaleString()
-                : "-"}
+              {formatDateTime(ticket.created_at)}
             </div>
 
             <div className="mt-1 text-xs text-blue-600">
@@ -280,7 +667,7 @@ export default function TicketRow({ ticket, role, userId }) {
                 rounded-md
                 ring-1
                 ring-inset
-                ${priorityColor[ticket.priority] || priorityColor.LOW}
+                ${getPriorityClass(ticket.priority)}
               `}
             >
               {ticket.priority || "-"}
@@ -295,9 +682,7 @@ export default function TicketRow({ ticket, role, userId }) {
 
             <div className="mt-1 text-xs text-gray-500 break-words">
               {ticket.location_name || "-"}
-
               {" • "}
-
               <span className="text-blue-600">
                 ID: {ticket.asset_code || "-"}
               </span>
@@ -316,48 +701,39 @@ export default function TicketRow({ ticket, role, userId }) {
           {/* STATUS */}
           <div className="min-w-0">
             {role === ROLE.ENGINEER ? (
-              <span
-                className={`
-                  inline-flex
-                  px-3
-                  py-1
-                  text-xs
-                  rounded-full
-                  ${
-                    ticket.engineer_status === "DONE"
-                      ? "bg-green-100 text-green-600"
-                      : "bg-orange-100 text-orange-600"
-                  }
-                `}
-              >
-                {ticket.engineer_status === "DONE" ? "DONE" : "PENDING"}
-              </span>
+              <EngineerStatusBadge
+                status={ticket.engineer_status}
+              />
             ) : (
               <>
-                <span
-                  className={`
-                    inline-flex
-                    px-3
-                    py-1
-                    text-xs
-                    rounded-full
-                    ring-1
-                    ring-inset
-                    ${statusColor[ticket.status] || "bg-gray-100 text-gray-600"}
-                  `}
-                >
-                  {ticket.status || "-"}
-                </span>
+                <StatusBadge
+                  status={ticket.status}
+                />
 
-                {ticket.status === "OPEN" && (
-                  <div
-                    className={`
-                      mt-1
-                      text-xs
-                      ${overdue ? "text-red-500 font-medium" : "text-gray-500"}
-                    `}
-                  >
-                    {overdue ? "⚠ Overdue" : `⏳ ${getSLA(ticket.due_at)}`}
+                {status === "OPEN" && (
+                  <div>
+                    <div
+                      className={`
+                        mt-1
+                        text-xs
+                        ${
+                          ticketOverdue
+                            ? "text-red-500 font-medium"
+                            : "text-gray-500"
+                        }
+                      `}
+                    >
+                      {ticketOverdue
+                        ? "⚠ Overdue"
+                        : `⏳ ${getSLAText(
+                            ticket.due_at,
+                            now,
+                          )}`}
+                    </div>
+
+                    <ResponseSlaBadge
+                      responseSla={responseSla}
+                    />
                   </div>
                 )}
 
@@ -389,7 +765,7 @@ export default function TicketRow({ ticket, role, userId }) {
           <div>
             <div className="flex flex-wrap gap-2">
               <ActionButton
-                onClick={() => setShowHistory(true)}
+                onClick={openHistory}
                 icon={<FiEye size={17} />}
                 color="text-blue-600 hover:bg-blue-50"
                 title="Lihat history"
@@ -401,92 +777,62 @@ export default function TicketRow({ ticket, role, userId }) {
                   icon={<FiMessageCircle size={17} />}
                   color="text-green-600 hover:bg-green-50"
                   title="Comment"
-                  badge={
-                    ticket.unread_comment_count > 0 ? (
-                      <span
-                        className="
-                          absolute
-                          -top-1
-                          -right-1
-                          min-w-[16px]
-                          h-4
-                          px-1
-                          flex
-                          items-center
-                          justify-center
-                          rounded-full
-                          bg-red-500
-                          text-white
-                          text-[9px]
-                        "
-                      >
-                        {ticket.unread_comment_count}
-                      </span>
-                    ) : null
-                  }
+                  badge={renderCommentBadge()}
                 />
               )}
 
               {[ROLE.ADMINISTRATOR, ROLE.STAFF].includes(role) && (
                 <ActionButton
-                  onClick={() => setShowResolution(true)}
+                  onClick={openResolution}
                   icon={<FiEdit size={17} />}
                   color="text-orange-600 hover:bg-orange-50"
                   title="Resolution Ticket"
                 />
               )}
 
-              {role === ROLE.STAFF &&
-                ticket.staff_assigned_to_id &&
-                Number(ticket.staff_assigned_to_id) === Number(userId) &&
-                !ticket.staff_first_response_at && (
-                  <ActionButton
-                    onClick={handleResponse}
-                    icon={<FiClock size={17} />}
-                    color="text-blue-600 hover:bg-blue-50"
-                    title="Response Ticket"
-                  />
-                )}
+              {canRespond && (
+                <ActionButton
+                  onClick={handleResponse}
+                  icon={<FiClock size={17} />}
+                  color="text-blue-600 hover:bg-blue-50"
+                  title="Response Ticket"
+                />
+              )}
 
-              {role === ROLE.ENGINEER &&
-                Number(ticket.assigned_to_id) === Number(userId) && (
+              {canEngineerResolve && (
+                <ActionButton
+                  onClick={openEngineerResolution}
+                  icon={<FiEdit size={17} />}
+                  color="text-orange-600 hover:bg-orange-50"
+                  title="Engineer Resolution"
+                />
+              )}
+
+              {role === ROLE.USER &&
+                status === "RESOLVED" && (
                   <ActionButton
-                    onClick={() => setShowEngineerResolution(true)}
+                    onClick={openResolution}
                     icon={<FiEdit size={17} />}
                     color="text-orange-600 hover:bg-orange-50"
-                    title="Engineer Resolution"
+                    title="Resolution Ticket"
                   />
                 )}
 
-              {role === ROLE.USER && ticket.status === "RESOLVED" && (
+              {canReassign && (
                 <ActionButton
-                  onClick={() => setShowResolution(true)}
-                  icon={<FiEdit size={17} />}
-                  color="text-orange-600 hover:bg-orange-50"
-                  title="Resolution Ticket"
+                  onClick={openReassign}
+                  icon={<FiSend size={17} />}
+                  color="text-purple-600 hover:bg-purple-50"
+                  title="Reassign"
                 />
               )}
-
-              {[ROLE.ADMINISTRATOR, ROLE.STAFF, ROLE.EXECUTIVE].includes(
-                role,
-              ) &&
-                !["RESOLVED", "CLOSED"].includes(
-                  String(ticket.status || "").toUpperCase(),
-                ) && (
-                  <ActionButton
-                    onClick={() => setShowReassignModal(true)}
-                    icon={<FiSend size={17} />}
-                    color="text-purple-600 hover:bg-purple-50"
-                    title="Reassign"
-                  />
-                )}
             </div>
           </div>
         </div>
 
-        {/* =====================================================
+        {/* =================================================
             MOBILE CARD
-        ====================================================== */}
+        ================================================== */}
 
         <div
           className="
@@ -505,7 +851,7 @@ export default function TicketRow({ ticket, role, userId }) {
               <div className="min-w-0">
                 <button
                   type="button"
-                  onClick={() => navigate(`/tickets/${ticket.id}`)}
+                  onClick={handleTicketClick}
                   className="
                     text-[15px]
                     font-bold
@@ -519,9 +865,7 @@ export default function TicketRow({ ticket, role, userId }) {
                 </button>
 
                 <div className="mt-1 text-xs text-gray-400">
-                  {ticket.created_at
-                    ? new Date(ticket.created_at).toLocaleString()
-                    : "-"}
+                  {formatDateTime(ticket.created_at)}
                 </div>
 
                 <div className="mt-1 text-xs text-blue-600">
@@ -540,7 +884,7 @@ export default function TicketRow({ ticket, role, userId }) {
                   rounded-full
                   ring-1
                   ring-inset
-                  ${priorityColor[ticket.priority] || priorityColor.LOW}
+                  ${getPriorityClass(ticket.priority)}
                 `}
               >
                 {ticket.priority || "-"}
@@ -551,7 +895,10 @@ export default function TicketRow({ ticket, role, userId }) {
           {/* PROJECT / LOCATION */}
           <div className="px-4 py-4">
             <div className="flex items-start gap-2">
-              <FiMapPin className="mt-0.5 text-orange-500 shrink-0" size={16} />
+              <FiMapPin
+                className="mt-0.5 text-orange-500 shrink-0"
+                size={16}
+              />
 
               <div className="min-w-0">
                 <div className="font-semibold text-gray-800 break-words">
@@ -560,9 +907,7 @@ export default function TicketRow({ ticket, role, userId }) {
 
                 <div className="text-xs text-gray-500 mt-1 break-words">
                   {ticket.location_name || "-"}
-
                   {" • "}
-
                   <span className="text-blue-600">
                     ID: {ticket.asset_code || "-"}
                   </span>
@@ -608,7 +953,10 @@ export default function TicketRow({ ticket, role, userId }) {
               </p>
 
               <div className="flex items-center gap-2 mt-2">
-                <FiUser size={15} className="text-gray-400 shrink-0" />
+                <FiUser
+                  size={15}
+                  className="text-gray-400 shrink-0"
+                />
 
                 <span className="text-sm text-gray-700 break-words">
                   {ticket.assigned_to_name || "-"}
@@ -619,78 +967,27 @@ export default function TicketRow({ ticket, role, userId }) {
             {/* STATUS */}
             <div className="p-4">
               <p className="text-[10px] font-bold uppercase text-gray-400">
-                {role === ROLE.ENGINEER ? "Status" : "Status & SLA"}
+                {role === ROLE.ENGINEER
+                  ? "Status"
+                  : "Status & SLA"}
               </p>
 
               <div className="mt-2">
                 {role === ROLE.ENGINEER ? (
-                  <span
-                    className={`
-                      inline-flex
-                      px-2.5
-                      py-1
-                      text-xs
-                      rounded-full
-
-                      ${
-                        ticket.engineer_status === "DONE"
-                          ? "bg-green-50 text-green-600"
-                          : "bg-orange-50 text-orange-600"
-                      }
-                    `}
-                  >
-                    {ticket.engineer_status === "DONE" ? "DONE" : "PENDING"}
-                  </span>
+                  <EngineerStatusBadge
+                    status={ticket.engineer_status}
+                  />
                 ) : (
                   <>
-                    <span
-                      className={`
-                        inline-flex
-                        px-2.5
-                        py-1
-                        text-xs
-                        rounded-full
-                        ring-1
-                        ring-inset
+                    <StatusBadge
+                      status={ticket.status}
+                    />
 
-                        ${
-                          statusColor[ticket.status] ||
-                          "bg-gray-100 text-gray-600"
-                        }
-                      `}
-                    >
-                      {ticket.status || "-"}
-                    </span>
-
-                    {ticket.status === "OPEN" && (
-                      <div
-                        className={`
-                          flex
-                          items-center
-                          gap-1
-                          mt-1
-                          text-xs
-
-                          ${
-                            overdue
-                              ? "text-red-500 font-medium"
-                              : "text-gray-500"
-                          }
-                        `}
-                      >
-                        {overdue ? (
-                          <>
-                            <FiAlertCircle size={13} />
-                            Overdue
-                          </>
-                        ) : (
-                          <>
-                            <FiClock size={13} />
-                            {getSLA(ticket.due_at)}
-                          </>
-                        )}
-                      </div>
-                    )}
+                    <TicketSla
+                      ticket={ticket}
+                      now={now}
+                      mobile
+                    />
                   </>
                 )}
               </div>
@@ -719,46 +1016,17 @@ export default function TicketRow({ ticket, role, userId }) {
           )}
 
           {/* STAFF RESPONSE SLA */}
-          {role === ROLE.STAFF && (
-            <>
-              {(() => {
-                const responseSLA = getResponseSLA();
-
-                if (!responseSLA) {
-                  return null;
-                }
-
-                return (
-                  <div className="px-4 pt-3">
-                    <div
-                      className={`
-                        rounded-lg
-                        px-3
-                        py-2
-                        text-xs
-                        ${
-                          responseSLA.overdue
-                            ? "bg-red-50 text-red-600"
-                            : "bg-blue-50 text-blue-600"
-                        }
-                      `}
-                    >
-                      {responseSLA.overdue
-                        ? `⚠ ${responseSLA.text}`
-                        : `⏱ Response SLA ${responseSLA.text}`}
-                    </div>
-                  </div>
-                );
-              })()}
-            </>
-          )}
+          <ResponseSlaBadge
+            responseSla={responseSla}
+            mobile
+          />
 
           {/* ACTION BAR */}
           <div className="p-3 mt-2">
             <div className="flex items-center justify-between rounded-xl bg-gray-50 border border-gray-100 p-1">
               {/* VIEW */}
               <ActionButton
-                onClick={() => setShowHistory(true)}
+                onClick={openHistory}
                 icon={<FiEye size={18} />}
                 color="text-blue-600 hover:bg-white"
                 title="Lihat history"
@@ -771,39 +1039,16 @@ export default function TicketRow({ ticket, role, userId }) {
                   icon={<FiMessageCircle size={18} />}
                   color="text-green-600 hover:bg-white"
                   title="Comment"
-                  badge={
-                    ticket.unread_comment_count > 0 ? (
-                      <span
-                        className="
-                          absolute
-                          -top-1
-                          -right-1
-                          min-w-[16px]
-                          h-4
-                          px-1
-                          flex
-                          items-center
-                          justify-center
-                          rounded-full
-                          bg-red-500
-                          text-white
-                          text-[9px]
-                        "
-                      >
-                        {ticket.unread_comment_count}
-                      </span>
-                    ) : null
-                  }
+                  badge={renderCommentBadge()}
                 />
               ) : (
                 <div />
               )}
 
               {/* RESOLUTION */}
-              {([ROLE.ADMINISTRATOR, ROLE.STAFF].includes(role) ||
-                (role === ROLE.USER && ticket.status === "RESOLVED")) && (
+              {canOpenResolution && (
                 <ActionButton
-                  onClick={() => setShowResolution(true)}
+                  onClick={openResolution}
                   icon={<FiEdit size={18} />}
                   color="text-orange-600 hover:bg-white"
                   title="Resolution"
@@ -811,91 +1056,129 @@ export default function TicketRow({ ticket, role, userId }) {
               )}
 
               {/* ENGINEER RESOLUTION */}
-              {role === ROLE.ENGINEER &&
-                Number(ticket.assigned_to_id) === Number(userId) && (
-                  <ActionButton
-                    onClick={() => setShowEngineerResolution(true)}
-                    icon={<FiEdit size={18} />}
-                    color="text-orange-600 hover:bg-white"
-                    title="Engineer Resolution"
-                  />
-                )}
+              {canEngineerResolve && (
+                <ActionButton
+                  onClick={openEngineerResolution}
+                  icon={<FiEdit size={18} />}
+                  color="text-orange-600 hover:bg-white"
+                  title="Engineer Resolution"
+                />
+              )}
 
               {/* RESPONSE */}
-              {role === ROLE.STAFF &&
-                ticket.staff_assigned_to_id &&
-                Number(ticket.staff_assigned_to_id) === Number(userId) &&
-                !ticket.staff_first_response_at && (
-                  <ActionButton
-                    onClick={handleResponse}
-                    icon={<FiClock size={18} />}
-                    color="text-blue-600 hover:bg-white"
-                    title="Response"
-                  />
-                )}
+              {canRespond && (
+                <ActionButton
+                  onClick={handleResponse}
+                  icon={<FiClock size={18} />}
+                  color="text-blue-600 hover:bg-white"
+                  title="Response"
+                />
+              )}
 
               {/* REASSIGN */}
-              {[ROLE.ADMINISTRATOR, ROLE.STAFF, ROLE.EXECUTIVE].includes(
-                role,
-              ) &&
-                !["RESOLVED", "CLOSED"].includes(
-                  String(ticket.status || "").toUpperCase(),
-                ) && (
-                  <ActionButton
-                    onClick={() => setShowReassignModal(true)}
-                    icon={<FiSend size={18} />}
-                    color="text-purple-600 hover:bg-white"
-                    title="Reassign"
-                  />
-                )}
+              {canReassign && (
+                <ActionButton
+                  onClick={openReassign}
+                  icon={<FiSend size={18} />}
+                  color="text-purple-600 hover:bg-white"
+                  title="Reassign"
+                />
+              )}
             </div>
           </div>
         </div>
       </div>
-      
+
+      {/* =====================================================
+          MODALS
+      ====================================================== */}
+
       {showResolution && (
         <TicketResolutionModal
           ticket={ticket}
           role={role}
-          onClose={() => setShowResolution(false)}
-          onSuccess={() => window.location.reload()}
+          onClose={() =>
+            setShowResolution(false)
+          }
+          onSuccess={handleResolutionSuccess}
         />
       )}
 
       {showEngineerResolution && (
         <TicketEngineerResolutionModal
           ticket={ticket}
-          onClose={() => setShowEngineerResolution(false)}
-          onSuccess={() => {
-            setShowEngineerResolution(false);
-            window.location.reload();
-          }}
+          onClose={() =>
+            setShowEngineerResolution(false)
+          }
+          onSuccess={
+            handleEngineerResolutionSuccess
+          }
         />
       )}
 
       {showComment && (
         <TicketCommentModal
           ticket={ticket}
-          onClose={() => setShowComment(false)}
+          onClose={() =>
+            setShowComment(false)
+          }
         />
       )}
 
       {showHistory && (
         <TicketHistoryModal
           ticket={ticket}
-          onClose={() => setShowHistory(false)}
+          onClose={() =>
+            setShowHistory(false)
+          }
         />
       )}
 
       {showReassignModal && (
         <TicketReassignModal
           ticket={ticket}
-          onClose={() => setShowReassignModal(false)}
-          onSuccess={() => {
-            setShowReassignModal(false);
-          }}
+          onClose={() =>
+            setShowReassignModal(false)
+          }
+          onSuccess={handleReassignSuccess}
         />
       )}
     </>
   );
+}
+
+/* =========================================================
+   TICKET SLA HELPERS
+========================================================= */
+
+function getSLAText(dueAt, now) {
+  const due = parseLocalDate(dueAt);
+
+  if (!due) {
+    return "-";
+  }
+
+  const diffMs =
+    due.getTime() - now.getTime();
+
+  if (diffMs <= 0) {
+    return "Overdue";
+  }
+
+  const totalMinutes = Math.floor(
+    diffMs / 60000,
+  );
+
+  const hours = Math.floor(
+    totalMinutes / 60,
+  );
+
+  const minutes =
+    totalMinutes % 60;
+
+  if (hours > 0) {
+    return `${hours}j ${minutes}m lagi`;
+  }
+
+  return `${minutes}m lagi`;
 }
