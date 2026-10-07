@@ -12,6 +12,7 @@ import UserManagement from "./pages/UserManagement";
 import TicketManagement from "./pages/TicketManagement";
 import TicketDetail from "./pages/TicketDetail";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ExportCustom from "./pages/ExportCustom";
 
 const dashboardPages = [
   {
@@ -72,20 +73,39 @@ const protectedRoutes = [
     component: TicketManagement,
   },
   {
+    path: "/admin/export-custom",
+    role: 1,
+    component: ExportCustom,
+  },
+
+  {
     path: "/staff/tickets",
     role: 2,
     component: TicketManagement,
   },
   {
+    path: "/staff/export-custom",
+    role: 2,
+    component: ExportCustom,
+  },
+
+  {
     path: "/user/tickets",
     role: 3,
     component: TicketManagement,
   },
+
   {
     path: "/executive/tickets",
     role: 4,
     component: TicketManagement,
   },
+  {
+    path: "/executive/export-custom",
+    role: 4,
+    component: ExportCustom,
+  },
+
   {
     path: "/engineer/tickets",
     role: 5,

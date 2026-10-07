@@ -1,10 +1,4 @@
-import {
-  FiGrid,
-  FiFileText,
-  FiUsers,
-  FiDatabase,
-} from "react-icons/fi";
-
+import { FiGrid, FiFileText, FiUsers, FiDatabase, FiDownload } from "react-icons/fi";
 const createDashboardMenu = (basePath) => ({
   label: "Dashboard",
   path: `${basePath}/dashboard`,
@@ -29,6 +23,12 @@ const createDashboardMenu = (basePath) => ({
   ],
 });
 
+const createCustomExportMenu = (basePath) => ({
+  label: "Export Custom",
+  path: `${basePath}/export-custom`,
+  icon: FiDownload,
+});
+
 export const navigationMenu = {
   administrator: [
     createDashboardMenu("/admin"),
@@ -38,6 +38,8 @@ export const navigationMenu = {
       path: "/admin/tickets",
       icon: FiFileText,
     },
+
+    createCustomExportMenu("/admin"),
 
     {
       label: "Manajemen User",
@@ -60,6 +62,8 @@ export const navigationMenu = {
       path: "/staff/tickets",
       icon: FiFileText,
     },
+
+    createCustomExportMenu("/staff"),
   ],
 
   user: [
@@ -80,6 +84,8 @@ export const navigationMenu = {
       path: "/executive/tickets",
       icon: FiFileText,
     },
+
+    createCustomExportMenu("/executive"),
   ],
 
   engineer: [
