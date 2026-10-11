@@ -5,17 +5,13 @@ import {
   updateTicketStatusOnly,
   createTicketResolution,
   getTicketResolution,
+  reassignTicketToOnlineStaff,
 } from "../../services/ticketService";
 import Select from "react-select";
 import useTicketSocket from "../../hooks/useTicketSocket";
 import { ROLE } from "../../constants/role";
 
-export default function TicketResolutionModal({
-  ticket,
-  onClose,
-  onSuccess,
-  role,
-}) {
+export default function TicketResolutionModal({ticket, onClose, onSuccess, role}) {
   const [loading, setLoading] = useState(false);
   const [causes, setCauses] = useState([]);
   const [solutions, setSolutions] = useState([]);
@@ -39,9 +35,11 @@ export default function TicketResolutionModal({
   });
   const isLocked = ["RESOLVED", "CLOSED"].includes(ticket.status);
   const isUser = Number(role) === ROLE.USER;
-
+  const [reassignJustification, setReassignJustification] = useState("");
+  const [reassignLoading, setReassignLoading] = useState(false);
+  const [showReassignForm, setShowReassignForm] = useState(false);
+  const isStaff = Number(role) === ROLE.STAFF;
   const isLockedForAdmin = ["RESOLVED", "CLOSED"].includes(ticket.status);
-
   const isReadOnly = isUser || isLockedForAdmin;
 
   useEffect(() => {
@@ -212,6 +210,52 @@ export default function TicketResolutionModal({
     { value: "RESOLVED", label: "RESOLVED" },
     { value: "ONHOLD", label: "ONHOLD" },
   ];
+
+  const handleReassignToOnlineStaff = async () => {
+    const justification = reassignJustification.trim();
+
+    if (!justification) {
+      alert("Justifikasi reassign wajib diisi.");
+      return;
+    }
+
+    if (justification.length > 1000) {
+      alert("Justifikasi maksimal 1000 karakter.");
+      return;
+    }
+
+    if (
+      !window.confirm(
+        "Apakah Anda yakin ingin mengalihkan ticket ke Staff CCIT lain?",
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setReassignLoading(true);
+
+      const result = await reassignTicketToOnlineStaff(ticket.id, {
+        justification,
+      });
+
+      const staffName =
+        result?.staff_name ||
+        result?.data?.staff_assigned_to_name ||
+        "Staff online";
+
+      alert(`Ticket berhasil dialihkan kepada ${staffName}.`);
+
+      setReassignJustification("");
+
+      onSuccess();
+      onClose();
+    } catch (err) {
+      alert(err.message || "Gagal melakukan reassign ticket.");
+    } finally {
+      setReassignLoading(false);
+    }
+  };
 
   const handleCloseAsUser = async () => {
     try {
@@ -479,7 +523,11 @@ export default function TicketResolutionModal({
                   Nama Staff
                 </label>
                 <input
-                  value={ticket.assigned_to_name}
+                  value={
+                    ticket.staff_assigned_to_name ||
+                    ticket.assigned_to_name ||
+                    "-"
+                  }
                   disabled
                   className="w-full border px-3 py-2 rounded-lg bg-gray-100"
                 />
@@ -715,6 +763,84 @@ export default function TicketResolutionModal({
             )}
           </div>
         </div>
+
+        
+        {/* REASSIGN STAFF - TOGGLE FORM */}
+        {isStaff && !isLockedForAdmin && (
+          <div className="mt-5">
+            {!showReassignForm ? (
+              <button
+                type="button"
+                onClick={() => setShowReassignForm(true)}
+                disabled={loading || reassignLoading}
+                className="inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <span aria-hidden="true">↗</span>
+                Alihkan Ticket ke Staff Lain
+              </button>
+            ) : (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <h3 className="mb-2 text-sm font-semibold text-amber-800">
+                  Justifikasi Reassign
+                </h3>
+
+                <p className="mb-3 text-sm text-gray-600">
+                  Jelaskan alasan ticket perlu dialihkan.
+                  Sistem akan memilih Staff lain yang sedang online secara otomatis.
+                </p>
+
+                <textarea
+                  id="reassign-justification"
+                  value={reassignJustification}
+                  onChange={(e) =>
+                    setReassignJustification(e.target.value)
+                  }
+                  maxLength={1000}
+                  rows={3}
+                  required
+                  disabled={reassignLoading}
+                  autoFocus
+                  placeholder="Tuliskan justifikasi pengalihan ticket..."
+                  className="w-full resize-y rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200 disabled:bg-gray-100"
+                />
+
+                <div className="mt-1 text-right text-xs text-gray-500">
+                  {reassignJustification.length}/1000 karakter
+                </div>
+
+                <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowReassignForm(false);
+                      setReassignJustification("");
+                    }}
+                    disabled={reassignLoading}
+                    className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                  >
+                    Batal
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleReassignToOnlineStaff}
+                    disabled={
+                      reassignLoading ||
+                      loading ||
+                      !reassignJustification.trim()
+                    }
+                    className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+                  >
+                    {reassignLoading
+                      ? "Mengalihkan..."
+                      : "Submit Reassign"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
 
         {isLockedForAdmin && (
           <p className="text-sm text-gray-500 mt-4 text-right">

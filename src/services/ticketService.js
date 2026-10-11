@@ -312,3 +312,11 @@ export const markEngineerResolutionAsRead = async (ticketId) => {
     headers: getHeaders(),
   });
 };
+
+export const reassignTicketToOnlineStaff = async (ticketId,payload) => {
+  return fetchAPI(`${BASE_URL}/tickets/reassign-staff/${ticketId}`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify(payload),
+    });
+};
