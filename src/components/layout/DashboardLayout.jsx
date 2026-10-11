@@ -23,6 +23,7 @@ import { useAuth } from "../../context/AuthContext";
 import {
   getCurrentUser,
   updateOnlineStatus,
+  getActiveOfflineSession,
 } from "../../services/userService";
 import {
   getNotifications,
@@ -128,6 +129,21 @@ const saveShownNotificationKeys = (userId, keys) => {
       error,
     );
   }
+};
+
+const formatDuration = (value = 0) => {
+  const totalSeconds = Math.max(
+    0,
+    Math.floor(Number(value) || 0),
+  );
+
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return [hours, minutes, seconds]
+    .map((part) => String(part).padStart(2, "0"))
+    .join(":");
 };
 
 function SidebarMenuItem({
@@ -298,6 +314,11 @@ export default function DashboardLayout({
   const [openProfile, setOpenProfile] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [showOfflineModal, setShowOfflineModal] = useState(false);
+  const [offlineJustification, setOfflineJustification] = useState("");
+  const [isStatusUpdating, setIsStatusUpdating] = useState(false);
+  const [offlineSince, setOfflineSince] = useState(null);
+  const [offlineElapsedSeconds, setOfflineElapsedSeconds] = useState(0);
   const [loadingNotif, setLoadingNotif] = useState(false);
   const notifRef = useRef(null);
   const profileRef = useRef(null);
@@ -341,11 +362,25 @@ export default function DashboardLayout({
       try {
         const userData = await getCurrentUser();
 
-        if (!mounted) {
+        if (!mounted) return;
+
+        const online = userData?.is_online ?? false;
+        setIsOnline(online);
+
+        if (online) {
+          setOfflineSince(null);
           return;
         }
 
-        setIsOnline(userData?.is_online ?? false);
+        try {
+          const session = await getActiveOfflineSession();
+
+          if (!mounted) return;
+
+          setOfflineSince(session?.offline_at ?? null);
+        } catch (error) {
+          console.error("Gagal mengambil sesi Offline:", error);
+        }
       } catch (error) {
         console.error("Gagal fetch status:", error);
       }
@@ -359,17 +394,101 @@ export default function DashboardLayout({
   }, [userId]);
 
   const handleToggleOnline = useCallback(async () => {
-    const newStatus = !isOnline;
+    if (isOnline === null || isStatusUpdating) return;
 
-    setIsOnline(newStatus);
+    if (isOnline) {
+      setOfflineJustification("");
+      setShowOfflineModal(true);
+      return;
+    }
+
+    setIsStatusUpdating(true);
 
     try {
-      await updateOnlineStatus(newStatus);
+      const response = await updateOnlineStatus(true);
+
+      const duration = Number(
+        response?.data?.duration_seconds ?? 0,
+      );
+
+      setIsOnline(true);
+      setOfflineSince(null);
+      setOfflineElapsedSeconds(0);
+
+      if (duration > 0) {
+        toast.success(
+          `Kembali Online. Durasi Offline: ${formatDuration(duration)}`,
+        );
+      } else {
+        toast.success("Status berhasil diubah menjadi Online.");
+      }
     } catch (error) {
-      console.error(error);
-      setIsOnline(!newStatus);
+      toast.error(
+        error.message || "Gagal mengubah status menjadi Online.",
+      );
+    } finally {
+      setIsStatusUpdating(false);
     }
-  }, [isOnline]);
+  }, [isOnline, isStatusUpdating]);
+
+  const handleSubmitOffline = useCallback(async (event) => {
+    event.preventDefault();
+
+    const reason = offlineJustification.trim();
+
+    if (!reason) {
+      toast.error("Justifikasi wajib diisi.");
+      return;
+    }
+
+    setIsStatusUpdating(true);
+
+    try {
+      const response = await updateOnlineStatus(false, reason);
+
+      setIsOnline(false);
+      setOfflineSince(
+        response?.data?.offline_at ?? new Date().toISOString(),
+      );
+      setOfflineElapsedSeconds(0);
+
+      setShowOfflineModal(false);
+      setOfflineJustification("");
+
+      toast.success("Status berhasil diubah menjadi Offline.");
+    } catch (error) {
+      toast.error(
+        error.message || "Gagal mengubah status menjadi Offline.",
+      );
+    } finally {
+      setIsStatusUpdating(false);
+    }
+  }, [offlineJustification]);
+
+  useEffect(() => {
+    if (isOnline !== false || !offlineSince) {
+      setOfflineElapsedSeconds(0);
+      return undefined;
+    }
+
+    const startTime = new Date(offlineSince).getTime();
+
+    if (Number.isNaN(startTime)) {
+      return undefined;
+    }
+
+    const updateElapsed = () => {
+      setOfflineElapsedSeconds(
+        Math.max(0, Math.floor((Date.now() - startTime) / 1000)),
+      );
+    };
+
+    updateElapsed();
+
+    const interval = setInterval(updateElapsed, 1000);
+
+    return () => clearInterval(interval);
+  }, [isOnline, offlineSince]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -1043,22 +1162,18 @@ export default function DashboardLayout({
             <button
               type="button"
               onClick={handleToggleOnline}
+              disabled={isOnline === null || isStatusUpdating}
               title={
                 isOnline
-                  ? "Klik untuk offline"
-                  : "Klik untuk online"
+                  ? "Klik untuk mengubah status menjadi Offline"
+                  : "Klik untuk kembali Online"
               }
               className={`
-                flex
-                items-center
-                gap-2
-                px-2
-                sm:px-3
-                py-1
-                text-xs
-                sm:text-sm
-                rounded-full
-                shrink-0
+                flex items-center gap-2
+                px-2 sm:px-3 py-1
+                text-xs sm:text-sm rounded-full shrink-0
+                transition-all duration-200
+                disabled:opacity-60 disabled:cursor-not-allowed
                 ${
                   isOnline
                     ? "bg-green-100 text-green-600"
@@ -1068,20 +1183,17 @@ export default function DashboardLayout({
             >
               <span
                 className={`
-                  w-2
-                  h-2
-                  rounded-full
-                  shrink-0
-                  ${
-                    isOnline
-                      ? "bg-green-500"
-                      : "bg-gray-500"
-                  }
+                  w-2 h-2 rounded-full shrink-0
+                  ${isOnline ? "bg-green-500" : "bg-gray-500"}
                 `}
               />
 
-              <span className="hidden sm:inline">
-                {isOnline ? "Online" : "Offline"}
+              <span className="hidden sm:inline whitespace-nowrap">
+                {isOnline
+                  ? "Online"
+                  : offlineSince
+                    ? `Offline · ${formatDuration(offlineElapsedSeconds)}`
+                    : "Offline"}
               </span>
             </button>
 
@@ -1428,6 +1540,122 @@ export default function DashboardLayout({
           <p>Version 1.0.0</p>
         </footer>
       </div>
+
+      {showOfflineModal && (
+        <div
+          className="
+            fixed inset-0 z-[100]
+            flex items-center justify-center
+            bg-black/40 p-4
+          "
+        >
+          <form
+            onSubmit={handleSubmitOffline}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="offline-modal-title"
+            className="
+              w-full max-w-md
+              rounded-2xl bg-white p-5 sm:p-6
+              shadow-xl
+            "
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="mt-1 text-sm text-gray-500">
+                  Berikan justifikasi sebelum mengubah status menjadi Offline.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isStatusUpdating) {
+                    setShowOfflineModal(false);
+                    setOfflineJustification("");
+                  }
+                }}
+                disabled={isStatusUpdating}
+                aria-label="Tutup form justifikasi"
+                className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+              >
+                <FiX size={20} />
+              </button>
+            </div>
+
+            <div className="mt-5">
+              <label
+                htmlFor="offline-justification"
+                className="mb-2 block text-sm font-medium text-gray-700"
+              >
+                Justifikasi Offline
+                <span className="text-red-500"> *</span>
+              </label>
+
+              <textarea
+                id="offline-justification"
+                value={offlineJustification}
+                onChange={(event) =>
+                  setOfflineJustification(event.target.value)
+                }
+                placeholder="Contoh: Istirahat, meeting, atau keperluan lainnya..."
+                rows={4}
+                maxLength={1000}
+                required
+                disabled={isStatusUpdating}
+                className="
+                  w-full resize-y rounded-xl border border-gray-300
+                  px-3 py-2.5 text-sm text-gray-700
+                  placeholder:text-gray-400
+                  focus:border-orange-500 focus:outline-none
+                  focus:ring-2 focus:ring-orange-100
+                  disabled:bg-gray-100
+                "
+              />
+
+              <p className="mt-1 text-right text-xs text-gray-400">
+                {offlineJustification.length}/1000 karakter
+              </p>
+            </div>
+
+            <div className="mt-5 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                disabled={isStatusUpdating}
+                onClick={() => {
+                  setShowOfflineModal(false);
+                  setOfflineJustification("");
+                }}
+                className="
+                  rounded-lg border border-gray-300
+                  px-4 py-2 text-sm text-gray-600
+                  hover:bg-gray-50 disabled:opacity-50
+                "
+              >
+                Batal
+              </button>
+
+              <button
+                type="submit"
+                disabled={
+                  isStatusUpdating ||
+                  !offlineJustification.trim()
+                }
+                className="
+                  rounded-lg bg-orange-500
+                  px-5 py-2
+                  text-sm font-medium text-white
+                  transition hover:bg-orange-600
+                  disabled:cursor-not-allowed disabled:opacity-50
+                "
+              >
+                {isStatusUpdating ? "Mengirim..." : "Kirim"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
     </div>
   );
 }

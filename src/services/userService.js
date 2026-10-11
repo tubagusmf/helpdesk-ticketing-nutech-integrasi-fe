@@ -48,15 +48,27 @@ export async function deleteUser(id) {
   return res.json();
 }
 
-export const updateOnlineStatus = async (isOnline) => {
+export const updateOnlineStatus = async (isOnline, justification = "",) => {
   const res = await fetch(`${BASE_URL}/online-status`, {
     method: "PUT",
     headers: getHeaders(),
-    body: JSON.stringify({ is_online: isOnline }),
+    body: JSON.stringify({
+      is_online: isOnline,
+      justification,
+    }),
   });
 
-  return res.json();
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new Error(
+      data.message || "Gagal mengubah status Online / Offline.",
+    );
+  }
+
+  return data;
 };
+
 
 export const getCurrentUser = async () => {
   const res = await fetch(`${BASE_URL}/me`, {
@@ -96,4 +108,21 @@ export const updateProfile = async (data) => {
   });
 
   return res.json();
+};
+
+export const getActiveOfflineSession = async () => {
+  const res = await fetch(`${BASE_URL}/online-status/session`, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new Error(
+      data.message || "Gagal mengambil sesi Offline.",
+    );
+  }
+
+  return data.data ?? null;
 };

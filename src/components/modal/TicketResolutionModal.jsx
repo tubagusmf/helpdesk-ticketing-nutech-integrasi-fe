@@ -10,6 +10,7 @@ import {
 import Select from "react-select";
 import useTicketSocket from "../../hooks/useTicketSocket";
 import { ROLE } from "../../constants/role";
+import { FiSend } from "react-icons/fi";
 
 export default function TicketResolutionModal({ticket, onClose, onSuccess, role}) {
   const [loading, setLoading] = useState(false);
@@ -775,8 +776,7 @@ export default function TicketResolutionModal({ticket, onClose, onSuccess, role}
                 disabled={loading || reassignLoading}
                 className="inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <span aria-hidden="true">↗</span>
-                Alihkan Ticket ke Staff Lain
+                <FiSend size={18} /> Alihkan Ticket ke Staff Lain
               </button>
             ) : (
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
