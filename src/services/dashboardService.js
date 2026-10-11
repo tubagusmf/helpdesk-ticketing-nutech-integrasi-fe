@@ -115,3 +115,25 @@ export const getStaffSummary = async (filters = {}) => {
     headers: getHeaders(),
   });
 };
+
+export const getStaffReassignSummary = async (filters = {}) => {
+  const query = new URLSearchParams(filters).toString();
+
+  return fetchAPI(
+    `${BASE_URL}/dashboard/staff-reassign-summary?${query}`,
+    {
+      headers: getHeaders(),
+    },
+  );
+};
+
+export const getStaffOfflineSummary = async (filters = {}) => {
+  const query = new URLSearchParams(filters).toString();
+
+  return fetchAPI(
+    `${BASE_URL}/dashboard/staff-offline-summary?${query}`,
+    {
+      headers: getHeaders(),
+    },
+  );
+};

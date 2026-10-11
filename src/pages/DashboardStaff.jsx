@@ -14,6 +14,8 @@ import useDashboardFilters from "../hooks/useDashboardFilters";
 
 import {
   getStaffSummary,
+  getStaffReassignSummary,
+  getStaffOfflineSummary,
 } from "../services/dashboardService";
 
 import {
@@ -22,8 +24,68 @@ import {
 } from "../utils/dashboard";
 
 import {
+  FiActivity,
+  FiClock,
+  FiRefreshCw,
   FiUsers,
 } from "react-icons/fi";
+
+function formatNumber(value) {
+  return Number(value || 0).toLocaleString("id-ID");
+}
+
+function formatDuration(value) {
+  const totalSeconds = Math.max(
+    0,
+    Math.floor(Number(value) || 0),
+  );
+
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (days > 0) {
+    return hours > 0
+      ? `${days} hari ${hours} jam`
+      : `${days} hari`;
+  }
+
+  if (hours > 0) {
+    return minutes > 0
+      ? `${hours} jam ${minutes} menit`
+      : `${hours} jam`;
+  }
+
+  if (minutes > 0) {
+    return seconds > 0
+      ? `${minutes} menit ${seconds} detik`
+      : `${minutes} menit`;
+  }
+
+  return `${seconds} detik`;
+}
+
+function formatDateTime(value) {
+  if (!value) {
+    return "-";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  return date.toLocaleString("id-ID", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
+/* =========================================================
+   MAIN COMPONENT
+========================================================= */
 
 export default function DashboardStaff() {
   const role = useMemo(
@@ -46,38 +108,40 @@ export default function DashboardStaff() {
     handleReset,
   } = useDashboardFilters();
 
-  const [loading, setLoading] =
-    useState(true);
+  const [ticketLoading, setTicketLoading] = useState(true);
+  const [ticketError, setTicketError] = useState("");
+  const [staffData, setStaffData] = useState([]);
+  const [activityLoading, setActivityLoading] = useState(true);
+  const [activityError, setActivityError] = useState("");
+  const [reassignData, setReassignData] = useState([]);
+  const [offlineData, setOfflineData] = useState([]);
 
-  const [error, setError] =
-    useState("");
+  const fetchDashboard = useCallback(async () => {
+    setTicketLoading(true);
+    setTicketError("");
 
-  const [data, setData] =
-    useState([]);
+    try {
+      const result = await getStaffSummary(appliedFilters);
 
-  const fetchDashboard =
-    useCallback(async () => {
-      try {
-        setLoading(true);
-        setError("");
+      setStaffData(
+        Array.isArray(result) ? result : [],
+      );
+    } catch (error) {
+      console.error(
+        "Gagal mengambil dashboard Staff:",
+        error,
+      );
 
-        const result =
-          await getStaffSummary(
-            appliedFilters,
-          );
+      setTicketError(
+        error?.message ||
+          "Gagal mengambil data dashboard Staff.",
+      );
 
-        setData(result || []);
-      } catch (err) {
-        console.error(err);
-
-        setError(
-          err?.message ||
-            "Gagal mengambil summary Staff.",
-        );
-      } finally {
-        setLoading(false);
-      }
-    }, [appliedFilters]);
+      setStaffData([]);
+    } finally {
+      setTicketLoading(false);
+    }
+  }, [appliedFilters]);
 
   useEffect(() => {
     if (role) {
@@ -85,17 +149,95 @@ export default function DashboardStaff() {
     }
   }, [role, fetchDashboard]);
 
-  const summary = useMemo(() => {
-    return data.reduce(
-      (acc, item) => {
-        acc.total += item.total || 0;
-        acc.open += item.open || 0;
-        acc.onhold += item.onhold || 0;
-        acc.done +=
-          (item.resolved || 0) +
-          (item.closed || 0);
+  const fetchStaffActivity = useCallback(async () => {
+    setActivityLoading(true);
+    setActivityError("");
 
-        return acc;
+    try {
+      const [reassignResult, offlineResult] =
+        await Promise.allSettled([
+          getStaffReassignSummary(appliedFilters),
+          getStaffOfflineSummary(appliedFilters),
+        ]);
+
+      const errors = [];
+
+      /* REASSIGN DATA */
+
+      if (reassignResult.status === "fulfilled") {
+        setReassignData(
+          Array.isArray(reassignResult.value)
+            ? reassignResult.value
+            : [],
+        );
+      } else {
+        console.error(
+          "Gagal mengambil statistik reassign:",
+          reassignResult.reason,
+        );
+
+        setReassignData([]);
+
+        errors.push(
+          "Gagal mengambil statistik reassign ticket.",
+        );
+      }
+
+      /* OFFLINE DATA */
+
+      if (offlineResult.status === "fulfilled") {
+        setOfflineData(
+          Array.isArray(offlineResult.value)
+            ? offlineResult.value
+            : [],
+        );
+      } else {
+        console.error(
+          "Gagal mengambil statistik Offline:",
+          offlineResult.reason,
+        );
+
+        setOfflineData([]);
+
+        errors.push(
+          "Gagal mengambil statistik Offline Staff.",
+        );
+      }
+
+      setActivityError(errors.join(" "));
+    } catch (error) {
+      console.error(
+        "Gagal mengambil aktivitas Staff:",
+        error,
+      );
+
+      setActivityError(
+        error?.message ||
+          "Gagal mengambil aktivitas Staff CCIT.",
+      );
+    } finally {
+      setActivityLoading(false);
+    }
+  }, [appliedFilters]);
+
+  useEffect(() => {
+    if (role) {
+      fetchStaffActivity();
+    }
+  }, [role, fetchStaffActivity]);
+
+  const ticketSummary = useMemo(() => {
+    return staffData.reduce(
+      (summary, item) => {
+        summary.total += Number(item.total || 0);
+        summary.open += Number(item.open || 0);
+        summary.onhold += Number(item.onhold || 0);
+
+        summary.done +=
+          Number(item.resolved || 0) +
+          Number(item.closed || 0);
+
+        return summary;
       },
       {
         total: 0,
@@ -104,7 +246,44 @@ export default function DashboardStaff() {
         done: 0,
       },
     );
-  }, [data]);
+  }, [staffData]);
+
+  const rankedReassignData = useMemo(() => {
+    return [...reassignData].sort(
+      (a, b) =>
+        Number(b.reassign_count || 0) -
+        Number(a.reassign_count || 0),
+    );
+  }, [reassignData]);
+
+  const totalReassign = useMemo(() => {
+    return reassignData.reduce(
+      (total, item) =>
+        total + Number(item.reassign_count || 0),
+      0,
+    );
+  }, [reassignData]);
+
+  const topReassignStaff = useMemo(() => {
+    return rankedReassignData.find(
+      (item) => Number(item.reassign_count || 0) > 0,
+    );
+  }, [rankedReassignData]);
+
+  const offlineStaffCount = useMemo(() => {
+    return offlineData.filter(
+      (item) => item.is_online === false,
+    ).length;
+  }, [offlineData]);
+
+  const totalOfflineSeconds = useMemo(() => {
+    return offlineData.reduce(
+      (total, item) =>
+        total +
+        Number(item.total_duration_seconds || 0),
+      0,
+    );
+  }, [offlineData]);
 
   return (
     <DashboardLayout
@@ -112,6 +291,7 @@ export default function DashboardStaff() {
       menu={menu}
     >
       <div className="space-y-5 sm:space-y-6">
+
         <DashboardFilter
           filters={filters}
           projects={projects}
@@ -121,22 +301,36 @@ export default function DashboardStaff() {
           onReset={handleReset}
         />
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm">
-            {error}
+        {ticketError && (
+          <div
+            className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 sm:flex-row sm:items-center sm:justify-between"
+            role="alert"
+          >
+            <span>{ticketError}</span>
+
+            <button
+              type="button"
+              onClick={fetchDashboard}
+              className="inline-flex items-center justify-center gap-2 self-start rounded-lg border border-red-200 bg-white px-3 py-2 font-medium hover:bg-red-100 sm:self-auto"
+            >
+              <FiRefreshCw size={15} />
+              Coba Lagi
+            </button>
           </div>
         )}
 
-        {loading ? (
-          <div className="bg-white border rounded-2xl p-10 text-center text-gray-400">
-            Loading dashboard staff...
+        {ticketLoading ? (
+          <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center text-gray-400">
+            Memuat dashboard Staff...
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            {/* TICKET SUMMARY CARDS */}
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <SummaryCard
                 title="Total Ticket"
-                value={summary.total}
+                value={formatNumber(ticketSummary.total)}
                 subtitle="Ticket ter-assign ke Staff"
                 tone="blue"
                 icon={FiUsers}
@@ -144,131 +338,122 @@ export default function DashboardStaff() {
 
               <SummaryCard
                 title="Ticket Open"
-                value={summary.open}
+                value={formatNumber(ticketSummary.open)}
                 subtitle="Masih membutuhkan penanganan"
                 tone="red"
               />
 
               <SummaryCard
                 title="Ticket Onhold"
-                value={summary.onhold}
+                value={formatNumber(ticketSummary.onhold)}
                 subtitle="Sedang ditunda"
                 tone="orange"
               />
 
               <SummaryCard
                 title="Resolved & Closed"
-                value={summary.done}
+                value={formatNumber(ticketSummary.done)}
                 subtitle="Ticket selesai"
                 tone="green"
               />
             </div>
 
+            {/* STATUS CHART */}
+
             <StatusStackedChart
               title="Distribusi Ticket per Staff"
               subtitle="Jumlah dan status ticket setiap Staff"
-              data={data}
+              data={staffData}
               labelKey="staff_name"
               maxItems={10}
             />
 
-            <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-              <div className="p-4 sm:p-5">
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                    <FiUsers size={18} />
-                  </div>
+            {/* ============================================
+                DETAIL TICKET PER STAFF
+            ============================================ */}
 
-                  <div>
-                    <h3 className="font-semibold text-gray-800">
-                      Detail Ticket per Staff
-                    </h3>
+            <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+              <SectionHeader
+                icon={FiUsers}
+                title="Detail Ticket per Staff"
+                subtitle="Data ticket berdasarkan assignment Staff"
+                iconClass="bg-blue-50 text-blue-600"
+              />
 
-                    <p className="text-xs text-gray-400 mt-1">
-                      Data ticket berdasarkan assignment Staff
-                    </p>
-                  </div>
-                </div>
-              </div>
+              {/* DESKTOP TABLE */}
 
-              {/* DESKTOP */}
-
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-sm min-w-[850px]">
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full min-w-[850px] text-sm">
                   <thead>
-                    <tr className="border-t border-b bg-gray-50 text-gray-500">
-                      <th className="text-left px-5 py-3">
+                    <tr className="border-y border-gray-200 bg-gray-50 text-gray-500">
+                      <th className="px-5 py-3 text-left">
                         Staff
                       </th>
 
-                      <th className="text-right px-4 py-3">
+                      <th className="px-4 py-3 text-right">
                         Total
                       </th>
 
-                      <th className="text-right px-4 py-3">
+                      <th className="px-4 py-3 text-right">
                         Open
                       </th>
 
-                      <th className="text-right px-4 py-3">
+                      <th className="px-4 py-3 text-right">
                         Progress
                       </th>
 
-                      <th className="text-right px-4 py-3">
+                      <th className="px-4 py-3 text-right">
                         Onhold
                       </th>
 
-                      <th className="text-right px-4 py-3">
+                      <th className="px-4 py-3 text-right">
                         Resolved
                       </th>
 
-                      <th className="text-right px-5 py-3">
+                      <th className="px-5 py-3 text-right">
                         Closed
                       </th>
                     </tr>
                   </thead>
 
                   <tbody>
-                    {data.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={7}
-                          className="text-center py-10 text-gray-400"
-                        >
-                          Belum ada data Staff.
-                        </td>
-                      </tr>
+                    {staffData.length === 0 ? (
+                      <EmptyTable
+                        colSpan={7}
+                        message="Belum ada data Staff."
+                      />
                     ) : (
-                      data.map((item) => (
+                      staffData.map((item) => (
                         <tr
                           key={item.staff_id}
                           className="border-b last:border-0 hover:bg-gray-50"
                         >
-                          <td className="px-5 py-4 font-medium">
+                          <td className="px-5 py-4 font-medium text-gray-800">
                             {item.staff_name}
                           </td>
 
-                          <td className="text-right px-4 font-semibold">
-                            {item.total}
+                          <td className="px-4 py-4 text-right font-semibold">
+                            {formatNumber(item.total)}
                           </td>
 
-                          <td className="text-right px-4 text-red-600">
-                            {item.open}
+                          <td className="px-4 py-4 text-right text-red-600">
+                            {formatNumber(item.open)}
                           </td>
 
-                          <td className="text-right px-4 text-yellow-600">
-                            {item.in_progress}
+                          <td className="px-4 py-4 text-right text-yellow-600">
+                            {formatNumber(item.in_progress)}
                           </td>
 
-                          <td className="text-right px-4 text-orange-600">
-                            {item.onhold}
+                          <td className="px-4 py-4 text-right text-orange-600">
+                            {formatNumber(item.onhold)}
                           </td>
 
-                          <td className="text-right px-4 text-green-600">
-                            {item.resolved}
+                          <td className="px-4 py-4 text-right text-green-600">
+                            {formatNumber(item.resolved)}
                           </td>
 
-                          <td className="text-right px-5 text-gray-600">
-                            {item.closed}
+                          <td className="px-5 py-4 text-right text-gray-600">
+                            {formatNumber(item.closed)}
                           </td>
                         </tr>
                       ))
@@ -277,112 +462,654 @@ export default function DashboardStaff() {
                 </table>
               </div>
 
-              {/* MOBILE */}
+              {/* MOBILE CARDS */}
 
-              <div className="md:hidden p-4 space-y-3">
-                {data.length === 0 ? (
-                  <div className="py-10 text-center text-sm text-gray-400">
-                    Belum ada data Staff.
-                  </div>
+              <div className="space-y-3 p-4 md:hidden">
+                {staffData.length === 0 ? (
+                  <EmptyState message="Belum ada data Staff." />
                 ) : (
-                  data.map((item) => (
+                  staffData.map((item) => (
                     <div
                       key={item.staff_id}
-                      className="border border-gray-100 rounded-xl p-4"
+                      className="rounded-xl border border-gray-100 p-4"
                     >
                       <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-9 h-9 shrink-0 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
-                            <FiUsers size={16} />
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+                            <FiUsers size={17} />
                           </div>
 
                           <div className="min-w-0">
-                            <p className="font-semibold text-gray-800 truncate">
+                            <p className="truncate font-semibold text-gray-800">
                               {item.staff_name}
                             </p>
 
-                            <p className="text-xs text-gray-400">
-                              Total ticket:{" "}
-                              {item.total}
+                            <p className="mt-1 text-xs text-gray-400">
+                              Total ticket: {formatNumber(item.total)}
                             </p>
                           </div>
                         </div>
 
-                        <span className="text-lg font-bold text-blue-600">
-                          {item.total}
+                        <span className="text-xl font-bold text-blue-600">
+                          {formatNumber(item.total)}
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3 mt-4">
+                      <div className="mt-4 grid grid-cols-2 gap-3">
                         <Metric
                           label="Open"
                           value={item.open}
-                          className="text-red-600 bg-red-50"
+                          className="bg-red-50 text-red-600"
                         />
 
                         <Metric
                           label="Progress"
-                          value={
-                            item.in_progress
-                          }
-                          className="text-yellow-600 bg-yellow-50"
+                          value={item.in_progress}
+                          className="bg-yellow-50 text-yellow-600"
                         />
 
                         <Metric
                           label="Onhold"
-                          value={
-                            item.onhold
-                          }
-                          className="text-orange-600 bg-orange-50"
+                          value={item.onhold}
+                          className="bg-orange-50 text-orange-600"
                         />
 
                         <Metric
                           label="Resolved"
-                          value={
-                            item.resolved
-                          }
-                          className="text-green-600 bg-green-50"
+                          value={item.resolved}
+                          className="bg-green-50 text-green-600"
                         />
 
                         <Metric
                           label="Closed"
-                          value={
-                            item.closed
-                          }
-                          className="text-gray-600 bg-gray-50"
+                          value={item.closed}
+                          className="bg-gray-50 text-gray-600"
                         />
                       </div>
                     </div>
                   ))
                 )}
               </div>
-            </div>
+            </section>
           </>
         )}
+
+        {/* ================================================
+            ACTIVITY ERROR
+        ================================================ */}
+
+        {activityError && (
+          <div
+            className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 sm:flex-row sm:items-center sm:justify-between"
+            role="alert"
+          >
+            <span>{activityError}</span>
+
+            <button
+              type="button"
+              onClick={fetchStaffActivity}
+              className="inline-flex items-center justify-center gap-2 self-start rounded-lg border border-red-200 bg-white px-3 py-2 font-medium hover:bg-red-100 sm:self-auto"
+            >
+              <FiRefreshCw size={15} />
+              Coba Lagi
+            </button>
+          </div>
+        )}
+
+        {/* ================================================
+            ACTIVITY SUMMARY CARDS
+        ================================================ */}
+
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-800">
+              Analitik Aktivitas Staff CCIT
+            </h2>
+
+            <p className="mt-1 text-sm text-gray-500">
+              Ringkasan aktivitas reassign ticket dan status Offline.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <ActivitySummaryCard
+              title="Total Reassign"
+              value={
+                activityLoading
+                  ? "..."
+                  : formatNumber(totalReassign)
+              }
+              subtitle="Sesuai periode filter"
+              icon={FiRefreshCw}
+              tone="blue"
+            />
+
+            <ActivitySummaryCard
+              title="Reassign Terbanyak"
+              value={
+                activityLoading
+                  ? "Memuat..."
+                  : topReassignStaff?.staff_name || "-"
+              }
+              subtitle={
+                topReassignStaff
+                  ? `${formatNumber(topReassignStaff.reassign_count)} kali reassign`
+                  : "Belum ada aktivitas reassign"
+              }
+              icon={FiActivity}
+              tone="indigo"
+            />
+
+            <ActivitySummaryCard
+              title="Staff Offline"
+              value={
+                activityLoading
+                  ? "..."
+                  : formatNumber(offlineStaffCount)
+              }
+              subtitle="Status Offline saat ini"
+              icon={FiUsers}
+              tone="orange"
+            />
+
+            <ActivitySummaryCard
+              title="Total Durasi Offline"
+              value={
+                activityLoading
+                  ? "Memuat..."
+                  : formatDuration(totalOfflineSeconds)
+              }
+              subtitle="Akumulasi sesi sesuai periode"
+              icon={FiClock}
+              tone="green"
+            />
+          </div>
+        </div>
+
+        {/* ================================================
+            REASSIGN TICKET PER STAFF
+        ================================================ */}
+
+        <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <SectionHeader
+            icon={FiRefreshCw}
+            title="Reassign Ticket per Staff CCIT"
+            subtitle="Staff dengan aktivitas reassign terbanyak"
+            iconClass="bg-indigo-50 text-indigo-600"
+          />
+
+          {/* DESKTOP TABLE */}
+
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full min-w-[600px] text-sm">
+              <thead>
+                <tr className="border-y border-gray-200 bg-gray-50 text-gray-500">
+                  <th className="px-5 py-3 text-left">
+                    Staff CCIT
+                  </th>
+
+                  <th className="px-4 py-3 text-right">
+                    Jumlah Reassign
+                  </th>
+
+                  <th className="px-5 py-3 text-left">
+                    Reassign Terakhir
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {activityLoading ? (
+                  <LoadingTable
+                    colSpan={3}
+                    message="Memuat statistik reassign..."
+                  />
+                ) : rankedReassignData.length === 0 ? (
+                  <EmptyTable
+                    colSpan={3}
+                    message="Belum ada data reassign."
+                  />
+                ) : (
+                  rankedReassignData.map((item, index) => (
+                    <tr
+                      key={item.staff_id}
+                      className="border-b last:border-0 hover:bg-gray-50"
+                    >
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <RankBadge rank={index + 1} />
+
+                          <span className="font-medium text-gray-800">
+                            {item.staff_name}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="px-4 py-4 text-right">
+                        <span className="font-semibold text-indigo-600">
+                          {formatNumber(item.reassign_count)}
+                        </span>
+                      </td>
+
+                      <td className="px-5 py-4 text-gray-600">
+                        {formatDateTime(item.last_reassigned_at)}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* MOBILE CARDS */}
+
+          <div className="space-y-3 p-4 md:hidden">
+            {activityLoading ? (
+              <EmptyState message="Memuat statistik reassign..." />
+            ) : rankedReassignData.length === 0 ? (
+              <EmptyState message="Belum ada data reassign." />
+            ) : (
+              rankedReassignData.map((item, index) => (
+                <div
+                  key={item.staff_id}
+                  className="rounded-xl border border-gray-100 p-4"
+                >
+                  <div className="flex items-start gap-3">
+                    <RankBadge rank={index + 1} />
+
+                    <div className="min-w-0 flex-1">
+                      <p className="break-words font-semibold text-gray-800">
+                        {item.staff_name}
+                      </p>
+
+                      <p className="mt-1 text-sm text-indigo-600">
+                        {formatNumber(item.reassign_count)} kali reassign
+                      </p>
+
+                      <p className="mt-2 text-xs text-gray-400">
+                        Terakhir: {formatDateTime(item.last_reassigned_at)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+
+        {/* ================================================
+            OFFLINE ACTIVITY PER STAFF
+        ================================================ */}
+
+        <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <SectionHeader
+            icon={FiClock}
+            title="Aktivitas Offline Staff CCIT"
+            subtitle="Frekuensi, durasi, dan status Offline setiap Staff"
+            iconClass="bg-orange-50 text-orange-600"
+          />
+
+          {/* DESKTOP TABLE */}
+
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full min-w-[1150px] text-sm">
+              <thead>
+                <tr className="border-y border-gray-200 bg-gray-50 text-gray-500">
+                  <th className="px-5 py-3 text-left">
+                    Staff CCIT
+                  </th>
+
+                  <th className="px-4 py-3 text-left">
+                    Status
+                  </th>
+
+                  <th className="px-4 py-3 text-right">
+                    Sesi Offline
+                  </th>
+
+                  <th className="px-4 py-3 text-left">
+                    Total Durasi
+                  </th>
+
+                  <th className="px-4 py-3 text-left">
+                    Rata-rata Durasi
+                  </th>
+
+                  <th className="px-4 py-3 text-left">
+                    Offline Sejak
+                  </th>
+
+                  <th className="px-4 py-3 text-left">
+                    Durasi Aktif
+                  </th>
+
+                  <th className="px-5 py-3 text-left">
+                    Justifikasi Terakhir
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {activityLoading ? (
+                  <LoadingTable
+                    colSpan={8}
+                    message="Memuat statistik Offline..."
+                  />
+                ) : offlineData.length === 0 ? (
+                  <EmptyTable
+                    colSpan={8}
+                    message="Belum ada data Staff CCIT."
+                  />
+                ) : (
+                  offlineData.map((item) => (
+                    <tr
+                      key={item.staff_id}
+                      className="border-b last:border-0 hover:bg-gray-50"
+                    >
+                      <td className="px-5 py-4 font-medium text-gray-800">
+                        {item.staff_name}
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <OnlineBadge
+                          isOnline={item.is_online}
+                        />
+                      </td>
+
+                      <td className="px-4 py-4 text-right">
+                        {formatNumber(item.offline_session_count)}
+                      </td>
+
+                      <td className="px-4 py-4 text-gray-700">
+                        {formatDuration(item.total_duration_seconds)}
+                      </td>
+
+                      <td className="px-4 py-4 text-gray-700">
+                        {formatDuration(item.average_duration_seconds)}
+                      </td>
+
+                      <td className="px-4 py-4 text-gray-600">
+                        {item.is_online
+                          ? "-"
+                          : formatDateTime(item.active_offline_since)}
+                      </td>
+
+                      <td className="px-4 py-4 font-medium text-orange-600">
+                        {item.is_online
+                          ? "-"
+                          : formatDuration(
+                              item.active_offline_duration_seconds,
+                            )}
+                      </td>
+
+                      <td
+                        className="max-w-[240px] truncate px-5 py-4 text-gray-600"
+                        title={item.last_justification || ""}
+                      >
+                        {item.last_justification || "-"}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* MOBILE CARDS */}
+
+          <div className="space-y-3 p-4 md:hidden">
+            {activityLoading ? (
+              <EmptyState message="Memuat statistik Offline..." />
+            ) : offlineData.length === 0 ? (
+              <EmptyState message="Belum ada data Staff CCIT." />
+            ) : (
+              offlineData.map((item) => (
+                <div
+                  key={item.staff_id}
+                  className="rounded-xl border border-gray-100 p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div
+                        className={
+                          item.is_online
+                            ? "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-50 text-green-600"
+                            : "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-orange-50 text-orange-600"
+                        }
+                      >
+                        <FiClock size={17} />
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="break-words font-semibold text-gray-800">
+                          {item.staff_name}
+                        </p>
+
+                        <p className="mt-1 text-xs text-gray-400">
+                          {formatNumber(item.offline_session_count)} sesi Offline
+                        </p>
+                      </div>
+                    </div>
+
+                    <OnlineBadge isOnline={item.is_online} />
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    <Metric
+                      label="Total Durasi"
+                      value={formatDuration(item.total_duration_seconds)}
+                      className="bg-orange-50 text-orange-700"
+                    />
+
+                    <Metric
+                      label="Rata-rata"
+                      value={formatDuration(item.average_duration_seconds)}
+                      className="bg-blue-50 text-blue-700"
+                    />
+
+                    <Metric
+                      label="Offline Sejak"
+                      value={
+                        item.is_online
+                          ? "-"
+                          : formatDateTime(item.active_offline_since)
+                      }
+                      className="bg-gray-50 text-gray-700"
+                    />
+
+                    <Metric
+                      label="Durasi Aktif"
+                      value={
+                        item.is_online
+                          ? "-"
+                          : formatDuration(
+                              item.active_offline_duration_seconds,
+                            )
+                      }
+                      className="bg-orange-50 text-orange-700"
+                    />
+                  </div>
+
+                  <div className="mt-3 rounded-lg bg-gray-50 p-3">
+                    <p className="text-xs text-gray-500">
+                      Justifikasi terakhir
+                    </p>
+
+                    <p className="mt-1 break-words text-sm text-gray-700">
+                      {item.last_justification || "-"}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
       </div>
     </DashboardLayout>
+  );
+}
+
+function SectionHeader({
+  icon: Icon,
+  title,
+  subtitle,
+  iconClass = "bg-blue-50 text-blue-600",
+}) {
+  return (
+    <div className="flex items-start gap-3 p-4 sm:p-5">
+      <div
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconClass}`}
+      >
+        <Icon size={19} />
+      </div>
+
+      <div className="min-w-0">
+        <h3 className="font-semibold text-gray-800">
+          {title}
+        </h3>
+
+        <p className="mt-1 text-xs text-gray-500">
+          {subtitle}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ActivitySummaryCard({
+  title,
+  value,
+  subtitle,
+  icon: Icon,
+  tone = "blue",
+}) {
+  const tones = {
+    blue: {
+      icon: "bg-blue-50 text-blue-600",
+      value: "text-blue-600",
+    },
+    indigo: {
+      icon: "bg-indigo-50 text-indigo-600",
+      value: "text-indigo-600",
+    },
+    orange: {
+      icon: "bg-orange-50 text-orange-600",
+      value: "text-orange-600",
+    },
+    green: {
+      icon: "bg-green-50 text-green-600",
+      value: "text-green-600",
+    },
+  };
+
+  const selectedTone = tones[tone] || tones.blue;
+
+  return (
+    <div className="min-w-0 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="flex items-start gap-3">
+        <div
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${selectedTone.icon}`}
+        >
+          <Icon size={19} />
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p className="text-sm text-gray-500">
+            {title}
+          </p>
+
+          <p
+            className={`mt-2 break-words text-2xl font-bold ${selectedTone.value}`}
+          >
+            {value}
+          </p>
+
+          <p className="mt-2 break-words text-xs text-gray-400">
+            {subtitle}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RankBadge({ rank }) {
+  const highlighted = rank <= 3;
+
+  return (
+    <span
+      className={
+        highlighted
+          ? "flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-xs font-bold text-indigo-600"
+          : "flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-500"
+      }
+    >
+      {rank}
+    </span>
+  );
+}
+
+function OnlineBadge({ isOnline }) {
+  return (
+    <span
+      className={
+        isOnline
+          ? "inline-flex whitespace-nowrap rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700"
+          : "inline-flex whitespace-nowrap rounded-full bg-orange-50 px-3 py-1 text-xs font-medium text-orange-700"
+      }
+    >
+      {isOnline ? "Online" : "Offline"}
+    </span>
+  );
+}
+
+function EmptyState({ message }) {
+  return (
+    <div className="py-8 text-center text-sm text-gray-400">
+      {message}
+    </div>
+  );
+}
+
+function EmptyTable({ colSpan, message }) {
+  return (
+    <tr>
+      <td
+        colSpan={colSpan}
+        className="px-5 py-10 text-center text-gray-400"
+      >
+        {message}
+      </td>
+    </tr>
+  );
+}
+
+function LoadingTable({ colSpan, message }) {
+  return (
+    <tr>
+      <td
+        colSpan={colSpan}
+        className="px-5 py-10 text-center text-gray-400"
+      >
+        {message}
+      </td>
+    </tr>
   );
 }
 
 function Metric({
   label,
   value,
-  className,
+  className = "bg-gray-50 text-gray-700",
 }) {
   return (
-    <div
-      className={`
-        rounded-xl
-        p-3
-        ${className}
-      `}
-    >
-      <p className="text-xs text-gray-500">
+    <div className={`min-w-0 rounded-xl p-3 ${className}`}>
+      <p className="text-xs opacity-80">
         {label}
       </p>
 
-      <p className="text-lg font-bold mt-1">
-        {value || 0}
+      <p className="mt-1 break-words text-sm font-semibold">
+        {value ?? 0}
       </p>
     </div>
   );

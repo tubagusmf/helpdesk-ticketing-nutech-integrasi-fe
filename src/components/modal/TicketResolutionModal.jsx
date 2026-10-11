@@ -833,7 +833,7 @@ export default function TicketResolutionModal({ticket, onClose, onSuccess, role}
                   >
                     {reassignLoading
                       ? "Mengalihkan..."
-                      : "Submit Reassign"}
+                      : "Reassign Staff"}
                   </button>
                 </div>
               </div>
