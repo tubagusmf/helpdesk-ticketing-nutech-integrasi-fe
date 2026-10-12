@@ -258,6 +258,62 @@ export const exportCustomTickets = async (payload) => {
   window.URL.revokeObjectURL(url);
 };
 
+export const exportTicketHistory = async (ticketId, ticketCode) => {
+  const query = new URLSearchParams();
+
+  if (ticketCode) {
+    query.set("ticket_code", ticketCode);
+  }
+
+  const res = await fetch(
+    `${BASE_URL}/tickets/${ticketId}/history/export?${query.toString()}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+    },
+  );
+
+  if (!res.ok) {
+    let message = "Gagal export history tiket";
+
+    try {
+      const result = await res.json();
+      message = result?.message || message;
+    } catch {
+    }
+
+    throw new Error(message);
+  }
+
+  const blob = await res.blob();
+
+  const contentDisposition = res.headers.get("Content-Disposition");
+
+  let fileName = `ticket_history_${ticketId}.xlsx`;
+
+  if (contentDisposition) {
+    const match = contentDisposition.match(/filename="?([^"]+)"?/);
+
+    if (match?.[1]) {
+      fileName = match[1];
+    }
+  }
+
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+
+  a.href = url;
+  a.download = fileName;
+
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  window.URL.revokeObjectURL(url);
+};
+
 export const getTicketResolution = async (ticketId) => {
   return fetchAPI(`${BASE_URL}/tickets/${ticketId}/resolution`, {
     headers: getHeaders(),

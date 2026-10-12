@@ -1,10 +1,13 @@
 
 import { useEffect, useState } from "react";
-import { getTicketHistories } from "../../services/ticketService";
+import { getTicketHistories, exportTicketHistory } from "../../services/ticketService";
 import useTicketSocket from "../../hooks/useTicketSocket";
+import { FiDownload } from "react-icons/fi";
 
 export default function TicketHistoryModal({ ticket, onClose }) {
   const [histories, setHistories] = useState([]);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState("");
 
   useEffect(() => {
     fetchHistories();
@@ -16,6 +19,26 @@ export default function TicketHistoryModal({ ticket, onClose }) {
       setHistories(res.data || []);
     } catch (err) {
       console.error("ERROR FETCH HISTORY:", err);
+    }
+  };
+
+  const handleExportHistory = async () => {
+    try {
+      setExporting(true);
+      setExportError("");
+
+      await exportTicketHistory(
+        ticket.id,
+        ticket.ticket_code,
+      );
+    } catch (err) {
+      console.error("ERROR EXPORT HISTORY:", err);
+
+      setExportError(
+        err.message || "Gagal mengunduh laporan history tiket.",
+      );
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -83,8 +106,8 @@ export default function TicketHistoryModal({ ticket, onClose }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white p-6 shadow-lg">
         {/* HEADER */}
-        <div className="mb-4 flex justify-between">
-          <div>
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="min-w-0">
             <h2 className="text-lg font-semibold">
               History Tiket #{ticket.ticket_code}
             </h2>
@@ -94,15 +117,44 @@ export default function TicketHistoryModal({ ticket, onClose }) {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Tutup riwayat tiket"
-            className="h-fit text-gray-500 hover:text-gray-800"
-          >
-            ✕
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={handleExportHistory}
+              disabled={exporting}
+              className="rounded-lg bg-green-600 px-3 py-2 text-sm font-medium
+                text-white transition hover:bg-green-700
+                disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {exporting ? (
+                <span className="text-xs">...</span>
+              ) : (
+                <FiDownload size={16} />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Tutup riwayat tiket"
+              className="h-fit rounded-md p-2 text-gray-500
+                transition hover:bg-gray-100 hover:text-gray-800"
+            >
+              ✕
+            </button>
+          </div>
         </div>
+
+        {/* EXPORT ERROR */}
+        {exportError && (
+          <p
+            role="alert"
+            className="mb-3 rounded-lg border border-red-200
+              bg-red-50 p-3 text-sm text-red-700"
+          >
+            {exportError}
+          </p>
+        )}
 
         {/* TIMELINE */}
         <div className="rounded-xl border bg-gray-50 p-4">
