@@ -33,6 +33,7 @@ import {
 } from "../../services/notificationService";
 import { isTokenExpired } from "../../utils/auth";
 import useTicketSocket from "../../hooks/useTicketSocket";
+import { getCurrentRole, getRoleMenu } from "../../utils/dashboard";
 
 const NOTIFICATION_POLL_INTERVAL = 10_000;
 const NOTIFICATION_STORAGE_PREFIX =
@@ -302,11 +303,16 @@ function SidebarMenuItem({
 export default function DashboardLayout({
   title,
   children,
-  menu,
 }) {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
-
+  const sidebarRole =
+    user?.role_id ??
+    user?.roleId ??
+    user?.role ??
+    user?.role_name ??
+    getCurrentRole();
+  const sidebarMenu = getRoleMenu(sidebarRole);
   const userId = getUserId(user);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(null);
@@ -1047,7 +1053,7 @@ export default function DashboardLayout({
             overflow-y-auto
           "
         >
-          {menu?.map((item) => (
+          {sidebarMenu.map((item) => (
             <SidebarMenuItem
               key={item.path}
               item={item}

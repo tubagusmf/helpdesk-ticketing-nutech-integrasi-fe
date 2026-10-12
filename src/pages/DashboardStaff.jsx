@@ -331,7 +331,7 @@ export default function DashboardStaff() {
               <SummaryCard
                 title="Total Ticket"
                 value={formatNumber(ticketSummary.total)}
-                subtitle="Ticket ter-assign ke Staff"
+                subtitle="Ticket yang di assign ke Staff lain"
                 tone="blue"
                 icon={FiUsers}
               />

@@ -1,5 +1,8 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+
+import {BrowserRouter, Navigate, Route, Routes} from "react-router-dom";
 import { Toaster } from "react-hot-toast";
+import { ROLE } from "./constants/role";
+import {canAccessDashboard, DASHBOARD_BASE_BY_ROLE, normalizeRole} from "./utils/dashboard";
 import Login from "./pages/Login";
 import Unauthorized from "./pages/Unauthorized";
 import Profile from "./pages/Profile";
@@ -11,23 +14,27 @@ import MasterDataAdmin from "./pages/MasterDataAdmin";
 import UserManagement from "./pages/UserManagement";
 import TicketManagement from "./pages/TicketManagement";
 import TicketDetail from "./pages/TicketDetail";
-import ProtectedRoute from "./components/ProtectedRoute";
 import ExportCustom from "./pages/ExportCustom";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const dashboardPages = [
   {
+    key: "summary",
     suffix: "",
     component: Dashboard,
   },
   {
+    key: "ticket",
     suffix: "/ticket",
     component: DashboardTicket,
   },
   {
+    key: "project",
     suffix: "/project",
     component: DashboardProject,
   },
   {
+    key: "staff",
     suffix: "/staff",
     component: DashboardStaff,
   },
@@ -36,79 +43,79 @@ const dashboardPages = [
 const roleBases = [
   {
     base: "/admin",
-    role: 1,
+    role: ROLE.ADMINISTRATOR,
   },
   {
     base: "/staff",
-    role: 2,
+    role: ROLE.STAFF,
   },
   {
     base: "/user",
-    role: 3,
+    role: ROLE.USER,
   },
   {
     base: "/executive",
-    role: 4,
+    role: ROLE.EXECUTIVE,
   },
   {
     base: "/engineer",
-    role: 5,
+    role: ROLE.ENGINEER,
   },
 ];
 
 const protectedRoutes = [
   {
     path: "/admin/users",
-    role: 1,
+    role: ROLE.ADMINISTRATOR,
     component: UserManagement,
   },
   {
     path: "/admin/master",
-    role: 1,
+    role: ROLE.ADMINISTRATOR,
     component: MasterDataAdmin,
   },
   {
     path: "/admin/tickets",
-    role: 1,
+    role: ROLE.ADMINISTRATOR,
     component: TicketManagement,
   },
   {
     path: "/admin/export-custom",
-    role: 1,
+    role: ROLE.ADMINISTRATOR,
     component: ExportCustom,
   },
 
   {
     path: "/staff/tickets",
-    role: 2,
+    role: ROLE.STAFF,
     component: TicketManagement,
   },
   {
     path: "/staff/export-custom",
-    role: 2,
+    role: ROLE.STAFF,
     component: ExportCustom,
   },
 
   {
     path: "/user/tickets",
-    role: 3,
+    role: ROLE.USER,
     component: TicketManagement,
   },
 
   {
     path: "/executive/tickets",
-    role: 4,
+    role: ROLE.EXECUTIVE,
     component: TicketManagement,
   },
   {
     path: "/executive/export-custom",
-    role: 4,
+    role: ROLE.EXECUTIVE,
     component: ExportCustom,
   },
 
   {
     path: "/engineer/tickets",
-    role: 5,
+    role: ROLE.ENGINEER,
     component: TicketManagement,
   },
 ];
@@ -116,9 +123,11 @@ const protectedRoutes = [
 const dashboardRoutes = roleBases.flatMap(
   ({ base, role }) =>
     dashboardPages.map(
-      ({ suffix, component: Component }) => ({
+      ({ key, suffix, component: Component }) => ({
         path: `${base}/dashboard${suffix}`,
+        base,
         role,
+        pageKey: key,
         Component,
       }),
     ),
@@ -132,6 +141,37 @@ function ProtectedPage({ role, Component }) {
   );
 }
 
+function DashboardRoutePage({
+  role,
+  base,
+  pageKey,
+  Component,
+}) {
+  const hasAccess = canAccessDashboard(
+    role,
+    pageKey,
+  );
+
+  if (!hasAccess) {
+    const fallbackBase =
+      DASHBOARD_BASE_BY_ROLE[role] || base;
+
+    return (
+      <Navigate
+        to={`${fallbackBase}/dashboard`}
+        replace
+      />
+    );
+  }
+  
+  return (
+    <ProtectedPage
+      role={role}
+      Component={Component}
+    />
+  );
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -142,6 +182,7 @@ function App() {
 
       <Routes>
         {/* PUBLIC ROUTES */}
+
         <Route
           path="/"
           element={<Login />}
@@ -153,14 +194,23 @@ function App() {
         />
 
         {/* DASHBOARD ROUTES */}
+
         {dashboardRoutes.map(
-          ({ path, role, Component }) => (
+          ({
+            path,
+            base,
+            role,
+            pageKey,
+            Component,
+          }) => (
             <Route
               key={path}
               path={path}
               element={
-                <ProtectedPage
+                <DashboardRoutePage
                   role={role}
+                  base={base}
+                  pageKey={pageKey}
                   Component={Component}
                 />
               }
@@ -168,9 +218,14 @@ function App() {
           ),
         )}
 
-        {/* PROTECTED ROUTES */}
+        {/* OTHER PROTECTED ROUTES */}
+
         {protectedRoutes.map(
-          ({ path, role, component: Component }) => (
+          ({
+            path,
+            role,
+            component: Component,
+          }) => (
             <Route
               key={path}
               path={path}
@@ -185,6 +240,7 @@ function App() {
         )}
 
         {/* PROFILE */}
+
         <Route
           path="/profile"
           element={
@@ -195,6 +251,7 @@ function App() {
         />
 
         {/* TICKET DETAIL */}
+
         <Route
           path="/tickets/:id"
           element={
