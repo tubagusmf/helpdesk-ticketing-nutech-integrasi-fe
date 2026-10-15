@@ -44,10 +44,14 @@ export default function TicketResolutionModal({ticket, onClose, onSuccess, role}
   const isReadOnly = isUser || isLockedForAdmin;
 
   useEffect(() => {
-    if (ticket?.attachment_url) {
-      setPreview(ticket.attachment_url);
+    if (!preview || !preview.startsWith("blob:")) {
+      return;
     }
-  }, [ticket]);
+
+    return () => {
+      URL.revokeObjectURL(preview);
+    };
+  }, [preview]);
 
   useEffect(() => {
     if (ticket?.id) {
@@ -141,9 +145,20 @@ export default function TicketResolutionModal({ticket, onClose, onSuccess, role}
     });
   };
 
+  
   const handleFileChange = (e) => {
-    setAttachment(e.target.files[0]);
+    const file = e.target.files?.[0] || null;
+
+    if (!file) {
+      setAttachment(null);
+      setPreview(null);
+      return;
+    }
+
+    setAttachment(file);
+    setPreview(URL.createObjectURL(file));
   };
+
 
   const handleSubmit = async () => {
     try {
@@ -185,7 +200,8 @@ export default function TicketResolutionModal({ticket, onClose, onSuccess, role}
       }
 
       await createTicketResolution(ticket.id, formData);
-
+      setAttachment(null);
+      setPreview(null);
       await fetchResolution();
 
       alert("Ticket berhasil di resolve!");
@@ -283,27 +299,59 @@ export default function TicketResolutionModal({ticket, onClose, onSuccess, role}
       setLoading(false);
     }
   };
+  
+  const resolveAttachmentUrl = (url) => {
+    if (!url) return "";
+
+    if (/^https?:\/\//i.test(url)) {
+      return url;
+    }
+
+    const baseUrl = (
+      import.meta.env.VITE_API_URL || ""
+    ).replace(/\/+$/, "");
+    const relativePath = url.replace(/^\/+/, "");
+
+    return `${baseUrl}/${relativePath}`;
+  };
 
   const getFileExtension = (url) => {
-    const parts = url.split(".");
-    return parts.length > 1 ? parts.pop().split("?")[0] : "jpg";
+    const cleanUrl = url.split("?")[0];
+    const parts = cleanUrl.split(".");
+    return parts.length > 1 ? parts.pop().toLowerCase() : "jpg";
   };
 
   const handleDownloadImage = async (url) => {
     try {
-      const response = await fetch(url);
+      const fullUrl = resolveAttachmentUrl(url);
+
+      const response = await fetch(fullUrl, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Gagal mengunduh gambar (${response.status})`,
+        );
+      }
+
       const blob = await response.blob();
       const blobUrl = window.URL.createObjectURL(blob);
-      const ext = getFileExtension(url);
+
       const link = document.createElement("a");
       link.href = blobUrl;
-      link.download = `ticket-${ticket.ticket_code}.${ext}`;
+      link.download = `ticket-${ticket.ticket_code}.${getFileExtension(url)}`;
 
+      document.body.appendChild(link);
       link.click();
+      link.remove();
 
       window.URL.revokeObjectURL(blobUrl);
     } catch (err) {
-      console.error("Download gagal:", err);
+      console.error("Download gambar gagal:", err);
+      alert(err.message || "Gagal mengunduh gambar resolution.");
     }
   };
 
@@ -500,6 +548,7 @@ export default function TicketResolutionModal({ticket, onClose, onSuccess, role}
                     if (newStatus === "ONHOLD") {
                       setSelectedCause(null);
                       setSelectedSolution(null);
+                      setAttachment(null);
                       setPreview(null);
                     }
                   }}
@@ -666,58 +715,8 @@ export default function TicketResolutionModal({ticket, onClose, onSuccess, role}
                   "
                 />
               </div>
-            )}
-
-            {/* UPLOAD */}
-            {form.status !== "ONHOLD" && !isLocked && (
-              <div className="flex flex-col lg:col-span-2 min-w-0">
-                <label className="text-sm font-medium mb-1 text-gray-700">
-                  Bukti Foto Penyelesaian (Opsional)
-                </label>
-
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    handleFileChange(e);
-
-                    const file = e.target.files[0];
-
-                    if (file) {
-                      const previewUrl = URL.createObjectURL(file);
-
-                      setPreview(previewUrl);
-                    }
-                  }}
-                  className="
-                    w-full
-                    border
-                    border-gray-200
-                    bg-white
-                    px-3
-                    py-2
-                    rounded-lg
-                    text-sm
-                  "
-                />
-
-                {preview && (
-                  <img
-                    src={preview}
-                    alt="preview"
-                    className="
-                      mt-3
-                      w-40
-                      h-40
-                      object-cover
-                      rounded-lg
-                      border
-                    "
-                  />
-                )}
-              </div>
-            )}
-
+            )}            
+          
             {/* EXISTING RESOLUTION ATTACHMENT */}
             {resolution?.attachment_url && (
               <div className="flex flex-col lg:col-span-2 min-w-0">
