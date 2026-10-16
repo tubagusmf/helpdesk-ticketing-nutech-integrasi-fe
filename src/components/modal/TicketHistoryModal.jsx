@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { getTicketHistories, exportTicketHistory } from "../../services/ticketService";
 import useTicketSocket from "../../hooks/useTicketSocket";
@@ -70,6 +69,9 @@ export default function TicketHistoryModal({ ticket, onClose }) {
 
       case "ENGINEER_RESOLUTION":
         return "🛠️ Solusi Tim Engineer";
+      
+      case "CANCELLATION_REASON":
+        return "🛑 Justifikasi Pembatalan";
 
       default:
         return "ℹ️ Aktivitas";
@@ -270,6 +272,21 @@ export default function TicketHistoryModal({ ticket, onClose }) {
                   <p className="mt-1 whitespace-pre-wrap text-gray-600">
                     {h.message || "-"}
                   </p>
+                )}
+
+                {/* CANCELLATION JUSTIFICATION */}
+                {h.type === "CANCELLATION_REASON" && (
+                  <div className="mt-2 rounded-md border border-red-200 bg-red-50 p-3">
+                    <p className="mb-1 text-xs font-semibold text-red-800">
+                      Alasan Pembatalan Tiket
+                    </p>
+
+                    <p className="whitespace-pre-wrap break-words text-gray-800">
+                      {h.message ||
+                        h.new_value ||
+                        "Justifikasi pembatalan tidak tersedia"}
+                    </p>
+                  </div>
                 )}
               </div>
             ))}

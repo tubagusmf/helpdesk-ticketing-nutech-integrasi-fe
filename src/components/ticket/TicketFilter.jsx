@@ -438,12 +438,10 @@ export default function TicketFilter({
                 ) : (
                   <>
                     <option value="OPEN">OPEN</option>
-
                     <option value="ONHOLD">ONHOLD</option>
-
                     <option value="RESOLVED">RESOLVED</option>
-
                     <option value="CLOSED">CLOSED</option>
+                    <option value="CANCEL">CANCEL</option>
                   </>
                 )}
               </select>

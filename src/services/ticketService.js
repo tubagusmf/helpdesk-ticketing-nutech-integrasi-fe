@@ -376,3 +376,11 @@ export const reassignTicketToOnlineStaff = async (ticketId,payload) => {
       body: JSON.stringify(payload),
     });
 };
+
+export const cancelTicket = async (ticketId, payload) => {
+  return fetchAPI(`${BASE_URL}/tickets/${ticketId}/cancel`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(payload),
+  });
+};

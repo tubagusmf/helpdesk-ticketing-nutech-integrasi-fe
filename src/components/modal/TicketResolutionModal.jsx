@@ -6,6 +6,7 @@ import {
   createTicketResolution,
   getTicketResolution,
   reassignTicketToOnlineStaff,
+  cancelTicket
 } from "../../services/ticketService";
 
 import Select from "react-select";
@@ -30,40 +31,28 @@ export default function TicketResolutionModal({
   const [solutions, setSolutions] = useState([]);
   const [selectedCause, setSelectedCause] = useState(null);
   const [selectedSolution, setSelectedSolution] = useState(null);
-
   const [preview, setPreview] = useState(null);
   const [attachment, setAttachment] = useState(null);
   const [problemImageError, setProblemImageError] = useState(false);
-
   const fileInputRef = useRef(null);
   const [resolution, setResolution] = useState(null);
-
   const getNowLocal = () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     return now.toISOString().slice(0, 16);
   };
 
-  const [form, setForm] = useState({
-    cause: "",
-    solution: "",
-    resolution_time: getNowLocal(),
-    notes: "",
-    onhold_notes: "",
-    status: ticket?.status || "OPEN",
-  });
-
   const isUser = Number(role) === ROLE.USER;
   const isStaff = Number(role) === ROLE.STAFF;
+  const isAdministrator = Number(role) === ROLE.ADMINISTRATOR;
 
   const [reassignJustification, setReassignJustification] = useState("");
   const [reassignLoading, setReassignLoading] = useState(false);
   const [showReassignForm, setShowReassignForm] = useState(false);
 
-  const isLockedForAdmin = ["RESOLVED", "CLOSED"].includes(ticket.status);
+  const isLockedForAdmin = ["RESOLVED", "CLOSED", "CANCEL"].includes(ticket.status);
   const isReadOnly = isUser || isLockedForAdmin;
 
-  // Bersihkan URL preview lokal ketika preview diganti atau modal ditutup.
   useEffect(() => {
     if (!preview || !preview.startsWith("blob:")) {
       return;
@@ -74,7 +63,6 @@ export default function TicketResolutionModal({
     };
   }, [preview]);
 
-  // Reset status error gambar ketika lampiran tiket berubah.
   useEffect(() => {
     setProblemImageError(false);
   }, [ticket?.attachment_url, ticket?.attachment]);
@@ -103,9 +91,6 @@ export default function TicketResolutionModal({
     try {
       const partId = ticket.part_id || ticket.part?.id;
       let causeList = [];
-
-      // Penyebab bergantung pada part, tetapi data resolusi tetap
-      // perlu diambil meskipun part_id tidak tersedia.
       if (partId) {
         const causeRes = await getCauses(partId);
         causeList = causeRes.data || [];
@@ -181,7 +166,6 @@ export default function TicketResolutionModal({
     }));
   };
 
-  // Menangani pemilihan foto penyelesaian.
   const handleFileChange = (e) => {
     const file = e.target.files?.[0] || null;
 
@@ -204,7 +188,6 @@ export default function TicketResolutionModal({
     setPreview(URL.createObjectURL(file));
   };
 
-  // Menghapus foto yang dipilih sebelum disimpan.
   const clearSelectedAttachment = () => {
     setAttachment(null);
     setPreview(null);
@@ -231,10 +214,23 @@ export default function TicketResolutionModal({
       }
     }
 
+    if (form.status === "CANCEL") {
+      const reason = (form.cancellation_reason || "").trim();
+
+      if (!reason) {
+        alert("Alasan pembatalan tiket wajib diisi.");
+        return;
+      }
+
+      if (reason.length > 1000) {
+        alert("Alasan pembatalan maksimal 1000 karakter.");
+        return;
+      }
+    }
+
     try {
       setLoading(true);
 
-      // Update status ONHOLD tidak membutuhkan foto penyelesaian.
       if (form.status === "ONHOLD") {
         await updateTicketStatusOnly(ticket.id, {
           status: form.status,
@@ -242,6 +238,26 @@ export default function TicketResolutionModal({
         });
 
         alert("Ticket berhasil diubah menjadi ONHOLD!");
+
+        onSuccess();
+        onClose();
+        return;
+      }
+
+      if (form.status === "CANCEL") {
+        const reason = form.cancellation_reason.trim();
+
+        const confirmed = window.confirm(
+          `Apakah Anda yakin ingin membatalkan tiket ${ticket.ticket_code}?`,
+        );
+
+        if (!confirmed) {
+          return;
+        }
+
+        await cancelTicket(ticket.id, { reason });
+
+        alert("Tiket berhasil dibatalkan!");
 
         onSuccess();
         onClose();
@@ -256,7 +272,6 @@ export default function TicketResolutionModal({
       formData.append("completion_time", form.resolution_time);
       formData.append("status", form.status);
 
-      // Nama field harus tetap sama dengan yang diterima backend.
       if (attachment) {
         formData.append("attachment", attachment);
       }
@@ -291,6 +306,10 @@ export default function TicketResolutionModal({
   const statusOptions = [
     { value: "RESOLVED", label: "RESOLVED" },
     { value: "ONHOLD", label: "ONHOLD" },
+
+    ...(isStaff || isAdministrator
+      ? [{ value: "CANCEL", label: "CANCEL" }]
+      : []),
   ];
 
   const handleReassignToOnlineStaff = async () => {
@@ -363,7 +382,6 @@ export default function TicketResolutionModal({
     }
   };
 
-  // Samakan pembentukan URL gambar dengan TicketDetail.jsx.
   const resolveAttachmentUrl = (value) => {
     if (typeof value !== "string" || !value.trim()) {
       return "";
@@ -371,7 +389,6 @@ export default function TicketResolutionModal({
 
     const rawUrl = value.trim();
 
-    // URL absolut, protocol-relative, data URL, atau blob URL.
     if (
       /^(https?:)?\/\//i.test(rawUrl) ||
       /^(data:|blob:)/i.test(rawUrl)
@@ -385,7 +402,6 @@ export default function TicketResolutionModal({
     try {
       apiOrigin = new URL(apiUrl).origin;
     } catch {
-      // Fallback jika VITE_API_URL bukan URL absolut.
       apiOrigin = apiUrl.replace(/\/v1\/?$/, "").replace(/\/+$/, "");
     }
 
@@ -462,7 +478,6 @@ export default function TicketResolutionModal({
       link.click();
       link.remove();
 
-      // Jangan mencabut URL sebelum browser memulai proses unduhan.
       window.setTimeout(() => {
         window.URL.revokeObjectURL(blobUrl);
       }, 1000);
@@ -471,6 +486,16 @@ export default function TicketResolutionModal({
       alert(err.message || "Gagal mengunduh gambar.");
     }
   };
+  
+  const [form, setForm] = useState({
+    cause: "",
+    solution: "",
+    resolution_time: getNowLocal(),
+    notes: "",
+    onhold_notes: "",
+    cancellation_reason: ticket?.cancellation_reason || "",
+    status: ticket?.status || "OPEN",
+  });
 
   useTicketSocket({
     onStatusUpdate: (data) => {
@@ -679,11 +704,14 @@ export default function TicketResolutionModal({
                     if (!selected) return;
 
                     const newStatus = selected.value;
+                    const clearResolution = ["ONHOLD", "CANCEL"].includes(
+                      newStatus,
+                    );
 
                     setForm((prev) => ({
                       ...prev,
                       status: newStatus,
-                      ...(newStatus === "ONHOLD"
+                      ...(clearResolution
                         ? {
                             cause: "",
                             solution: "",
@@ -692,7 +720,7 @@ export default function TicketResolutionModal({
                         : {}),
                     }));
 
-                    if (newStatus === "ONHOLD") {
+                    if (clearResolution) {
                       setSelectedCause(null);
                       setSelectedSolution(null);
                       setAttachment(null);
@@ -744,7 +772,7 @@ export default function TicketResolutionModal({
           </h3>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {form.status !== "ONHOLD" && (
+            {form.status !== "ONHOLD" && form.status !== "CANCEL" && (
               <>
                 {/* PENYEBAB */}
                 <div className="flex min-w-0 flex-col">
@@ -852,8 +880,37 @@ export default function TicketResolutionModal({
               </div>
             )}
 
+            {/* JUSTIFIKASI PEMBATALAN */}
+            {form.status === "CANCEL" && (
+              <div className="flex min-w-0 flex-col lg:col-span-2">
+                <label
+                  htmlFor="cancellation-reason"
+                  className="mb-2 text-sm font-medium text-gray-700"
+                >
+                  Alasan / Justifikasi Pembatalan
+                  <span className="ml-1 text-red-500">*</span>
+                </label>
+
+                <textarea
+                  id="cancellation-reason"
+                  name="cancellation_reason"
+                  value={form.cancellation_reason || ""}
+                  onChange={handleChange}
+                  disabled={isReadOnly || loading}
+                  rows={4}
+                  maxLength={1000}
+                  placeholder="Jelaskan alasan mengapa tiket ini harus dibatalkan..."
+                  className="w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 disabled:bg-gray-100"
+                />
+
+                <p className="mt-1 text-right text-xs text-gray-500">
+                  {(form.cancellation_reason || "").length}/1000 karakter
+                </p>
+              </div>
+            )}
+
             {/* UPLOAD FOTO PENYELESAIAN */}
-            {form.status !== "ONHOLD" && (
+            {form.status !== "ONHOLD" && form.status !== "CANCEL" && (
               <div className="flex min-w-0 flex-col lg:col-span-2">
                 <label
                   htmlFor="resolution-attachment"
@@ -1081,10 +1138,16 @@ export default function TicketResolutionModal({
               className={`rounded-lg px-4 py-2 text-white ${
                 loading
                   ? "bg-gray-400"
-                  : "bg-blue-600 hover:bg-blue-700"
+                  : form.status === "CANCEL"
+                    ? "bg-red-600 hover:bg-red-700"
+                    : "bg-blue-600 hover:bg-blue-700"
               }`}
             >
-              {loading ? "Menyimpan..." : "Simpan Perubahan"}
+              {loading
+                ? "Memproses..."
+                : form.status === "CANCEL"
+                  ? "Batalkan Tiket"
+                  : "Simpan Perubahan"}
             </button>
           )}
         </div>
