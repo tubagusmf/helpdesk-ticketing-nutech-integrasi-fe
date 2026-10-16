@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   getCauses,
   getSolutions,
@@ -7,19 +7,37 @@ import {
   getTicketResolution,
   reassignTicketToOnlineStaff,
 } from "../../services/ticketService";
+
 import Select from "react-select";
 import useTicketSocket from "../../hooks/useTicketSocket";
 import { ROLE } from "../../constants/role";
-import { FiSend } from "react-icons/fi";
+import {
+  FiDownload,
+  FiExternalLink,
+  FiImage,
+  FiSend,
+  FiX,
+} from "react-icons/fi";
 
-export default function TicketResolutionModal({ticket, onClose, onSuccess, role}) {
+export default function TicketResolutionModal({
+  ticket,
+  onClose,
+  onSuccess,
+  role,
+}) {
   const [loading, setLoading] = useState(false);
   const [causes, setCauses] = useState([]);
   const [solutions, setSolutions] = useState([]);
   const [selectedCause, setSelectedCause] = useState(null);
   const [selectedSolution, setSelectedSolution] = useState(null);
+
   const [preview, setPreview] = useState(null);
+  const [attachment, setAttachment] = useState(null);
+  const [problemImageError, setProblemImageError] = useState(false);
+
+  const fileInputRef = useRef(null);
   const [resolution, setResolution] = useState(null);
+
   const getNowLocal = () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
@@ -34,15 +52,18 @@ export default function TicketResolutionModal({ticket, onClose, onSuccess, role}
     onhold_notes: "",
     status: ticket?.status || "OPEN",
   });
-  const isLocked = ["RESOLVED", "CLOSED"].includes(ticket.status);
+
   const isUser = Number(role) === ROLE.USER;
+  const isStaff = Number(role) === ROLE.STAFF;
+
   const [reassignJustification, setReassignJustification] = useState("");
   const [reassignLoading, setReassignLoading] = useState(false);
   const [showReassignForm, setShowReassignForm] = useState(false);
-  const isStaff = Number(role) === ROLE.STAFF;
+
   const isLockedForAdmin = ["RESOLVED", "CLOSED"].includes(ticket.status);
   const isReadOnly = isUser || isLockedForAdmin;
 
+  // Bersihkan URL preview lokal ketika preview diganti atau modal ditutup.
   useEffect(() => {
     if (!preview || !preview.startsWith("blob:")) {
       return;
@@ -52,6 +73,11 @@ export default function TicketResolutionModal({ticket, onClose, onSuccess, role}
       URL.revokeObjectURL(preview);
     };
   }, [preview]);
+
+  // Reset status error gambar ketika lampiran tiket berubah.
+  useEffect(() => {
+    setProblemImageError(false);
+  }, [ticket?.attachment_url, ticket?.attachment]);
 
   useEffect(() => {
     if (ticket?.id) {
@@ -76,27 +102,29 @@ export default function TicketResolutionModal({ticket, onClose, onSuccess, role}
   const fetchResolution = async () => {
     try {
       const partId = ticket.part_id || ticket.part?.id;
+      let causeList = [];
 
-      if (!partId) {
-        console.warn("PART ID NULL");
-        return;
+      // Penyebab bergantung pada part, tetapi data resolusi tetap
+      // perlu diambil meskipun part_id tidak tersedia.
+      if (partId) {
+        const causeRes = await getCauses(partId);
+        causeList = causeRes.data || [];
       }
 
-      const causeRes = await getCauses(partId);
-      const causeList = causeRes.data || [];
       setCauses(causeList);
 
       const res = await getTicketResolution(ticket.id);
       const data = res;
 
       if (!data) {
+        setResolution(null);
         return;
       }
 
       setResolution(data);
 
       const foundCause = causeList.find(
-        (c) => String(c.id) === String(data.cause_id),
+        (cause) => String(cause.id) === String(data.cause_id),
       );
 
       if (foundCause) {
@@ -109,10 +137,12 @@ export default function TicketResolutionModal({ticket, onClose, onSuccess, role}
 
         const solRes = await getSolutions(foundCause.id);
         const solList = solRes.data || [];
+
         setSolutions(solList);
 
         const foundSolution = solList.find(
-          (s) => String(s.id) === String(data.solution_id),
+          (solution) =>
+            String(solution.id) === String(data.solution_id),
         );
 
         if (foundSolution) {
@@ -120,7 +150,13 @@ export default function TicketResolutionModal({ticket, onClose, onSuccess, role}
             value: foundSolution.id,
             label: foundSolution.name,
           });
+        } else {
+          setSelectedSolution(null);
         }
+      } else {
+        setSelectedCause(null);
+        setSelectedSolution(null);
+        setSolutions([]);
       }
 
       setForm((prev) => ({
@@ -132,20 +168,20 @@ export default function TicketResolutionModal({ticket, onClose, onSuccess, role}
         status: ticket.status,
       }));
     } catch (err) {
-      console.error(err);
+      console.error("[TICKET RESOLUTION] Gagal mengambil resolusi:", err);
     }
   };
 
-  const [attachment, setAttachment] = useState(null);
-
   const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
-  
+  // Menangani pemilihan foto penyelesaian.
   const handleFileChange = (e) => {
     const file = e.target.files?.[0] || null;
 
@@ -155,33 +191,58 @@ export default function TicketResolutionModal({ticket, onClose, onSuccess, role}
       return;
     }
 
+    if (!file.type.startsWith("image/")) {
+      alert("File yang diunggah harus berupa gambar.");
+
+      e.target.value = "";
+      setAttachment(null);
+      setPreview(null);
+      return;
+    }
+
     setAttachment(file);
     setPreview(URL.createObjectURL(file));
   };
 
+  // Menghapus foto yang dipilih sebelum disimpan.
+  const clearSelectedAttachment = () => {
+    setAttachment(null);
+    setPreview(null);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   const handleSubmit = async () => {
-    try {
-      if (isUser) {
+    if (isUser || isReadOnly) {
+      return;
+    }
+
+    if (form.status === "RESOLVED") {
+      if (!form.cause || !form.solution) {
+        alert("Penyebab dan solusi wajib diisi!");
         return;
       }
 
-      if (form.status === "RESOLVED") {
-        if (!form.cause || !form.solution) {
-          alert("Cause dan Solution wajib diisi!");
-          return;
-        }
+      if (!form.resolution_time) {
+        alert("Waktu penyelesaian wajib diisi!");
+        return;
       }
+    }
 
+    try {
       setLoading(true);
 
+      // Update status ONHOLD tidak membutuhkan foto penyelesaian.
       if (form.status === "ONHOLD") {
         await updateTicketStatusOnly(ticket.id, {
           status: form.status,
           onhold_notes: form.onhold_notes,
         });
 
-        alert("Ticket berhasil di ONHOLD!");
+        alert("Ticket berhasil diubah menjadi ONHOLD!");
+
         onSuccess();
         onClose();
         return;
@@ -195,32 +256,36 @@ export default function TicketResolutionModal({ticket, onClose, onSuccess, role}
       formData.append("completion_time", form.resolution_time);
       formData.append("status", form.status);
 
+      // Nama field harus tetap sama dengan yang diterima backend.
       if (attachment) {
         formData.append("attachment", attachment);
       }
 
       await createTicketResolution(ticket.id, formData);
-      setAttachment(null);
-      setPreview(null);
+
+      clearSelectedAttachment();
+
       await fetchResolution();
 
-      alert("Ticket berhasil di resolve!");
+      alert("Ticket berhasil disimpan!");
+
       onSuccess();
     } catch (err) {
-      alert(err.message);
+      console.error("[TICKET RESOLUTION] Gagal menyimpan:", err);
+      alert(err.message || "Gagal menyimpan resolusi tiket.");
     } finally {
       setLoading(false);
     }
   };
 
-  const causeOptions = causes.map((c) => ({
-    value: c.id,
-    label: c.name,
+  const causeOptions = causes.map((cause) => ({
+    value: cause.id,
+    label: cause.name,
   }));
 
-  const solutionOptions = solutions.map((s) => ({
-    value: s.id,
-    label: s.name,
+  const solutionOptions = solutions.map((solution) => ({
+    value: solution.id,
+    label: solution.name,
   }));
 
   const statusOptions = [
@@ -268,6 +333,7 @@ export default function TicketResolutionModal({ticket, onClose, onSuccess, role}
       onSuccess();
       onClose();
     } catch (err) {
+      console.error("[REASSIGN] Gagal:", err);
       alert(err.message || "Gagal melakukan reassign ticket.");
     } finally {
       setReassignLoading(false);
@@ -275,55 +341,100 @@ export default function TicketResolutionModal({ticket, onClose, onSuccess, role}
   };
 
   const handleCloseAsUser = async () => {
+    if (!isUser || ticket.status !== "RESOLVED") {
+      return;
+    }
+
     try {
-      if (!isUser) {
-        return;
-      }
-
-      if (ticket.status !== "RESOLVED") {
-        return;
-      }
-
       setLoading(true);
 
       await updateTicketStatusOnly(ticket.id, {
         status: "CLOSED",
       });
 
-      alert("Ticket berhasil di CLOSED!");
+      alert("Ticket berhasil diubah menjadi CLOSED!");
+
       onSuccess();
       onClose();
     } catch (err) {
-      alert(err.message);
+      alert(err.message || "Gagal menutup ticket.");
     } finally {
       setLoading(false);
     }
   };
-  
-  const resolveAttachmentUrl = (url) => {
-    if (!url) return "";
 
-    if (/^https?:\/\//i.test(url)) {
-      return url;
+  // Samakan pembentukan URL gambar dengan TicketDetail.jsx.
+  const resolveAttachmentUrl = (value) => {
+    if (typeof value !== "string" || !value.trim()) {
+      return "";
     }
 
-    const baseUrl = (
-      import.meta.env.VITE_API_URL || ""
-    ).replace(/\/+$/, "");
-    const relativePath = url.replace(/^\/+/, "");
+    const rawUrl = value.trim();
 
-    return `${baseUrl}/${relativePath}`;
+    // URL absolut, protocol-relative, data URL, atau blob URL.
+    if (
+      /^(https?:)?\/\//i.test(rawUrl) ||
+      /^(data:|blob:)/i.test(rawUrl)
+    ) {
+      return rawUrl;
+    }
+
+    const apiUrl = import.meta.env.VITE_API_URL || "";
+    let apiOrigin = "";
+
+    try {
+      apiOrigin = new URL(apiUrl).origin;
+    } catch {
+      // Fallback jika VITE_API_URL bukan URL absolut.
+      apiOrigin = apiUrl.replace(/\/v1\/?$/, "").replace(/\/+$/, "");
+    }
+
+    const path = rawUrl
+      .replace(/\\/g, "/")
+      .replace(/^\/+/, "");
+
+    return apiOrigin ? `${apiOrigin}/${path}` : `/${path}`;
   };
+
+  const problemAttachmentUrl = resolveAttachmentUrl(
+    ticket?.attachment_url ||
+      ticket?.attachment ||
+      ticket?.Attachment,
+  );
+
+  const resolutionAttachmentUrl = resolveAttachmentUrl(
+    resolution?.attachment_url ||
+      resolution?.attachment ||
+      resolution?.AttachmentURL,
+  );
 
   const getFileExtension = (url) => {
-    const cleanUrl = url.split("?")[0];
-    const parts = cleanUrl.split(".");
-    return parts.length > 1 ? parts.pop().toLowerCase() : "jpg";
+    try {
+      const pathname = new URL(url, window.location.origin).pathname;
+      const fileName = pathname.split("/").filter(Boolean).pop() || "";
+
+      const extension = fileName.includes(".")
+        ? fileName.split(".").pop()
+        : "jpg";
+
+      return /^[a-z0-9]{1,8}$/i.test(extension)
+        ? extension.toLowerCase()
+        : "jpg";
+    } catch {
+      return "jpg";
+    }
   };
 
-  const handleDownloadImage = async (url) => {
+  const handleDownloadImage = async (
+    url,
+    label = "penyelesaian",
+  ) => {
     try {
       const fullUrl = resolveAttachmentUrl(url);
+
+      if (!fullUrl) {
+        throw new Error("URL gambar tidak ditemukan.");
+      }
 
       const response = await fetch(fullUrl, {
         headers: {
@@ -333,7 +444,7 @@ export default function TicketResolutionModal({ticket, onClose, onSuccess, role}
 
       if (!response.ok) {
         throw new Error(
-          `Gagal mengunduh gambar (${response.status})`,
+          `Gagal mengunduh gambar (${response.status}).`,
         );
       }
 
@@ -341,17 +452,23 @@ export default function TicketResolutionModal({ticket, onClose, onSuccess, role}
       const blobUrl = window.URL.createObjectURL(blob);
 
       const link = document.createElement("a");
+
       link.href = blobUrl;
-      link.download = `ticket-${ticket.ticket_code}.${getFileExtension(url)}`;
+      link.download =
+        `ticket-${ticket.ticket_code}-${label}.` +
+        getFileExtension(fullUrl);
 
       document.body.appendChild(link);
       link.click();
       link.remove();
 
-      window.URL.revokeObjectURL(blobUrl);
+      // Jangan mencabut URL sebelum browser memulai proses unduhan.
+      window.setTimeout(() => {
+        window.URL.revokeObjectURL(blobUrl);
+      }, 1000);
     } catch (err) {
-      console.error("Download gambar gagal:", err);
-      alert(err.message || "Gagal mengunduh gambar resolution.");
+      console.error("[DOWNLOAD IMAGE] Gagal:", err);
+      alert(err.message || "Gagal mengunduh gambar.");
     }
   };
 
@@ -367,211 +484,245 @@ export default function TicketResolutionModal({ticket, onClose, onSuccess, role}
   });
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
-      <div className="bg-white w-full max-w-5xl rounded-xl shadow-lg p-6 overflow-y-auto max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3">
+      <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-xl bg-white p-4 shadow-lg sm:p-6">
         {/* HEADER */}
-        <div className="flex justify-between items-center mb-4">
+        <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">
               Tiket #{ticket.ticket_code}
             </h2>
+
             <p className="text-sm text-gray-500">
-              SLA Remaining: <span className="text-red-500">Overdue</span>
+              SLA Remaining:{" "}
+              <span className="text-red-500">Overdue</span>
             </p>
           </div>
-          <button onClick={onClose}>✕</button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Tutup modal"
+            className="rounded-lg px-2 py-1 text-gray-500 hover:bg-gray-100"
+          >
+            ✕
+          </button>
         </div>
 
-        {/* CONTENT */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* LEFT */}
-          <div className="border rounded-xl p-4">
-            <h3 className="text-sm font-semibold mb-3 text-gray-600">
+        {/* INFORMASI MASALAH DAN PELAPOR */}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          {/* INFORMASI MASALAH */}
+          <div className="min-w-0 rounded-xl border p-4">
+            <h3 className="mb-3 text-sm font-semibold text-gray-600">
               INFORMASI MASALAH
             </h3>
 
             <div className="space-y-3">
-              {/* PROJECT */}
               <div className="flex flex-col">
                 <label className="text-sm font-medium text-gray-700">
                   Project
                 </label>
+
                 <input
-                  value={ticket.project_name}
+                  value={ticket.project_name || "-"}
                   disabled
-                  className="w-full border px-3 py-2 rounded-lg bg-gray-100"
+                  className="w-full rounded-lg border bg-gray-100 px-3 py-2"
                 />
               </div>
 
-              {/* LOCATION & PART */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* LOKASI */}
-                <div className="flex flex-col min-w-0">
-                  <label className="text-sm font-medium text-gray-700 mb-1">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="flex min-w-0 flex-col">
+                  <label className="mb-1 text-sm font-medium text-gray-700">
                     Lokasi
                   </label>
 
                   <input
                     value={ticket.location_name || "-"}
                     disabled
-                    className="
-                      w-full
-                      border
-                      border-gray-200
-                      px-3
-                      py-2
-                      rounded-lg
-                      bg-gray-100
-                      text-sm
-                      min-w-0
-                    "
+                    className="w-full min-w-0 rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm"
                   />
                 </div>
 
-                {/* PERANGKAT */}
-                <div className="flex flex-col min-w-0">
-                  <label className="text-sm font-medium text-gray-700 mb-1">
+                <div className="flex min-w-0 flex-col">
+                  <label className="mb-1 text-sm font-medium text-gray-700">
                     Perangkat
                   </label>
 
                   <input
                     value={ticket.part_name || "-"}
                     disabled
-                    className="
-                      w-full
-                      border
-                      border-gray-200
-                      px-3
-                      py-2
-                      rounded-lg
-                      bg-gray-100
-                      text-sm
-                      min-w-0
-                    "
+                    className="w-full min-w-0 rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm"
                   />
                 </div>
               </div>
 
-              {/* ASSET */}
               <div className="flex flex-col">
                 <label className="text-sm font-medium text-gray-700">
                   ID / No Perangkat
                 </label>
+
                 <input
-                  value={ticket.asset_code}
+                  value={ticket.asset_code || "-"}
                   disabled
-                  className="w-full border px-3 py-2 rounded-lg bg-gray-100"
+                  className="w-full rounded-lg border bg-gray-100 px-3 py-2"
                 />
               </div>
 
-              {/* DESCRIPTION */}
               <div className="flex flex-col">
                 <label className="text-sm font-medium text-gray-700">
                   Deskripsi Permasalahan
                 </label>
+
                 <textarea
-                  value={ticket.description}
+                  value={ticket.description || "-"}
                   disabled
-                  className="w-full border px-3 py-2 rounded-lg bg-gray-100"
+                  rows={3}
+                  className="w-full resize-y rounded-lg border bg-gray-100 px-3 py-2"
                 />
               </div>
 
-              {/* ATTACHMENT PROBLEM */}
-              <div className="flex flex-col">
+              {/* FOTO PERMASALAHAN */}
+              <div className="flex min-w-0 flex-col">
                 <label className="text-sm font-medium text-gray-700">
                   Bukti Foto Masalah
                 </label>
-                {ticket.attachment_url ? (
-                  <img
-                    src={
-                      ticket.attachment_url?.startsWith("http")
-                        ? ticket.attachment_url
-                        : `${import.meta.env.VITE_API_URL}/${ticket.attachment_url}`
-                    }
-                    alt="problem"
-                    onError={(e) => {
-                      e.target.src = "/no-image.png";
-                    }}
-                    className="mt-2 w-40 h-40 object-cover rounded-lg border"
-                  />
+
+                {problemAttachmentUrl && !problemImageError ? (
+                  <div className="mt-2 flex flex-col items-start gap-3">
+                    <a
+                      href={problemAttachmentUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                      title="Buka foto masalah"
+                    >
+                      <img
+                        src={problemAttachmentUrl}
+                        alt="Bukti foto masalah"
+                        onError={() => setProblemImageError(true)}
+                        className="h-40 w-40 rounded-lg border border-gray-200 object-cover"
+                      />
+                    </a>
+
+                    <div className="flex flex-wrap gap-2">
+                      <a
+                        href={problemAttachmentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 rounded-lg border border-blue-200 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50"
+                      >
+                        <FiExternalLink size={16} />
+                        Buka Gambar
+                      </a>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleDownloadImage(
+                            problemAttachmentUrl,
+                            "masalah",
+                          )
+                        }
+                        className="inline-flex items-center gap-2 rounded-lg border border-green-200 px-3 py-2 text-sm text-green-600 hover:bg-green-50"
+                      >
+                        <FiDownload size={16} />
+                        Unduh Gambar
+                      </button>
+                    </div>
+                  </div>
                 ) : (
-                  <p className="text-xs text-gray-400 mt-1">
-                    Tidak ada lampiran
-                  </p>
+                  <div className="mt-2 flex h-24 w-40 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 text-center">
+                    <p className="text-xs text-gray-500">
+                      {problemAttachmentUrl
+                        ? "Gambar tidak dapat dimuat"
+                        : "Tidak ada lampiran foto"}
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* RIGHT */}
-          <div className="border rounded-xl p-4">
-            <h3 className="text-sm font-semibold mb-3 text-gray-600">
+          {/* INFORMASI PELAPOR */}
+          <div className="min-w-0 rounded-xl border p-4">
+            <h3 className="mb-3 text-sm font-semibold text-gray-600">
               User Pelapor
             </h3>
 
             <div className="space-y-3">
-              {/* REPORTER */}
               <div className="flex flex-col">
                 <label className="text-sm font-medium text-gray-700">
                   Nama Pelapor
                 </label>
+
                 <input
-                  value={ticket.reporter_name}
+                  value={ticket.reporter_name || "-"}
                   disabled
-                  className="w-full border px-3 py-2 rounded-lg bg-gray-100"
+                  className="w-full rounded-lg border bg-gray-100 px-3 py-2"
                 />
               </div>
 
-              {/* STATUS (EDITABLE) */}
+              {/* STATUS */}
               <div className="flex flex-col">
                 <label className="text-sm font-medium text-gray-700">
                   Status
                 </label>
+
                 <Select
                   options={statusOptions}
                   placeholder="Pilih Status"
-                  value={statusOptions.find((s) => s.value === form.status)}
-                  isDisabled={isReadOnly}
+                  value={statusOptions.find(
+                    (status) => status.value === form.status,
+                  )}
+                  isDisabled={isReadOnly || loading}
                   onChange={(selected) => {
+                    if (!selected) return;
+
                     const newStatus = selected.value;
 
-                    setForm({
-                      ...form,
+                    setForm((prev) => ({
+                      ...prev,
                       status: newStatus,
-                      ...(newStatus === "ONHOLD" && {
-                        cause: "",
-                        solution: "",
-                        resolution_time: "",
-                      }),
-                    });
+                      ...(newStatus === "ONHOLD"
+                        ? {
+                            cause: "",
+                            solution: "",
+                            resolution_time: "",
+                          }
+                        : {}),
+                    }));
 
                     if (newStatus === "ONHOLD") {
                       setSelectedCause(null);
                       setSelectedSolution(null);
                       setAttachment(null);
                       setPreview(null);
+
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = "";
+                      }
                     }
                   }}
                 />
               </div>
 
-              {/* PRIORITY */}
               <div className="flex flex-col">
                 <label className="text-sm font-medium text-gray-700">
                   Prioritas
                 </label>
+
                 <input
-                  value={ticket.priority}
+                  value={ticket.priority || "-"}
                   disabled
-                  className="w-full border px-3 py-2 rounded-lg bg-gray-100"
+                  className="w-full rounded-lg border bg-gray-100 px-3 py-2"
                 />
               </div>
 
-              {/* STAFF */}
               <div className="flex flex-col">
                 <label className="text-sm font-medium text-gray-700">
                   Nama Staff
                 </label>
+
                 <input
                   value={
                     ticket.staff_assigned_to_name ||
@@ -579,50 +730,57 @@ export default function TicketResolutionModal({ticket, onClose, onSuccess, role}
                     "-"
                   }
                   disabled
-                  className="w-full border px-3 py-2 rounded-lg bg-gray-100"
+                  className="w-full rounded-lg border bg-gray-100 px-3 py-2"
                 />
               </div>
             </div>
           </div>
         </div>
 
-        {/* RESOLUTION */}
-        <div className="border border-green-100 rounded-xl p-4 mt-5 bg-green-50">
-          <h3 className="text-sm font-semibold mb-3 text-green-700">
+        {/* PENYELESAIAN */}
+        <div className="mt-5 rounded-xl border border-green-100 bg-green-50 p-4">
+          <h3 className="mb-3 text-sm font-semibold text-green-700">
             PENYELESAIAN
           </h3>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {form.status !== "ONHOLD" && (
               <>
-                {/* CAUSE */}
-                <div className="flex flex-col min-w-0">
-                  <label className="text-sm font-medium mb-1 text-gray-700">
+                {/* PENYEBAB */}
+                <div className="flex min-w-0 flex-col">
+                  <label className="mb-1 text-sm font-medium text-gray-700">
                     Penyebab
                   </label>
 
                   <Select
                     options={causeOptions}
                     value={selectedCause}
-                    isDisabled={isReadOnly}
+                    isDisabled={isReadOnly || loading}
                     onChange={async (selected) => {
                       setSelectedCause(selected);
                       setSelectedSolution(null);
 
-                      setForm({
-                        ...form,
+                      setForm((prev) => ({
+                        ...prev,
                         cause: selected?.value || "",
                         solution: "",
-                      });
+                      }));
 
                       if (!selected?.value) {
                         setSolutions([]);
                         return;
                       }
 
-                      const res = await getSolutions(selected.value);
-
-                      setSolutions(res.data || []);
+                      try {
+                        const res = await getSolutions(selected.value);
+                        setSolutions(res.data || []);
+                      } catch (err) {
+                        console.error(
+                          "Gagal mengambil daftar solusi:",
+                          err,
+                        );
+                        setSolutions([]);
+                      }
                     }}
                     placeholder="Pilih atau ketik penyebab..."
                     isSearchable
@@ -631,34 +789,34 @@ export default function TicketResolutionModal({ticket, onClose, onSuccess, role}
                   />
                 </div>
 
-                {/* SOLUTION */}
-                <div className="flex flex-col min-w-0">
-                  <label className="text-sm font-medium mb-1 text-gray-700">
+                {/* SOLUSI */}
+                <div className="flex min-w-0 flex-col">
+                  <label className="mb-1 text-sm font-medium text-gray-700">
                     Solusi
                   </label>
 
                   <Select
                     options={solutionOptions}
                     value={selectedSolution}
+                    isDisabled={isReadOnly || loading}
                     onChange={(selected) => {
                       setSelectedSolution(selected);
 
-                      setForm({
-                        ...form,
+                      setForm((prev) => ({
+                        ...prev,
                         solution: selected?.value || "",
-                      });
+                      }));
                     }}
                     placeholder="Pilih atau ketik solusi..."
                     isSearchable
-                    isDisabled={isReadOnly}
                     className="w-full"
                     classNamePrefix="ticket-select"
                   />
                 </div>
 
-                {/* RESOLUTION TIME */}
-                <div className="flex flex-col lg:col-span-2 min-w-0">
-                  <label className="text-sm font-medium mb-1 text-gray-700">
+                {/* WAKTU PENYELESAIAN */}
+                <div className="flex min-w-0 flex-col lg:col-span-2">
+                  <label className="mb-1 text-sm font-medium text-gray-700">
                     Waktu Penyelesaian
                   </label>
 
@@ -667,95 +825,141 @@ export default function TicketResolutionModal({ticket, onClose, onSuccess, role}
                     name="resolution_time"
                     value={form.resolution_time}
                     onChange={handleChange}
-                    className="
-                      w-full
-                      border
-                      border-gray-200
-                      px-3
-                      py-2
-                      rounded-lg
-                      bg-white
-                      text-sm
-                      focus:outline-none
-                      focus:ring-2
-                      focus:ring-green-200
-                    "
-                    disabled={isReadOnly}
+                    disabled={isReadOnly || loading}
+                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
                   />
                 </div>
               </>
             )}
 
-            {/* ONHOLD NOTES */}
+            {/* CATATAN ONHOLD */}
             {form.status === "ONHOLD" && (
-              <div className="flex flex-col lg:col-span-2 min-w-0">
-                <label className="text-sm font-medium mb-1 text-gray-700">
+              <div className="flex min-w-0 flex-col lg:col-span-2">
+                <label className="mb-1 text-sm font-medium text-gray-700">
                   Catatan ONHOLD
                 </label>
 
                 <textarea
                   name="onhold_notes"
-                  value={ticket.onhold_notes || form.onhold_notes}
+                  value={
+                    form.onhold_notes || ticket.onhold_notes || ""
+                  }
                   onChange={handleChange}
-                  disabled={isReadOnly}
-                  className="
-                    w-full
-                    min-h-[100px]
-                    border
-                    border-gray-200
-                    px-3
-                    py-2
-                    rounded-lg
-                    bg-white
-                    text-sm
-                    resize-y
-                    focus:outline-none
-                    focus:ring-2
-                    focus:ring-green-200
-                  "
+                  disabled={isReadOnly || loading}
+                  rows={3}
+                  className="w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
                 />
               </div>
-            )}            
-          
-            {/* EXISTING RESOLUTION ATTACHMENT */}
-            {resolution?.attachment_url && (
-              <div className="flex flex-col lg:col-span-2 min-w-0">
-                <label className="text-sm font-medium mb-2 text-gray-700">
+            )}
+
+            {/* UPLOAD FOTO PENYELESAIAN */}
+            {form.status !== "ONHOLD" && (
+              <div className="flex min-w-0 flex-col lg:col-span-2">
+                <label
+                  htmlFor="resolution-attachment"
+                  className="mb-2 text-sm font-medium text-gray-700"
+                >
+                  Upload Foto Penyelesaian
+                </label>
+
+                <div className="flex flex-col gap-3 rounded-lg border border-dashed border-gray-300 bg-white p-4">
+                  <div className="flex items-start gap-3">
+                    <FiImage
+                      className="mt-0.5 shrink-0 text-gray-500"
+                      size={20}
+                    />
+
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-gray-700">
+                        Upload foto sesudah (opsional).
+                      </p>
+
+                      <p className="mt-1 text-xs text-gray-500">
+                        Format gambar JPG, JPEG, atau PNG.
+                      </p>
+                    </div>
+                  </div>
+
+                  {!isReadOnly && (
+                    <input
+                      ref={fileInputRef}
+                      id="resolution-attachment"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      disabled={loading}
+                      className="block w-full cursor-pointer rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-700 file:mr-4 file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-sm file:font-medium hover:file:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-60"
+                    />
+                  )}
+
+                  {/* PREVIEW FOTO BARU */}
+                  {preview && attachment && (
+                    <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+                      <img
+                        src={preview}
+                        alt="Preview foto penyelesaian yang akan diunggah"
+                        className="h-40 w-40 rounded-lg border border-gray-200 object-cover"
+                      />
+
+                      <div className="min-w-0">
+                        <p className="max-w-xs break-all text-sm text-gray-700">
+                          {attachment.name}
+                        </p>
+
+                        <p className="mt-1 text-xs text-gray-500">
+                          {(attachment.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+
+                        {!isReadOnly && (
+                          <button
+                            type="button"
+                            onClick={clearSelectedAttachment}
+                            disabled={loading}
+                            className="mt-2 inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+                          >
+                            <FiX size={16} />
+                            Hapus Pilihan
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* FOTO PENYELESAIAN YANG SUDAH TERSIMPAN */}
+            {resolutionAttachmentUrl && (
+              <div className="flex min-w-0 flex-col lg:col-span-2">
+                <label className="mb-2 text-sm font-medium text-gray-700">
                   Bukti Foto Penyelesaian
                 </label>
 
-                <div className="flex flex-col sm:flex-row items-start gap-4">
-                  <img
-                    src={
-                      resolution.attachment_url.startsWith("http")
-                        ? resolution.attachment_url
-                        : `${import.meta.env.VITE_API_URL}/${resolution.attachment_url}`
-                    }
-                    alt="resolution"
-                    className="
-                      w-40
-                      h-40
-                      object-cover
-                      rounded-lg
-                      border
-                    "
-                  />
+                <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-start">
+                  <a
+                    href={resolutionAttachmentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Buka foto penyelesaian"
+                  >
+                    <img
+                      src={resolutionAttachmentUrl}
+                      alt="Bukti foto penyelesaian yang sudah tersimpan"
+                      className="h-40 w-40 rounded-lg border border-gray-200 object-cover"
+                    />
+                  </a>
 
                   <button
                     type="button"
                     onClick={() =>
-                      handleDownloadImage(resolution.attachment_url)
+                      handleDownloadImage(
+                        resolutionAttachmentUrl,
+                        "penyelesaian",
+                      )
                     }
-                    className="
-                      px-3
-                      py-2
-                      bg-orange-600
-                      text-white
-                      rounded-lg
-                      text-sm
-                      hover:bg-orange-700
-                    "
+                    className="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-3 py-2 text-sm text-white hover:bg-orange-700"
                   >
+                    <FiDownload size={16} />
                     Unduh Gambar
                   </button>
                 </div>
@@ -764,8 +968,7 @@ export default function TicketResolutionModal({ticket, onClose, onSuccess, role}
           </div>
         </div>
 
-        
-        {/* REASSIGN STAFF - TOGGLE FORM */}
+        {/* REASSIGN STAFF CCIT */}
         {isStaff && !isLockedForAdmin && (
           <div className="mt-5">
             {!showReassignForm ? (
@@ -775,7 +978,8 @@ export default function TicketResolutionModal({ticket, onClose, onSuccess, role}
                 disabled={loading || reassignLoading}
                 className="inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <FiSend size={18} /> Alihkan Ticket ke Staff Lain
+                <FiSend size={18} />
+                Alihkan Ticket ke Staff Lain
               </button>
             ) : (
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
@@ -784,8 +988,8 @@ export default function TicketResolutionModal({ticket, onClose, onSuccess, role}
                 </h3>
 
                 <p className="mb-3 text-sm text-gray-600">
-                  Jelaskan alasan ticket perlu dialihkan.
-                  Sistem akan memilih Staff lain yang sedang online secara otomatis.
+                  Jelaskan alasan ticket perlu dialihkan. Sistem akan
+                  memilih Staff lain yang sedang online secara otomatis.
                 </p>
 
                 <textarea
@@ -840,36 +1044,44 @@ export default function TicketResolutionModal({ticket, onClose, onSuccess, role}
           </div>
         )}
 
-
         {isLockedForAdmin && (
-          <p className="text-sm text-gray-500 mt-4 text-right">
-            Ticket sudah selesai, data tidak dapat diubah
+          <p className="mt-4 text-right text-sm text-gray-500">
+            Ticket sudah selesai, data tidak dapat diubah.
           </p>
         )}
 
         {/* FOOTER */}
-        <div className="flex justify-end gap-2 mt-6">
-          <button onClick={onClose} className="px-4 py-2 border rounded-lg">
+        <div className="mt-6 flex flex-col-reverse justify-end gap-2 sm:flex-row">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border px-4 py-2"
+          >
             Batal
           </button>
 
-          {/* USER CLOSE TICKET */}
+          {/* USER MENUTUP TIKET */}
           {isUser && ticket.status === "RESOLVED" && (
             <button
+              type="button"
               onClick={handleCloseAsUser}
-              className="px-4 py-2 rounded-lg bg-green-600 text-white"
+              disabled={loading}
+              className="rounded-lg bg-green-600 px-4 py-2 text-white disabled:opacity-50"
             >
-              Close Ticket
+              {loading ? "Memproses..." : "Close Ticket"}
             </button>
           )}
 
-          {/* ADMIN SAVE TICKET */}
+          {/* SIMPAN PERUBAHAN */}
           {!isUser && !isLockedForAdmin && (
             <button
+              type="button"
               onClick={handleSubmit}
-              disabled={loading}
-              className={`px-4 py-2 rounded-lg text-white ${
-                loading ? "bg-gray-400" : "bg-blue-600"
+              disabled={loading || reassignLoading}
+              className={`rounded-lg px-4 py-2 text-white ${
+                loading
+                  ? "bg-gray-400"
+                  : "bg-blue-600 hover:bg-blue-700"
               }`}
             >
               {loading ? "Menyimpan..." : "Simpan Perubahan"}

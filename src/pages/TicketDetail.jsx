@@ -18,6 +18,82 @@ import { jwtDecode } from "jwt-decode";
 import { navigationMenu } from "../constants/navigation";
 import { ROLE } from "../constants/role";
 
+const API_ORIGIN = (() => {
+  const apiUrl = import.meta.env.VITE_API_URL;
+  if (!apiUrl) return "";
+
+  try {
+    return new URL(apiUrl).origin;
+  } catch {
+    return "";
+  }
+})();
+
+// Upload lokal biasanya mengembalikan path relatif (contoh: /uploads/tickets/...).
+// Ubah menjadi URL absolut agar preview tidak mengambil file dari domain frontend.
+const resolveAttachmentUrl = (value) => {
+  if (typeof value !== "string" || !value.trim()) return "";
+
+  const rawUrl = value.trim();
+  if (/^(https?:)?\/\//i.test(rawUrl) || /^(data:|blob:)/i.test(rawUrl)) {
+    return rawUrl;
+  }
+
+  const path = rawUrl.replace(/\\/g, "/").replace(/^\/+/, "");
+  return API_ORIGIN ? `${API_ORIGIN}/${path}` : `/${path}`;
+};
+
+const getAttachmentUrl = (file) => {
+  const value = typeof file === "string"
+    ? file
+    : file?.file_url ||
+      file?.fileUrl ||
+      file?.attachment_url ||
+      file?.attachmentUrl ||
+      file?.AttachmentURL ||
+      file?.url;
+
+  return resolveAttachmentUrl(value);
+};
+
+const getAttachmentFileName = (file, fileUrl, fallback = "attachment") => {
+  if (file && typeof file === "object") {
+    const name =
+      file.file_name || file.fileName || file.filename || file.name;
+    if (name) return name;
+  }
+
+  if (fileUrl) {
+    try {
+      const base = API_ORIGIN || window.location.origin;
+      const pathname = new URL(fileUrl, base).pathname;
+      const lastSegment = pathname.split("/").filter(Boolean).pop();
+      if (lastSegment) return decodeURIComponent(lastSegment);
+    } catch {
+      // Gunakan nama fallback di bawah jika URL tidak dapat diparsing.
+    }
+  }
+
+  return fallback;
+};
+
+const getAttachmentsForDisplay = (item) => {
+  if (!item) return [];
+
+  if (Array.isArray(item.attachments) && item.attachments.length > 0) {
+    return item.attachments;
+  }
+
+  const singleAttachment =
+    item.attachment_url ||
+    item.attachmentUrl ||
+    item.AttachmentURL ||
+    item.attachment;
+
+  if (singleAttachment) return [singleAttachment];
+  return Array.isArray(item.attachments) ? item.attachments : [];
+};
+
 export default function TicketDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -26,6 +102,7 @@ export default function TicketDetail() {
   const [engineerResolutions, setEngineerResolutions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [ticketImageError, setTicketImageError] = useState(false);
   const token = localStorage.getItem("token");
 
   const sortedEngineerResolutions = [...engineerResolutions].sort((a, b) => {
@@ -64,11 +141,21 @@ export default function TicketDetail() {
               ? navigationMenu.engineer
               : [];
 
+  const ticketAttachment =
+    ticket?.attachment_url || ticket?.attachment || ticket?.Attachment;
+  const ticketAttachmentUrl = getAttachmentUrl(ticketAttachment);
+  const ticketAttachmentName = getAttachmentFileName(
+    ticketAttachment,
+    ticketAttachmentUrl,
+    `${ticket?.ticket_code || `ticket_${id}`}_attachment`,
+  );
+
   useEffect(() => {
     const fetchDetail = async () => {
       try {
         setLoading(true);
         setError("");
+        setTicketImageError(false);
         const ticketData = await getTicketById(id);
 
         setTicket(ticketData);
@@ -191,15 +278,15 @@ export default function TicketDetail() {
   };
 
   const downloadFile = async (file) => {
+    const fileUrl = getAttachmentUrl(file);
+    const fileName = getAttachmentFileName(file, fileUrl);
+
+    if (!fileUrl) {
+      console.error("[DOWNLOAD] URL lampiran tidak ditemukan:", file);
+      return;
+    }
+
     try {
-      const fileUrl = file.file_url || file.fileUrl;
-
-      const fileName = file.file_name || file.fileName || "attachment";
-
-      if (!fileUrl) {
-        throw new Error("URL file tidak ditemukan");
-      }
-
       const response = await fetch(fileUrl, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -211,82 +298,81 @@ export default function TicketDetail() {
       }
 
       const blob = await response.blob();
-
-      const url = window.URL.createObjectURL(blob);
-
+      const objectUrl = window.URL.createObjectURL(blob);
       const anchor = document.createElement("a");
 
-      anchor.href = url;
-
+      anchor.href = objectUrl;
       anchor.download = fileName;
-
       document.body.appendChild(anchor);
-
       anchor.click();
-
       anchor.remove();
-
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(objectUrl);
     } catch (err) {
       console.error("[DOWNLOAD] Error:", err);
-
-      const fileUrl = file.file_url || file.fileUrl;
-
-      if (fileUrl) {
-        window.open(fileUrl, "_blank", "noopener,noreferrer");
-      }
+      // Fallback untuk storage eksternal/CDN yang tidak mengizinkan fetch blob.
+      window.open(fileUrl, "_blank", "noopener,noreferrer");
     }
   };
 
   const renderAttachments = (attachments = []) => {
-    if (!attachments || attachments.length === 0) {
+    const normalizedAttachments = Array.isArray(attachments)
+      ? attachments
+      : attachments
+        ? [attachments]
+        : [];
+
+    if (normalizedAttachments.length === 0) {
       return <p className="text-sm text-gray-500">Tidak ada attachment.</p>;
     }
 
     return (
       <div className="space-y-2">
-        {attachments.map((file, index) => {
-          const fileUrl = file.file_url || file.fileUrl;
-
-          const fileName = file.file_name || file.fileName || "Attachment";
+        {normalizedAttachments.map((file, index) => {
+          const fileUrl = getAttachmentUrl(file);
+          const fileName = getAttachmentFileName(
+            file,
+            fileUrl,
+            `Attachment ${index + 1}`,
+          );
 
           return (
             <div
-              key={file.id || `${fileName}-${index}`}
-              className="flex items-center justify-between gap-3 border rounded-lg p-3 bg-gray-50"
+              key={file?.id || `${fileName}-${index}`}
+              className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border rounded-lg p-3 bg-gray-50"
             >
-              {/* FILE */}
               <div className="flex items-center gap-3 min-w-0">
                 <FiFileText className="text-gray-500 shrink-0" size={20} />
-
-                <span className="text-sm text-gray-700 truncate">
+                <span className="text-sm text-gray-700 break-all">
                   {fileName}
                 </span>
               </div>
 
-              {/* ACTION */}
-              <div className="flex items-center gap-2 shrink-0">
-                {/* BUKA */}
-                <a
-                  href={fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border rounded-md text-blue-600 hover:bg-blue-50"
-                >
-                  <FiExternalLink size={14} />
-                  Buka
-                </a>
+              {fileUrl ? (
+                <div className="flex items-center gap-2 shrink-0">
+                  <a
+                    href={fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border rounded-md text-blue-600 hover:bg-blue-50"
+                  >
+                    <FiExternalLink size={14} />
+                    Buka
+                  </a>
 
-                {/* UNDUH */}
-                <button
-                  type="button"
-                  onClick={() => downloadFile(file)}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border rounded-md text-green-600 hover:bg-green-50"
-                >
-                  <FiDownload size={14} />
-                  Unduh
-                </button>
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => downloadFile(file)}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border rounded-md text-green-600 hover:bg-green-50"
+                  >
+                    <FiDownload size={14} />
+                    Unduh
+                  </button>
+                </div>
+              ) : (
+                <span className="text-xs text-red-500">
+                  URL lampiran tidak tersedia
+                </span>
+              )}
             </div>
           );
         })}
@@ -407,10 +493,74 @@ export default function TicketDetail() {
             Permasalahan
           </h2>
 
-          <div className="bg-gray-50 border rounded-lg p-4">
-            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-              {ticket.description || "-"}
-            </p>
+          <div className="space-y-4">
+            <div className="bg-gray-50 border rounded-lg p-4">
+              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                {ticket.description || "-"}
+              </p>
+            </div>
+
+            <div className="border rounded-lg p-4">
+              <p className="text-xs font-medium text-gray-500 mb-3">
+                Foto Lampiran
+              </p>
+
+              {!ticketAttachmentUrl ? (
+                <p className="text-sm text-gray-500">
+                  Tidak ada lampiran foto pada tiket.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {ticketImageError ? (
+                    <p className="text-sm text-red-500">
+                      Preview gambar gagal dimuat. Periksa URL lampiran dan konfigurasi penyimpanan file backend.
+                    </p>
+                  ) : (
+                    <a
+                      href={ticketAttachmentUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-block max-w-full"
+                      aria-label="Buka foto lampiran di tab baru"
+                    >
+                      <img
+                        src={ticketAttachmentUrl}
+                        alt={`Foto permasalahan ${ticket.ticket_code || "tiket"}`}
+                        onError={() => setTicketImageError(true)}
+                        className="max-h-[420px] max-w-full rounded-lg border object-contain bg-gray-50"
+                        loading="lazy"
+                      />
+                    </a>
+                  )}
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <a
+                      href={ticketAttachmentUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-3 py-2 text-sm border rounded-lg text-blue-600 hover:bg-blue-50"
+                    >
+                      <FiExternalLink size={16} />
+                      Buka Gambar
+                    </a>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        downloadFile({
+                          file_url: ticketAttachmentUrl,
+                          file_name: ticketAttachmentName,
+                        })
+                      }
+                      className="inline-flex items-center gap-2 px-3 py-2 text-sm border rounded-lg text-green-600 hover:bg-green-50"
+                    >
+                      <FiDownload size={16} />
+                      Unduh Gambar
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </section>
 
@@ -458,7 +608,7 @@ export default function TicketDetail() {
                   Attachment
                 </p>
 
-                {renderAttachments(resolution.attachments)}
+                {renderAttachments(getAttachmentsForDisplay(resolution))}
               </div>
             </div>
           )}
@@ -542,7 +692,7 @@ export default function TicketDetail() {
                         Attachment Engineer
                       </p>
 
-                      {renderAttachments(engineerResolution.attachments)}
+                      {renderAttachments(getAttachmentsForDisplay(engineerResolution))}
                     </div>
                   </div>
                 );
