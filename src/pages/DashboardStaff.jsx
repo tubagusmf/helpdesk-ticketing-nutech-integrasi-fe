@@ -34,37 +34,37 @@ function formatNumber(value) {
   return Number(value || 0).toLocaleString("id-ID");
 }
 
-function formatDuration(value) {
-  const totalSeconds = Math.max(
-    0,
-    Math.floor(Number(value) || 0),
-  );
+// function formatDuration(value) {
+//   const totalSeconds = Math.max(
+//     0,
+//     Math.floor(Number(value) || 0),
+//   );
 
-  const days = Math.floor(totalSeconds / 86400);
-  const hours = Math.floor((totalSeconds % 86400) / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
+//   const days = Math.floor(totalSeconds / 86400);
+//   const hours = Math.floor((totalSeconds % 86400) / 3600);
+//   const minutes = Math.floor((totalSeconds % 3600) / 60);
+//   const seconds = totalSeconds % 60;
 
-  if (days > 0) {
-    return hours > 0
-      ? `${days} hari ${hours} jam`
-      : `${days} hari`;
-  }
+//   if (days > 0) {
+//     return hours > 0
+//       ? `${days} hari ${hours} jam`
+//       : `${days} hari`;
+//   }
 
-  if (hours > 0) {
-    return minutes > 0
-      ? `${hours} jam ${minutes} menit`
-      : `${hours} jam`;
-  }
+//   if (hours > 0) {
+//     return minutes > 0
+//       ? `${hours} jam ${minutes} menit`
+//       : `${hours} jam`;
+//   }
 
-  if (minutes > 0) {
-    return seconds > 0
-      ? `${minutes} menit ${seconds} detik`
-      : `${minutes} menit`;
-  }
+//   if (minutes > 0) {
+//     return seconds > 0
+//       ? `${minutes} menit ${seconds} detik`
+//       : `${minutes} menit`;
+//   }
 
-  return `${seconds} detik`;
-}
+//   return `${seconds} detik`;
+// }
 
 function formatDateTime(value) {
   if (!value) {
@@ -276,14 +276,14 @@ export default function DashboardStaff() {
     ).length;
   }, [offlineData]);
 
-  const totalOfflineSeconds = useMemo(() => {
-    return offlineData.reduce(
-      (total, item) =>
-        total +
-        Number(item.total_duration_seconds || 0),
-      0,
-    );
-  }, [offlineData]);
+  // const totalOfflineSeconds = useMemo(() => {
+  //   return offlineData.reduce(
+  //     (total, item) =>
+  //       total +
+  //       Number(item.total_duration_seconds || 0),
+  //     0,
+  //   );
+  // }, [offlineData]);
 
   return (
     <DashboardLayout
@@ -612,7 +612,7 @@ export default function DashboardStaff() {
               tone="orange"
             />
 
-            <ActivitySummaryCard
+            {/* <ActivitySummaryCard
               title="Total Durasi Offline"
               value={
                 activityLoading
@@ -622,7 +622,7 @@ export default function DashboardStaff() {
               subtitle="Akumulasi sesi sesuai periode"
               icon={FiClock}
               tone="green"
-            />
+            /> */}
           </div>
         </div>
 
@@ -744,15 +744,15 @@ export default function DashboardStaff() {
         <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
           <SectionHeader
             icon={FiClock}
-            title="Aktivitas Offline Staff CCIT"
-            subtitle="Frekuensi, durasi, dan status Offline setiap Staff"
+            title="Aktivitas Status Staff CCIT"
+            subtitle="Menampilkan status Offline/ Online setiap Staff"
             iconClass="bg-orange-50 text-orange-600"
           />
 
           {/* DESKTOP TABLE */}
 
           <div className="hidden overflow-x-auto md:block">
-            <table className="w-full min-w-[1150px] text-sm">
+            <table className="w-full min-w-[420px] text-sm">
               <thead>
                 <tr className="border-y border-gray-200 bg-gray-50 text-gray-500">
                   <th className="px-5 py-3 text-left">
@@ -763,7 +763,7 @@ export default function DashboardStaff() {
                     Status
                   </th>
 
-                  <th className="px-4 py-3 text-right">
+                  {/* <th className="px-4 py-3 text-right">
                     Sesi Offline
                   </th>
 
@@ -785,19 +785,19 @@ export default function DashboardStaff() {
 
                   <th className="px-5 py-3 text-left">
                     Justifikasi Terakhir
-                  </th>
+                  </th> */}
                 </tr>
               </thead>
 
               <tbody>
                 {activityLoading ? (
                   <LoadingTable
-                    colSpan={8}
+                    colSpan={2}
                     message="Memuat statistik Offline..."
                   />
                 ) : offlineData.length === 0 ? (
                   <EmptyTable
-                    colSpan={8}
+                    colSpan={2}
                     message="Belum ada data Staff CCIT."
                   />
                 ) : (
@@ -816,7 +816,7 @@ export default function DashboardStaff() {
                         />
                       </td>
 
-                      <td className="px-4 py-4 text-right">
+                      {/* <td className="px-4 py-4 text-right">
                         {formatNumber(item.offline_session_count)}
                       </td>
 
@@ -847,7 +847,7 @@ export default function DashboardStaff() {
                         title={item.last_justification || ""}
                       >
                         {item.last_justification || "-"}
-                      </td>
+                      </td> */}
                     </tr>
                   ))
                 )}
@@ -856,89 +856,30 @@ export default function DashboardStaff() {
           </div>
 
           {/* MOBILE CARDS */}
-
           <div className="space-y-3 p-4 md:hidden">
             {activityLoading ? (
-              <EmptyState message="Memuat statistik Offline..." />
+              <EmptyState message="Memuat status Staff CCIT..." />
             ) : offlineData.length === 0 ? (
               <EmptyState message="Belum ada data Staff CCIT." />
             ) : (
               offlineData.map((item) => (
                 <div
                   key={item.staff_id}
-                  className="rounded-xl border border-gray-100 p-4"
+                  className="
+                    flex items-center justify-between gap-3
+                    rounded-xl border border-gray-100 p-4
+                  "
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div
-                        className={
-                          item.is_online
-                            ? "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-50 text-green-600"
-                            : "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-orange-50 text-orange-600"
-                        }
-                      >
-                        <FiClock size={17} />
-                      </div>
-
-                      <div className="min-w-0">
-                        <p className="break-words font-semibold text-gray-800">
-                          {item.staff_name}
-                        </p>
-
-                        <p className="mt-1 text-xs text-gray-400">
-                          {formatNumber(item.offline_session_count)} sesi Offline
-                        </p>
-                      </div>
-                    </div>
-
-                    <OnlineBadge isOnline={item.is_online} />
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-2 gap-3">
-                    <Metric
-                      label="Total Durasi"
-                      value={formatDuration(item.total_duration_seconds)}
-                      className="bg-orange-50 text-orange-700"
-                    />
-
-                    <Metric
-                      label="Rata-rata"
-                      value={formatDuration(item.average_duration_seconds)}
-                      className="bg-blue-50 text-blue-700"
-                    />
-
-                    <Metric
-                      label="Offline Sejak"
-                      value={
-                        item.is_online
-                          ? "-"
-                          : formatDateTime(item.active_offline_since)
-                      }
-                      className="bg-gray-50 text-gray-700"
-                    />
-
-                    <Metric
-                      label="Durasi Aktif"
-                      value={
-                        item.is_online
-                          ? "-"
-                          : formatDuration(
-                              item.active_offline_duration_seconds,
-                            )
-                      }
-                      className="bg-orange-50 text-orange-700"
-                    />
-                  </div>
-
-                  <div className="mt-3 rounded-lg bg-gray-50 p-3">
-                    <p className="text-xs text-gray-500">
-                      Justifikasi terakhir
+                  <div className="min-w-0">
+                    <p className="break-words font-semibold text-gray-800">
+                      {item.staff_name}
                     </p>
-
-                    <p className="mt-1 break-words text-sm text-gray-700">
-                      {item.last_justification || "-"}
+                    <p className="mt-1 text-xs text-gray-500">
+                      Status
                     </p>
                   </div>
+
+                  <OnlineBadge isOnline={item.is_online} />
                 </div>
               ))
             )}

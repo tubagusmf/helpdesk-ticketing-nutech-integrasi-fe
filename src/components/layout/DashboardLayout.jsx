@@ -23,7 +23,7 @@ import { useAuth } from "../../context/AuthContext";
 import {
   getCurrentUser,
   updateOnlineStatus,
-  getActiveOfflineSession,
+  // getActiveOfflineSession,
 } from "../../services/userService";
 import {
   getNotifications,
@@ -40,6 +40,8 @@ const NOTIFICATION_STORAGE_PREFIX =
   "helpdesk_notification_popup_";
 const NOTIFICATION_HISTORY_LIMIT = 100;
 const TOAST_DURATION = 5_000;
+const AUTO_REFRESH_INTERVAL = 30_000;
+const AUTO_REFRESH_STORAGE_PREFIX = "helpdesk_auto_refresh_";
 
 const getUserId = (user) => {
   return (
@@ -315,6 +317,7 @@ export default function DashboardLayout({
   const sidebarMenu = getRoleMenu(sidebarRole);
   const userId = getUserId(user);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isAutoRefresh, setIsAutoRefresh] = useState(false);
   const [isOnline, setIsOnline] = useState(null);
   const [openNotif, setOpenNotif] = useState(false);
   const [openProfile, setOpenProfile] = useState(false);
@@ -331,7 +334,56 @@ export default function DashboardLayout({
   const audioRef = useRef(null);
   const fetchingNotifRef = useRef(false);
   const notificationKeysRef = useRef(new Set());
-  
+
+  // Pulihkan preferensi Auto Refresh untuk akun yang sedang login.
+  useEffect(() => {
+    if (!userId) {
+      setIsAutoRefresh(false);
+      return undefined;
+    }
+
+    try {
+      const savedPreference = localStorage.getItem(
+        `${AUTO_REFRESH_STORAGE_PREFIX}${userId}`,
+      );
+      setIsAutoRefresh(savedPreference === "true");
+    } catch (error) {
+      console.error("Gagal membaca pengaturan Auto Refresh:", error);
+      setIsAutoRefresh(false);
+    }
+
+    return undefined;
+  }, [userId]);
+
+  // Muat ulang halaman setiap 30 detik ketika Auto Refresh aktif.
+  useEffect(() => {
+    if (!userId || !isAutoRefresh) {
+      return undefined;
+    }
+
+    const interval = window.setInterval(() => {
+      window.location.reload();
+    }, AUTO_REFRESH_INTERVAL);
+
+    return () => window.clearInterval(interval);
+  }, [userId, isAutoRefresh]);
+
+  const handleToggleAutoRefresh = useCallback(() => {
+    if (!userId) return;
+
+    const nextValue = !isAutoRefresh;
+    setIsAutoRefresh(nextValue);
+
+    try {
+      localStorage.setItem(
+        `${AUTO_REFRESH_STORAGE_PREFIX}${userId}`,
+        String(nextValue),
+      );
+    } catch (error) {
+      console.error("Gagal menyimpan pengaturan Auto Refresh:", error);
+    }
+  }, [isAutoRefresh, userId]);
+
   const handleLogout = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
@@ -370,23 +422,7 @@ export default function DashboardLayout({
 
         if (!mounted) return;
 
-        const online = userData?.is_online ?? false;
-        setIsOnline(online);
-
-        if (online) {
-          setOfflineSince(null);
-          return;
-        }
-
-        try {
-          const session = await getActiveOfflineSession();
-
-          if (!mounted) return;
-
-          setOfflineSince(session?.offline_at ?? null);
-        } catch (error) {
-          console.error("Gagal mengambil sesi Offline:", error);
-        }
+        setIsOnline(userData?.is_online ?? false);
       } catch (error) {
         console.error("Gagal fetch status:", error);
       }
@@ -399,102 +435,128 @@ export default function DashboardLayout({
     };
   }, [userId]);
 
+  // const handleToggleOnline = useCallback(async () => {
+  //   if (isOnline === null || isStatusUpdating) return;
+
+  //   if (isOnline) {
+  //     setOfflineJustification("");
+  //     setShowOfflineModal(true);
+  //     return;
+  //   }
+
+  //   setIsStatusUpdating(true);
+
+  //   try {
+  //     const response = await updateOnlineStatus(true);
+
+  //     const duration = Number(
+  //       response?.data?.duration_seconds ?? 0,
+  //     );
+
+  //     setIsOnline(true);
+  //     setOfflineSince(null);
+  //     setOfflineElapsedSeconds(0);
+
+  //     if (duration > 0) {
+  //       toast.success(
+  //         `Kembali Online. Durasi Offline: ${formatDuration(duration)}`,
+  //       );
+  //     } else {
+  //       toast.success("Status berhasil diubah menjadi Online.");
+  //     }
+  //   } catch (error) {
+  //     toast.error(
+  //       error.message || "Gagal mengubah status menjadi Online.",
+  //     );
+  //   } finally {
+  //     setIsStatusUpdating(false);
+  //   }
+  // }, [isOnline, isStatusUpdating]);
+
+  // const handleSubmitOffline = useCallback(async (event) => {
+  //   event.preventDefault();
+
+  //   const reason = offlineJustification.trim();
+
+  //   if (!reason) {
+  //     toast.error("Justifikasi wajib diisi.");
+  //     return;
+  //   }
+
+  //   setIsStatusUpdating(true);
+
+  //   try {
+  //     const response = await updateOnlineStatus(false, reason);
+
+  //     setIsOnline(false);
+  //     setOfflineSince(
+  //       response?.data?.offline_at ?? new Date().toISOString(),
+  //     );
+  //     setOfflineElapsedSeconds(0);
+
+  //     setShowOfflineModal(false);
+  //     setOfflineJustification("");
+
+  //     toast.success("Status berhasil diubah menjadi Offline.");
+  //   } catch (error) {
+  //     toast.error(
+  //       error.message || "Gagal mengubah status menjadi Offline.",
+  //     );
+  //   } finally {
+  //     setIsStatusUpdating(false);
+  //   }
+  // }, [offlineJustification]);
+
+  // useEffect(() => {
+  //   if (isOnline !== false || !offlineSince) {
+  //     setOfflineElapsedSeconds(0);
+  //     return undefined;
+  //   }
+
+  //   const startTime = new Date(offlineSince).getTime();
+
+  //   if (Number.isNaN(startTime)) {
+  //     return undefined;
+  //   }
+
+  //   const updateElapsed = () => {
+  //     setOfflineElapsedSeconds(
+  //       Math.max(0, Math.floor((Date.now() - startTime) / 1000)),
+  //     );
+  //   };
+
+  //   updateElapsed();
+
+  //   const interval = setInterval(updateElapsed, 1000);
+
+  //   return () => clearInterval(interval);
+  // }, [isOnline, offlineSince]);
+
   const handleToggleOnline = useCallback(async () => {
     if (isOnline === null || isStatusUpdating) return;
 
-    if (isOnline) {
-      setOfflineJustification("");
-      setShowOfflineModal(true);
-      return;
-    }
+    const nextStatus = !isOnline;
 
     setIsStatusUpdating(true);
 
     try {
-      const response = await updateOnlineStatus(true);
+      await updateOnlineStatus(nextStatus);
 
-      const duration = Number(
-        response?.data?.duration_seconds ?? 0,
+      setIsOnline(nextStatus);
+
+      toast.success(
+        `Status berhasil diubah menjadi ${
+          nextStatus ? "Online" : "Offline"
+        }.`,
       );
-
-      setIsOnline(true);
-      setOfflineSince(null);
-      setOfflineElapsedSeconds(0);
-
-      if (duration > 0) {
-        toast.success(
-          `Kembali Online. Durasi Offline: ${formatDuration(duration)}`,
-        );
-      } else {
-        toast.success("Status berhasil diubah menjadi Online.");
-      }
     } catch (error) {
       toast.error(
-        error.message || "Gagal mengubah status menjadi Online.",
+        error.message || "Gagal mengubah status Online / Offline.",
       );
     } finally {
       setIsStatusUpdating(false);
     }
   }, [isOnline, isStatusUpdating]);
-
-  const handleSubmitOffline = useCallback(async (event) => {
-    event.preventDefault();
-
-    const reason = offlineJustification.trim();
-
-    if (!reason) {
-      toast.error("Justifikasi wajib diisi.");
-      return;
-    }
-
-    setIsStatusUpdating(true);
-
-    try {
-      const response = await updateOnlineStatus(false, reason);
-
-      setIsOnline(false);
-      setOfflineSince(
-        response?.data?.offline_at ?? new Date().toISOString(),
-      );
-      setOfflineElapsedSeconds(0);
-
-      setShowOfflineModal(false);
-      setOfflineJustification("");
-
-      toast.success("Status berhasil diubah menjadi Offline.");
-    } catch (error) {
-      toast.error(
-        error.message || "Gagal mengubah status menjadi Offline.",
-      );
-    } finally {
-      setIsStatusUpdating(false);
-    }
-  }, [offlineJustification]);
-
-  useEffect(() => {
-    if (isOnline !== false || !offlineSince) {
-      setOfflineElapsedSeconds(0);
-      return undefined;
-    }
-
-    const startTime = new Date(offlineSince).getTime();
-
-    if (Number.isNaN(startTime)) {
-      return undefined;
-    }
-
-    const updateElapsed = () => {
-      setOfflineElapsedSeconds(
-        Math.max(0, Math.floor((Date.now() - startTime) / 1000)),
-      );
-    };
-
-    updateElapsed();
-
-    const interval = setInterval(updateElapsed, 1000);
-
-    return () => clearInterval(interval);
-  }, [isOnline, offlineSince]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -1164,6 +1226,41 @@ export default function DashboardLayout({
               shrink-0
             "
           >
+            {/* AUTO REFRESH */}
+            <div className="flex items-center gap-2 shrink-0 rounded-full px-1.5 py-1">
+              <span className="hidden sm:inline whitespace-nowrap text-xs font-medium text-gray-600">
+                Auto Refresh
+              </span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isAutoRefresh}
+                aria-label="Auto Refresh"
+                title={
+                  isAutoRefresh
+                    ? "Auto Refresh aktif: halaman dimuat ulang setiap 30 detik"
+                    : "Aktifkan Auto Refresh setiap 30 detik"
+                }
+                onClick={handleToggleAutoRefresh}
+                disabled={!userId}
+                className={`
+                  relative inline-flex h-5 w-9 shrink-0 items-center rounded-full
+                  transition-colors duration-200
+                  focus:outline-none focus:ring-2 focus:ring-orange-300 focus:ring-offset-2
+                  disabled:cursor-not-allowed disabled:opacity-50
+                  ${isAutoRefresh ? "bg-orange-500" : "bg-gray-300"}
+                `}
+              >
+                <span
+                  className={`
+                    inline-block h-4 w-4 transform rounded-full bg-white shadow
+                    transition-transform duration-200
+                    ${isAutoRefresh ? "translate-x-4" : "translate-x-0.5"}
+                  `}
+                />
+              </button>
+            </div>
+
             {/* ONLINE STATUS */}
             <button
               type="button"
@@ -1195,11 +1292,7 @@ export default function DashboardLayout({
               />
 
               <span className="hidden sm:inline whitespace-nowrap">
-                {isOnline
-                  ? "Online"
-                  : offlineSince
-                    ? `Offline · ${formatDuration(offlineElapsedSeconds)}`
-                    : "Offline"}
+                {isOnline ? "Online" : "Offline"}
               </span>
             </button>
 
@@ -1547,7 +1640,7 @@ export default function DashboardLayout({
         </footer>
       </div>
 
-      {showOfflineModal && (
+      {/* {showOfflineModal && (
         <div
           className="
             fixed inset-0 z-[100]
@@ -1660,7 +1753,7 @@ export default function DashboardLayout({
             </div>
           </form>
         </div>
-      )}
+      )} */}
 
     </div>
   );
