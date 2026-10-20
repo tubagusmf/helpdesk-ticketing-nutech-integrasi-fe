@@ -51,11 +51,17 @@ export default function UserTab({
     return user?.role?.name || "-";
   };
 
-  const hasProjects =
-    Array.isArray(users) &&
-    users.some(
-      (user) => Array.isArray(user.projects) && user.projects.length > 0,
-    );
+  const isStaffUser = (user) =>
+    Number(user?.role_id) === 2 ||
+    String(user?.role?.name || "").toUpperCase() === "STAFF";
+
+  const getCodeName = (user) => {
+    if (!isStaffUser(user)) {
+      return "-";
+    }
+
+    return user?.code_name?.trim() || "-";
+  };
 
   const renderEmptyState = () => (
     <div className="py-10 text-center text-sm text-gray-500">
@@ -178,6 +184,25 @@ export default function UserTab({
           </div>
         </div>
 
+        {/* CODE NAME */}
+        {isStaffUser(user) && (
+          <div>
+            <p className="text-[11px] font-semibold uppercase text-gray-400">
+              Code Name
+            </p>
+
+            <div className="mt-1">
+              {getCodeName(user) !== "-" ? (
+                <span className="inline-flex px-2 py-1 text-xs font-semibold rounded bg-blue-50 text-blue-700">
+                  {getCodeName(user)}
+                </span>
+              ) : (
+                <span className="text-xs text-gray-400">Belum diisi</span>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* STATUS */}
         <div>
           <p className="text-[11px] font-semibold uppercase text-gray-400">
@@ -286,6 +311,10 @@ export default function UserTab({
                 Privilege / Role
               </th>
 
+              <th className="text-left p-3 whitespace-nowrap">
+                Code Name
+              </th>
+
               <th className="text-left p-3 whitespace-nowrap">Status</th>
 
               <th className="text-left p-3">Akses Project</th>
@@ -353,6 +382,17 @@ export default function UserTab({
                     >
                       {getRoleName(user)}
                     </span>
+                  </td>
+
+                  {/* CODE NAME */}
+                  <td className="p-3">
+                    {isStaffUser(user) && getCodeName(user) !== "-" ? (
+                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-md bg-blue-50 text-blue-700 whitespace-nowrap">
+                        {getCodeName(user)}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
                   </td>
 
                   {/* STATUS */}
@@ -448,7 +488,7 @@ export default function UserTab({
               ))
             ) : (
               <tr>
-                <td colSpan={6} className="p-8 text-center text-gray-500">
+                <td colSpan={7} className="p-8 text-center text-gray-500">
                   Tidak ada pengguna ditemukan.
                 </td>
               </tr>

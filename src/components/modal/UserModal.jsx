@@ -8,6 +8,7 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
 
   const [form, setForm] = useState({
     name: user?.name || "",
+    code_name: user?.code_name || "",
     email: user?.email || "",
     password: "",
     role_id: user?.role_id || 1,
@@ -113,6 +114,15 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (
+      !user &&
+      Number(form.role_id) === 2 &&
+      !form.code_name.trim()
+    ) {
+      alert("Code Name wajib diisi untuk Staff / CCIT.");
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -122,11 +132,11 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
         await createUser(form);
       }
 
-      reload();
+      await reload();
       onClose();
     } catch (err) {
       console.error(err);
-      alert("Gagal menyimpan user");
+      alert(err?.message || "Gagal menyimpan user");
     } finally {
       setLoading(false);
     }
@@ -167,6 +177,35 @@ export default function UserModal({ user, onClose, reload, projects = [] }) {
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
               />
+
+              {form.role_id === 2 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Code Name Staff CCIT
+                  </label>
+
+                  <input
+                    type="text"
+                    name="code_name"
+                    value={form.code_name}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        code_name: e.target.value,
+                      })
+                    }
+                    placeholder="Contoh: #CC01"
+                    maxLength={20}
+                    required={!user}
+                    className="w-full border rounded-lg px-3 py-2"
+                  />
+
+                  <p className="text-xs text-gray-500 mt-1">
+                    Isi kode secara manual. Kode ini akan ditampilkan
+                    pada daftar tiket dan riwayat aktivitas Staff CCIT.
+                  </p>
+                </div>
+              )}
 
               <input
                 placeholder="Email"

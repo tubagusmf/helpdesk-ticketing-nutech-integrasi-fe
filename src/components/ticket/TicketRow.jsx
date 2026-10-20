@@ -604,7 +604,7 @@ export default function TicketRow({
       ROLE.STAFF,
       ROLE.EXECUTIVE,
     ].includes(role) &&
-    !["RESOLVED", "CLOSED"].includes(
+    !["RESOLVED", "CLOSED", "CANCEL"].includes(
       status,
     );
 

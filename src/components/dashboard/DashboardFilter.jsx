@@ -1,8 +1,50 @@
-export default function DashboardFilter({filters, projects, parts, onChange, onFilter, onReset}) {
-  
+
+export default function DashboardFilter({ filters, projects, parts, onChange, onFilter, onReset }) {
+  const fieldClassName = `
+    w-full
+    min-w-0
+    border
+    border-gray-200
+    rounded-xl
+    px-3
+    py-2.5
+    text-sm
+    bg-white
+    focus:outline-none
+    focus:ring-2
+    focus:ring-blue-100
+  `;
+
+  const buttonClassName = `
+    w-full
+    2xl:w-auto
+    2xl:min-w-[80px]
+    whitespace-nowrap
+    rounded-xl
+    px-3
+    sm:px-4
+    py-2.5
+    text-white
+    text-sm
+    font-semibold
+    transition
+    focus:outline-none
+    focus:ring-2
+  `;
+
   return (
     <div className="bg-white border border-gray-200 rounded-2xl p-3 sm:p-4 shadow-sm">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3">
+      <div
+        className="
+          grid
+          grid-cols-1
+          sm:grid-cols-2
+          2xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto]
+          gap-3
+          items-center
+        "
+      >
+        {/* PROJECT */}
         <select
           value={filters.project_id}
           onChange={(e) =>
@@ -11,36 +53,18 @@ export default function DashboardFilter({filters, projects, parts, onChange, onF
               part_id: "",
             })
           }
-          className="
-            w-full
-            lg:col-span-3
-            min-w-0
-            border
-            border-gray-200
-            rounded-xl
-            px-3
-            py-2.5
-            text-sm
-            bg-white
-            focus:outline-none
-            focus:ring-2
-            focus:ring-blue-100
-          "
+          className={fieldClassName}
         >
-          <option value="">
-            Semua Project
-          </option>
+          <option value="">Semua Project</option>
 
           {projects.map((project) => (
-            <option
-              key={project.id}
-              value={project.id}
-            >
+            <option key={project.id} value={project.id}>
               {project.name}
             </option>
           ))}
         </select>
 
+        {/* PART */}
         <select
           value={filters.part_id}
           onChange={(e) =>
@@ -49,38 +73,22 @@ export default function DashboardFilter({filters, projects, parts, onChange, onF
             })
           }
           disabled={!filters.project_id}
-          className="
-            w-full
-            lg:col-span-3
-            min-w-0
-            border
-            border-gray-200
-            rounded-xl
-            px-3
-            py-2.5
-            text-sm
-            bg-white
+          className={`
+            ${fieldClassName}
             disabled:bg-gray-50
             disabled:text-gray-400
-            focus:outline-none
-            focus:ring-2
-            focus:ring-blue-100
-          "
+          `}
         >
-          <option value="">
-            Semua Part
-          </option>
+          <option value="">Semua Part</option>
 
           {parts.map((part) => (
-            <option
-              key={part.id}
-              value={part.id}
-            >
+            <option key={part.id} value={part.id}>
               {part.name}
             </option>
           ))}
         </select>
 
+        {/* START DATE */}
         <input
           type="date"
           value={filters.start_date}
@@ -89,22 +97,10 @@ export default function DashboardFilter({filters, projects, parts, onChange, onF
               start_date: e.target.value,
             })
           }
-          className="
-            w-full
-            lg:col-span-2
-            min-w-0
-            border
-            border-gray-200
-            rounded-xl
-            px-3
-            py-2.5
-            text-sm
-            focus:outline-none
-            focus:ring-2
-            focus:ring-blue-100
-          "
+          className={fieldClassName}
         />
 
+        {/* END DATE */}
         <input
           type="date"
           value={filters.end_date}
@@ -113,58 +109,33 @@ export default function DashboardFilter({filters, projects, parts, onChange, onF
               end_date: e.target.value,
             })
           }
-          className="
-            w-full
-            lg:col-span-2
-            min-w-0
-            border
-            border-gray-200
-            rounded-xl
-            px-3
-            py-2.5
-            text-sm
-            focus:outline-none
-            focus:ring-2
-            focus:ring-blue-100
-          "
+          className={fieldClassName}
         />
 
+        {/* FILTER BUTTON */}
         <button
           type="button"
           onClick={onFilter}
-          className="
-            lg:col-span-1
-            w-full
-            rounded-xl
-            px-4
-            py-2.5
+          className={`
+            ${buttonClassName}
             bg-blue-600
             hover:bg-blue-700
-            text-white
-            text-sm
-            font-semibold
-            transition
-          "
+            focus:ring-blue-200
+          `}
         >
           Filter
         </button>
 
+        {/* RESET BUTTON */}
         <button
           type="button"
           onClick={onReset}
-          className="
-            lg:col-span-1
-            w-full
-            rounded-xl
-            px-4
-            py-2.5
+          className={`
+            ${buttonClassName}
             bg-orange-500
             hover:bg-orange-600
-            text-white
-            text-sm
-            font-semibold
-            transition
-          "
+            focus:ring-orange-200
+          `}
         >
           Reset
         </button>
