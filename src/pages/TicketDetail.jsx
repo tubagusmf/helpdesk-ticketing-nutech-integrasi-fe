@@ -590,11 +590,15 @@ export default function TicketDetail() {
 
               {/* SOLUSI */}
               <div>
-                <p className="text-xs font-medium text-gray-500 mb-1">Solusi</p>
+                <p className="text-xs font-medium text-gray-500 mb-1">
+                  Solusi
+                </p>
 
                 <div className="bg-gray-50 border rounded-lg p-4">
                   <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                    {resolution.solution_name ||
+                    {resolution.custom_solution ||
+                      resolution.CustomSolution ||
+                      resolution.solution_name ||
                       resolution.solution?.name ||
                       resolution.solution ||
                       "-"}

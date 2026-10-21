@@ -20,12 +20,74 @@ import {
   FiX,
 } from "react-icons/fi";
 
-export default function TicketResolutionModal({
-  ticket,
-  onClose,
-  onSuccess,
-  role,
-}) {
+const parseSlaDate = (value) => {
+  if (!value) return null;
+
+  const parsed = new Date(value);
+  if (!Number.isNaN(parsed.getTime())) return parsed;
+
+  const normalized = String(value).trim().replace(" ", "T");
+  const fallback = new Date(normalized);
+
+  return Number.isNaN(fallback.getTime()) ? null : fallback;
+};
+
+const parseSlaCompletionDate = (value) => {
+  if (!value) return null;
+
+  const normalized = String(value)
+    .trim()
+    .replace(" ", "T");
+
+  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(
+    normalized,
+  );
+
+  if (hasTimezone) {
+    const parsed = new Date(normalized);
+
+    return Number.isNaN(parsed.getTime())
+      ? null
+      : parsed;
+  }
+
+  const match = normalized.match(
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?/,
+  );
+
+  if (match) {
+    const [, year, month, day, hour, minute, second = "0"] =
+      match;
+
+    const parsed = new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute),
+      Number(second),
+    );
+
+    return Number.isNaN(parsed.getTime())
+      ? null
+      : parsed;
+  }
+
+  return parseSlaDate(value);
+};
+
+const formatSlaRemaining = (totalSeconds) => {
+  const seconds = Math.max(0, Math.ceil(totalSeconds));
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = seconds % 60;
+
+  if (hours > 0) return `${hours} jam ${minutes} menit`;
+  if (minutes > 0) return `${minutes} menit ${remainingSeconds} detik`;
+  return `${remainingSeconds} detik`;
+};
+
+export default function TicketResolutionModal({ ticket, onClose, onSuccess, role }) {
   const [loading, setLoading] = useState(false);
   const [causes, setCauses] = useState([]);
   const [solutions, setSolutions] = useState([]);
@@ -36,6 +98,7 @@ export default function TicketResolutionModal({
   const [problemImageError, setProblemImageError] = useState(false);
   const fileInputRef = useRef(null);
   const [resolution, setResolution] = useState(null);
+  const [solutionMode, setSolutionMode] = useState("select");
   const getNowLocal = () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
@@ -45,13 +108,79 @@ export default function TicketResolutionModal({
   const isUser = Number(role) === ROLE.USER;
   const isStaff = Number(role) === ROLE.STAFF;
   const isAdministrator = Number(role) === ROLE.ADMINISTRATOR;
-
   const [reassignJustification, setReassignJustification] = useState("");
   const [reassignLoading, setReassignLoading] = useState(false);
   const [showReassignForm, setShowReassignForm] = useState(false);
-
   const isLockedForAdmin = ["RESOLVED", "CLOSED", "CANCEL"].includes(ticket.status);
   const isReadOnly = isUser || isLockedForAdmin;
+  const [slaNow, setSlaNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setSlaNow(new Date());
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  const ticketStatus = String(ticket?.status || "").toUpperCase();
+
+  const slaDueAt = parseSlaDate(
+    ticket?.due_at ?? ticket?.DueAt,
+  );
+
+  const slaCompletionAt =
+    parseSlaCompletionDate(
+      resolution?.completion_time ||
+        resolution?.completionTime,
+    ) ||
+    parseSlaDate(
+      ticket?.resolved_at ?? ticket?.ResolvedAt,
+    );
+
+  let slaIndicator = null;
+
+  if (slaDueAt) {
+    if (
+      ticketStatus === "OPEN" ||
+      ticketStatus === "IN_PROGRESS"
+    ) {
+      const remainingSeconds =
+        (slaDueAt.getTime() - slaNow.getTime()) / 1000;
+
+      slaIndicator =
+        remainingSeconds <= 0
+          ? {
+              label: "SLA Remaining:",
+              value: "Overdue",
+              overdue: true,
+            }
+          : {
+              label: "SLA Remaining:",
+              value: formatSlaRemaining(remainingSeconds),
+              overdue: false,
+            };
+    } else if (
+      ["RESOLVED", "CLOSED"].includes(ticketStatus)
+    ) {
+      if (!slaCompletionAt) {
+        slaIndicator = {
+          label: "SLA Status:",
+          value: "-",
+          overdue: false,
+        };
+      } else {
+        const overdue =
+          slaCompletionAt.getTime() > slaDueAt.getTime();
+
+        slaIndicator = {
+          label: "SLA Status:",
+          value: overdue ? "Overdue" : "-",
+          overdue,
+        };
+      }
+    }
+  }
 
   useEffect(() => {
     if (!preview || !preview.startsWith("blob:")) {
@@ -76,15 +205,49 @@ export default function TicketResolutionModal({
   const formatDatetimeLocal = (dateString) => {
     if (!dateString) return "";
 
-    const date = new Date(dateString);
+    const value = String(dateString)
+      .trim()
+      .replace(" ", "T");
+
+    const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(value);
+
+    if (hasTimezone) {
+      const date = new Date(value);
+
+      if (Number.isNaN(date.getTime())) {
+        return "";
+      }
+
+      const localDate = new Date(
+        date.getTime() -
+          date.getTimezoneOffset() * 60_000,
+      );
+
+      return localDate.toISOString().slice(0, 16);
+    }
+
+    const match = value.match(
+      /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/,
+    );
+
+    if (match) {
+      const [, year, month, day, hour, minute] = match;
+
+      return `${year}-${month}-${day}T${hour}:${minute}`;
+    }
+
+    const date = new Date(value);
 
     if (Number.isNaN(date.getTime())) {
       return "";
     }
 
-    date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+    const localDate = new Date(
+      date.getTime() -
+        date.getTimezoneOffset() * 60_000,
+    );
 
-    return date.toISOString().slice(0, 16);
+    return localDate.toISOString().slice(0, 16);
   };
 
   const fetchResolution = async () => {
@@ -108,46 +271,62 @@ export default function TicketResolutionModal({
 
       setResolution(data);
 
+      const customSolutionValue = String(
+        data.custom_solution ?? data.CustomSolution ?? "",
+      ).trim();
+
       const foundCause = causeList.find(
         (cause) => String(cause.id) === String(data.cause_id),
       );
 
       if (foundCause) {
-        const causeOption = {
+        setSelectedCause({
           value: foundCause.id,
           label: foundCause.name,
-        };
-
-        setSelectedCause(causeOption);
+        });
 
         const solRes = await getSolutions(foundCause.id);
         const solList = solRes.data || [];
 
         setSolutions(solList);
 
-        const foundSolution = solList.find(
-          (solution) =>
-            String(solution.id) === String(data.solution_id),
-        );
-
-        if (foundSolution) {
-          setSelectedSolution({
-            value: foundSolution.id,
-            label: foundSolution.name,
-          });
-        } else {
+        if (customSolutionValue) {
+          setSolutionMode("custom");
           setSelectedSolution(null);
+        } else {
+          setSolutionMode("select");
+
+          const foundSolution = solList.find(
+            (solution) =>
+              String(solution.id) === String(data.solution_id),
+          );
+
+          if (foundSolution) {
+            setSelectedSolution({
+              value: foundSolution.id,
+              label: foundSolution.name,
+            });
+          } else {
+            setSelectedSolution(null);
+          }
         }
       } else {
         setSelectedCause(null);
         setSelectedSolution(null);
         setSolutions([]);
+
+        setSolutionMode(
+          customSolutionValue ? "custom" : "select",
+        );
       }
 
       setForm((prev) => ({
         ...prev,
         cause: data.cause_id || "",
-        solution: data.solution_id || "",
+        solution: customSolutionValue
+          ? ""
+          : data.solution_id || "",
+        custom_solution: customSolutionValue,
         notes: data.resolution_notes || "",
         resolution_time: formatDatetimeLocal(data.completion_time),
         status: ticket.status,
@@ -203,13 +382,26 @@ export default function TicketResolutionModal({
     }
 
     if (form.status === "RESOLVED") {
-      if (!form.cause || !form.solution) {
-        alert("Penyebab dan solusi wajib diisi!");
+      if (!form.cause) {
+        alert("Penyebab wajib dipilih.");
+        return;
+      }
+
+      if (solutionMode === "select" && !form.solution) {
+        alert("Silakan pilih solusi dari daftar.");
+        return;
+      }
+
+      if (
+        solutionMode === "custom" &&
+        !form.custom_solution.trim()
+      ) {
+        alert("Silakan isi solusi secara manual.");
         return;
       }
 
       if (!form.resolution_time) {
-        alert("Waktu penyelesaian wajib diisi!");
+        alert("Waktu penyelesaian wajib diisi.");
         return;
       }
     }
@@ -267,7 +459,16 @@ export default function TicketResolutionModal({
       const formData = new FormData();
 
       formData.append("cause_id", form.cause);
-      formData.append("solution_id", form.solution);
+      formData.append(
+        "solution_id",
+        solutionMode === "select" ? String(form.solution || "") : "",
+      );
+      formData.append(
+        "custom_solution",
+        solutionMode === "custom"
+          ? form.custom_solution.trim()
+          : "",
+      );
       formData.append("resolution_notes", form.notes);
       formData.append("completion_time", form.resolution_time);
       formData.append("status", form.status);
@@ -490,6 +691,7 @@ export default function TicketResolutionModal({
   const [form, setForm] = useState({
     cause: "",
     solution: "",
+    custom_solution: "",
     resolution_time: getNowLocal(),
     notes: "",
     onhold_notes: "",
@@ -518,10 +720,20 @@ export default function TicketResolutionModal({
               Tiket #{ticket.ticket_code}
             </h2>
 
-            <p className="text-sm text-gray-500">
-              SLA Remaining:{" "}
-              <span className="text-red-500">Overdue</span>
-            </p>
+            {slaIndicator && (
+              <p className="text-sm text-gray-500">
+                {slaIndicator.label}{" "}
+                <span
+                  className={
+                    slaIndicator.overdue
+                      ? "font-medium text-red-500"
+                      : "font-medium text-emerald-600"
+                  }
+                >
+                  {slaIndicator.value}
+                </span>
+              </p>
+            )}
           </div>
 
           <button
@@ -787,11 +999,13 @@ export default function TicketResolutionModal({
                     onChange={async (selected) => {
                       setSelectedCause(selected);
                       setSelectedSolution(null);
+                      setSolutionMode("select");
 
                       setForm((prev) => ({
                         ...prev,
                         cause: selected?.value || "",
                         solution: "",
+                        custom_solution: "",
                       }));
 
                       if (!selected?.value) {
@@ -803,10 +1017,7 @@ export default function TicketResolutionModal({
                         const res = await getSolutions(selected.value);
                         setSolutions(res.data || []);
                       } catch (err) {
-                        console.error(
-                          "Gagal mengambil daftar solusi:",
-                          err,
-                        );
+                        console.error("Gagal mengambil daftar solusi:", err);
                         setSolutions([]);
                       }
                     }}
@@ -819,28 +1030,99 @@ export default function TicketResolutionModal({
 
                 {/* SOLUSI */}
                 <div className="flex min-w-0 flex-col">
-                  <label className="mb-1 text-sm font-medium text-gray-700">
-                    Solusi
-                  </label>
+                  {/* LABEL DAN BUTTON INPUT MANUAL */}
+                  <div className="mb-1 flex h-5 items-center justify-between gap-2">
+                    <label className="text-sm font-medium leading-5 text-gray-700">
+                      Solusi
+                      <span className="ml-1 text-red-500">*</span>
+                    </label>
 
-                  <Select
-                    options={solutionOptions}
-                    value={selectedSolution}
-                    isDisabled={isReadOnly || loading}
-                    onChange={(selected) => {
-                      setSelectedSolution(selected);
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (solutionMode === "custom") {
+                          // Sembunyikan textarea dan tampilkan dropdown kembali.
+                          setSolutionMode("select");
 
-                      setForm((prev) => ({
-                        ...prev,
-                        solution: selected?.value || "",
-                      }));
-                    }}
-                    placeholder="Pilih atau ketik solusi..."
-                    isSearchable
-                    className="w-full"
-                    classNamePrefix="ticket-select"
-                  />
+                          setForm((prev) => ({
+                            ...prev,
+                            custom_solution: "",
+                          }));
+                        } else {
+                          // Tampilkan textarea dan kosongkan pilihan dropdown.
+                          setSolutionMode("custom");
+                          setSelectedSolution(null);
+
+                          setForm((prev) => ({
+                            ...prev,
+                            solution: "",
+                            custom_solution: "",
+                          }));
+                        }
+                      }}
+                      disabled={isReadOnly || loading}
+                      aria-pressed={solutionMode === "custom"}
+                      className={`h-5 shrink-0 rounded-md border px-2 text-[10px] font-medium leading-none transition ${
+                        solutionMode === "custom"
+                          ? "border-orange-600 bg-orange-600 text-white"
+                          : "border-orange-200 bg-white text-orange-700 hover:bg-orange-50"
+                      } disabled:cursor-not-allowed disabled:opacity-50`}
+                    >
+                      Input Manual
+                    </button>
+                  </div>
+
+                  {/* DROPDOWN SOLUSI */}
+                  {solutionMode === "select" && (
+                    <Select
+                      options={solutionOptions}
+                      value={selectedSolution}
+                      isDisabled={isReadOnly || loading || !selectedCause}
+                      onChange={(selected) => {
+                        setSelectedSolution(selected);
+
+                        setForm((prev) => ({
+                          ...prev,
+                          solution: selected?.value || "",
+                          custom_solution: "",
+                        }));
+                      }}
+                      placeholder="Pilih atau ketik solusi..."
+                      isSearchable
+                      className="w-full"
+                      classNamePrefix="ticket-select"
+                    />
+                  )}
                 </div>
+
+                {/* TEXTAREA SOLUSI MANUAL - LEBAR PENUH */}
+                {solutionMode === "custom" && (
+                  <div className="flex min-w-0 flex-col lg:col-span-2">
+                    <label
+                      htmlFor="custom-solution"
+                      className="mb-1 text-sm font-medium text-gray-700"
+                    >
+                      Input Solusi Manual
+                      <span className="ml-1 text-red-500">*</span>
+                    </label>
+
+                    <textarea
+                      id="custom-solution"
+                      name="custom_solution"
+                      value={form.custom_solution || ""}
+                      onChange={handleChange}
+                      disabled={isReadOnly || loading}
+                      rows={4}
+                      maxLength={2000}
+                      placeholder="Tuliskan solusi penyelesaian masalah..."
+                      className="w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 disabled:cursor-not-allowed disabled:bg-gray-100"
+                    />
+
+                    <p className="mt-1 text-right text-xs text-gray-500">
+                      {(form.custom_solution || "").length}/2000 karakter
+                    </p>
+                  </div>
+                )}
 
                 {/* WAKTU PENYELESAIAN */}
                 <div className="flex min-w-0 flex-col lg:col-span-2">

@@ -219,6 +219,7 @@ const DEFAULT_COLUMNS = [
   "assigned_engineer",
   "priority",
   "status",
+  "resolution_solution",
   "cancellation_reason",
   "cancelled_at",
   "cancelled_by",
