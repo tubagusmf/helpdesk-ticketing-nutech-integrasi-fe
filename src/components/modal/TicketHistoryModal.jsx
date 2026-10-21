@@ -73,10 +73,25 @@ export default function TicketHistoryModal({ ticket, onClose }) {
       case "CANCELLATION_REASON":
         return "🛑 Justifikasi Pembatalan";
 
+      case "TICKET_OVERDUE":
+        return "⚠️ Ticket Overdue";
+
+      case "STAFF_RESPONSE_OVERDUE":
+        return "⏱️ Tiket belum direspons";
+
+      case "STAFF_RESPONSE_LATE":
+        return "🔴 Ticket telat direspons";
+
       default:
         return "ℹ️ Aktivitas";
     }
   };
+
+  const SYSTEM_SLA_HISTORY_TYPES = new Set([
+    "TICKET_OVERDUE",
+    "STAFF_RESPONSE_OVERDUE",
+    "STAFF_RESPONSE_LATE",
+  ]);
 
   useTicketSocket({
     onTicketHistory: (data) => {
@@ -178,7 +193,11 @@ export default function TicketHistoryModal({ ticket, onClose }) {
               >
                 {/* ACTOR AND TIMESTAMP */}
                 <div className="mb-1 flex justify-between gap-3 text-xs text-gray-500">
-                  <span>{h.user_name || "-"}</span>
+                  <span>
+                    {SYSTEM_SLA_HISTORY_TYPES.has(h.type)
+                      ? "System"
+                      : h.user_name || "-"}
+                  </span>
 
                   <span className="shrink-0">
                     {new Date(h.created_at).toLocaleString("id-ID")}
@@ -285,6 +304,26 @@ export default function TicketHistoryModal({ ticket, onClose }) {
                       {h.message ||
                         h.new_value ||
                         "Justifikasi pembatalan tidak tersedia"}
+                    </p>
+                  </div>
+                )}
+
+                {/* SLA HISTORY */}
+                {SYSTEM_SLA_HISTORY_TYPES.has(h.type) && (
+                  <div
+                    className={`
+                      mt-2 rounded-md border p-3
+                      ${
+                        h.type === "TICKET_OVERDUE"
+                          ? "border-red-200 bg-red-50"
+                          : h.type === "STAFF_RESPONSE_OVERDUE"
+                            ? "border-amber-200 bg-amber-50"
+                            : "border-orange-200 bg-orange-50"
+                      }
+                    `}
+                  >
+                    <p className="whitespace-pre-wrap break-words text-gray-800">
+                      {h.message || h.new_value || "Informasi SLA tidak tersedia."}
                     </p>
                   </div>
                 )}

@@ -440,7 +440,7 @@ export default function TicketRow({
     if (remainingSeconds <= 0) {
       return {
         overdue: true,
-        text: "Ticket belum diresponse",
+        text: "Tiket belum direspons",
       };
     }
 

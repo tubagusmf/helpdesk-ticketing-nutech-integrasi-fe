@@ -8,6 +8,7 @@ import { jwtDecode } from "jwt-decode";
 import { navigationMenu } from "../constants/navigation";
 import useTicketSocket from "../hooks/useTicketSocket";
 import { ROLE } from "../constants/role";
+import { FiPlus } from "react-icons/fi";
 
 const EMPTY_FILTERS = {
   project_id: "",
@@ -233,7 +234,7 @@ export default function TicketManagement() {
   return (
     <DashboardLayout title="Manajemen Tiket" menu={menu}>
       <div className="bg-white p-3 sm:p-4 md:p-6 rounded-xl shadow w-full min-w-0">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
           <div>
             <h2 className="text-xl font-semibold">
               {role === ROLE.STAFF
@@ -243,8 +244,37 @@ export default function TicketManagement() {
                   : "Daftar Tiket Aduan"}
             </h2>
 
-            <p className="text-gray-500 text-sm">Manajemen tiket helpdesk</p>
+            <p className="text-gray-500 text-sm">
+              Manajemen tiket helpdesk
+            </p>
           </div>
+
+          {role === ROLE.STAFF && (
+            <button
+              type="button"
+              onClick={() => setShowModal(true)}
+              className="
+                inline-flex
+                items-center
+                justify-center
+                gap-2
+                px-4
+                py-2.5
+                rounded-lg
+                bg-blue-600
+                hover:bg-blue-700
+                text-white
+                text-sm
+                font-medium
+                shadow-sm
+                transition
+                shrink-0
+              "
+            >
+              <FiPlus size={18} />
+              Buat Tiket
+            </button>
+          )}
         </div>
 
         <TicketFilter
