@@ -317,10 +317,10 @@ function SortableColumnItem({
               relative
               z-50
               scale-[1.01]
-              border-blue-400
+              border-orange-400
               shadow-xl
               ring-2
-              ring-blue-100
+              ring-orange-100
             `
             : `
               border-gray-200
@@ -345,7 +345,7 @@ function SortableColumnItem({
           items-center
           justify-center
           rounded-lg
-          bg-blue-600
+          bg-orange-600
           text-xs
           font-semibold
           text-white
@@ -832,8 +832,8 @@ export default function ExportCustom() {
                 items-center
                 justify-center
                 rounded-xl
-                bg-blue-100
-                text-blue-600
+                bg-orange-100
+                text-orange-600
               ">
                 <FiDownload
                   size={21}
@@ -883,12 +883,12 @@ export default function ExportCustom() {
 
               <span className="
                 rounded-full
-                bg-blue-100
+                bg-orange-100
                 px-3
                 py-1.5
                 text-xs
                 font-semibold
-                text-blue-700
+                text-orange-700
               ">
                 {selectedColumnCount} Selected
               </span>
@@ -934,7 +934,7 @@ export default function ExportCustom() {
                   font-semibold
                   uppercase
                   tracking-wider
-                  text-blue-600
+                  text-orange-600
                 ">
                   Step 1
                 </span>
@@ -1202,15 +1202,15 @@ export default function ExportCustom() {
                                   ${
                                     selected
                                       ? `
-                                        border-blue-400
-                                        bg-blue-50
+                                        border-orange-400
+                                        bg-orange-50
                                         shadow-sm
                                       `
                                       : `
                                         border-gray-200
                                         bg-white
-                                        hover:border-blue-300
-                                        hover:bg-blue-50/50
+                                        hover:border-orange-300
+                                        hover:bg-orange-50/50
                                       `
                                   }
                                 `}
@@ -1232,8 +1232,8 @@ export default function ExportCustom() {
                                     ${
                                       selected
                                         ? `
-                                          border-blue-500
-                                          bg-blue-500
+                                          border-orange-500
+                                          bg-orange-500
                                           text-white
                                         `
                                         : `
@@ -1261,7 +1261,7 @@ export default function ExportCustom() {
                                       selected
                                         ? `
                                           font-semibold
-                                          text-blue-700
+                                          text-orange-700
                                         `
                                         : `
                                           text-gray-700
@@ -1280,12 +1280,12 @@ export default function ExportCustom() {
                                   <span className="
                                     shrink-0
                                     rounded-full
-                                    bg-blue-100
+                                    bg-orange-100
                                     px-2
                                     py-0.5
                                     text-[10px]
                                     font-semibold
-                                    text-blue-700
+                                    text-orange-700
                                   ">
                                     Selected
                                   </span>
@@ -1337,12 +1337,12 @@ export default function ExportCustom() {
 
                 <span className="
                   rounded-full
-                  bg-blue-100
+                  bg-orange-100
                   px-3
                   py-1
                   text-xs
                   font-semibold
-                  text-blue-700
+                  text-orange-700
                 ">
                   {selectedColumnCount}
                 </span>
@@ -1355,8 +1355,8 @@ export default function ExportCustom() {
                 mb-4
                 rounded-xl
                 border
-                border-blue-100
-                bg-blue-50
+                border-orange-100
+                bg-orange-50
                 p-3
               ">
 
@@ -1369,14 +1369,14 @@ export default function ExportCustom() {
 
                   <span className="
                     font-medium
-                    text-blue-800
+                    text-orange-800
                   ">
                     Column Selected
                   </span>
 
                   <span className="
                     font-semibold
-                    text-blue-700
+                    text-orange-700
                   ">
                     {selectedColumnCount} /{" "}
                     {totalColumns}
@@ -1389,13 +1389,13 @@ export default function ExportCustom() {
                   h-2
                   overflow-hidden
                   rounded-full
-                  bg-blue-100
+                  bg-orange-100
                 ">
                   <div
                     className="
                       h-full
                       rounded-full
-                      bg-blue-500
+                      bg-orange-500
                       transition-all
                       duration-300
                     "
@@ -1413,8 +1413,8 @@ export default function ExportCustom() {
                 min-h-[350px]
                 rounded-xl
                 border
-                border-blue-100
-                bg-blue-50/40
+                border-orange-100
+                bg-orange-50/40
                 p-3
               ">
 
@@ -1653,9 +1653,9 @@ export default function ExportCustom() {
                   outline-none
                   transition
                   placeholder:text-gray-400
-                  focus:border-blue-500
+                  focus:border-orange-500
                   focus:ring-2
-                  focus:ring-blue-100
+                  focus:ring-orange-100
                 "
               />
             </div>
@@ -1701,9 +1701,9 @@ export default function ExportCustom() {
                   text-gray-700
                   outline-none
                   transition
-                  focus:border-blue-500
+                  focus:border-orange-500
                   focus:ring-2
-                  focus:ring-blue-100
+                  focus:ring-orange-100
                   disabled:cursor-not-allowed
                   disabled:bg-gray-100
                 "
@@ -1771,9 +1771,9 @@ export default function ExportCustom() {
                   text-gray-700
                   outline-none
                   transition
-                  focus:border-blue-500
+                  focus:border-orange-500
                   focus:ring-2
-                  focus:ring-blue-100
+                  focus:ring-orange-100
                   disabled:cursor-not-allowed
                   disabled:bg-gray-100
                 "
@@ -1848,9 +1848,9 @@ export default function ExportCustom() {
                   text-gray-700
                   outline-none
                   transition
-                  focus:border-blue-500
+                  focus:border-orange-500
                   focus:ring-2
-                  focus:ring-blue-100
+                  focus:ring-orange-100
                   disabled:cursor-not-allowed
                   disabled:bg-gray-100
                 "
@@ -1918,9 +1918,9 @@ export default function ExportCustom() {
                   text-gray-700
                   outline-none
                   transition
-                  focus:border-blue-500
+                  focus:border-orange-500
                   focus:ring-2
-                  focus:ring-blue-100
+                  focus:ring-orange-100
                   disabled:cursor-not-allowed
                   disabled:bg-gray-100
                 "
@@ -1968,9 +1968,9 @@ export default function ExportCustom() {
                   text-gray-700
                   outline-none
                   transition
-                  focus:border-blue-500
+                  focus:border-orange-500
                   focus:ring-2
-                  focus:ring-blue-100
+                  focus:ring-orange-100
                   disabled:cursor-not-allowed
                   disabled:bg-gray-100
                 "
@@ -1983,8 +1983,8 @@ export default function ExportCustom() {
         <section className="
           rounded-2xl
           border
-          border-blue-100
-          bg-blue-50
+          border-orange-100
+          bg-orange-50
           p-4
           sm:p-5
         ">
@@ -2003,7 +2003,7 @@ export default function ExportCustom() {
               <p className="
                 text-sm
                 font-semibold
-                text-blue-800
+                text-orange-800
               ">
                 Export Preview
               </p>
@@ -2011,7 +2011,7 @@ export default function ExportCustom() {
               <p className="
                 mt-1
                 text-xs
-                text-blue-700
+                text-orange-700
                 sm:text-sm
               ">
                 {selectedColumnCount} field
@@ -2029,7 +2029,7 @@ export default function ExportCustom() {
               py-1.5
               text-xs
               font-semibold
-              text-blue-700
+              text-orange-700
               shadow-sm
             ">
               {selectedColumnCount} Columns
@@ -2066,7 +2066,7 @@ export default function ExportCustom() {
                       py-1.5
                       text-xs
                       font-medium
-                      text-blue-700
+                      text-orange-700
                       shadow-sm
                     "
                   >

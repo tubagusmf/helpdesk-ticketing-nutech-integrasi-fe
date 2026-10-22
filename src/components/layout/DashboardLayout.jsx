@@ -20,6 +20,8 @@ import {
 import toast from "react-hot-toast";
 
 import { useAuth } from "../../context/AuthContext";
+import { useAppSettings } from "../../context/AppSettingsContext";
+import { getAppAssetURL } from "../../services/appSettingsService";
 import {
   getCurrentUser,
   updateOnlineStatus,
@@ -307,6 +309,7 @@ export default function DashboardLayout({
   children,
 }) {
   const { logout, user } = useAuth();
+  const { settings } = useAppSettings();
   const navigate = useNavigate();
   const sidebarRole =
     user?.role_id ??
@@ -632,10 +635,12 @@ export default function DashboardLayout({
         body:
           notif.message ||
           "Anda memiliki notifikasi baru.",
-        icon: "/vite.svg",
+        icon: getAppAssetURL(
+          settings.favicon_url || settings.login_icon_url || settings.logo_url,
+        ) || undefined,
       });
     }
-  }, []);
+  }, [settings.favicon_url, settings.login_icon_url, settings.logo_url]);
 
   useEffect(() => {
     const requestPermission = async () => {
@@ -1040,9 +1045,21 @@ export default function DashboardLayout({
             shrink-0
           "
         >
-          <h2 className="text-lg sm:text-xl font-bold text-orange-600">
-            Helpdesk Center
-          </h2>
+          <div className="flex min-w-0 items-center gap-2">
+            {settings.logo_url && (
+              <img
+                src={getAppAssetURL(settings.logo_url)}
+                alt="Logo aplikasi"
+                className="h-8 w-8 shrink-0 object-contain"
+              />
+            )}
+            <h2
+              className="truncate text-lg font-bold sm:text-xl"
+              style={{ color: settings.primary_color || "#EA580C" }}
+            >
+              {settings.sidebar_title || settings.app_name || "Helpdesk Center"}
+            </h2>
+          </div>
 
           <button
             type="button"
@@ -1633,10 +1650,10 @@ export default function DashboardLayout({
           "
         >
           <p className="break-words">
-            © 2026 Helpdesk CCIT Nutech Integrasi
+            {settings.footer_text || "© 2026 Helpdesk CCIT Nutech Integrasi"}
           </p>
 
-          <p>Version 1.0.0</p>
+          <p>{settings.app_version || "Version 1.0.0"}</p>
         </footer>
       </div>
 
