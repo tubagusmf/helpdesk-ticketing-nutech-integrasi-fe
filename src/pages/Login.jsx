@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { jwtDecode } from "jwt-decode";
 import { useNavigate } from "react-router-dom";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, RefreshCw } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 
 import API from "../services/api";
@@ -62,16 +62,14 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-
-  const [showPassword, setShowPassword] =
-    useState(false);
-
-  const [isSubmitting, setIsSubmitting] =
-    useState(false);
-
-  const [logoLoadFailed, setLogoLoadFailed] =
-    useState(false);
-
+  const [captchaId, setCaptchaId] = useState("");
+  const [captchaImage, setCaptchaImage] = useState("");
+  const [captchaCode, setCaptchaCode] = useState("");
+  const [captchaLoading, setCaptchaLoading] = useState(false);
+  const [captchaLoadError, setCaptchaLoadError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [logoLoadFailed, setLogoLoadFailed] = useState(false);
   const { login, user } = useAuth();
   const { settings } = useAppSettings();
   const navigate = useNavigate();
@@ -87,11 +85,7 @@ export default function Login() {
     "";
 
   const iconURL = getAppAssetURL(iconPath);
-
-  const primaryColor = getValidPrimaryColor(
-    currentSettings.primary_color,
-  );
-
+  const primaryColor = getValidPrimaryColor(currentSettings.primary_color,);
   const loginTitle =
     String(currentSettings.login_title || "").trim() ||
     String(currentSettings.app_name || "").trim() ||
@@ -124,6 +118,46 @@ export default function Login() {
     setLogoLoadFailed(false);
   }, [iconURL]);
 
+  const loadCaptcha = useCallback(async () => {
+    setCaptchaLoading(true);
+    setCaptchaLoadError("");
+
+    try {
+      const response = await API.get("/users/captcha");
+      const result = response?.data?.data ?? response?.data ?? {};
+      const nextCaptchaId = result.captcha_id ?? result.captchaId ?? "";
+
+      const rawImage =
+        result.captcha_image ?? result.captchaImage ?? "";
+
+      if (!nextCaptchaId || !rawImage) {
+        throw new Error("Respons CAPTCHA tidak lengkap.");
+      }
+
+      const nextCaptchaImage = rawImage.startsWith("data:")
+        ? rawImage
+        : `data:image/png;base64,${rawImage}`;
+
+      setCaptchaId(nextCaptchaId);
+      setCaptchaImage(nextCaptchaImage);
+      setCaptchaCode("");
+    } catch (err) {
+      console.error("Gagal memuat CAPTCHA:", err);
+
+      setCaptchaId("");
+      setCaptchaImage("");
+      setCaptchaLoadError(
+        "CAPTCHA gagal dimuat. Silakan tekan tombol refresh.",
+      );
+    } finally {
+      setCaptchaLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadCaptcha();
+  }, [loadCaptcha]);
+
   useEffect(() => {
     if (!user) {
       return;
@@ -145,21 +179,31 @@ export default function Login() {
   const handleLogin = async (event) => {
     event.preventDefault();
 
+    if (!captchaId) {
+      setError("CAPTCHA belum tersedia. Silakan muat ulang gambar.");
+      return;
+    }
+
+    if (!captchaCode.trim()) {
+      setError("Silakan masukkan kode CAPTCHA.");
+      return;
+    }
+
     if (isSubmitting) {
       return;
     }
 
     setError("");
+    void loadCaptcha();
     setIsSubmitting(true);
 
     try {
-      const response = await API.post(
-        "/users/login",
-        {
-          email: email.trim(),
-          password,
-        },
-      );
+      const response = await API.post("/users/login", {
+        email: email.trim(),
+        password,
+        captcha_id: captchaId,
+        captcha_code: captchaCode,
+      });
 
       const token = response?.data?.token;
 
@@ -377,9 +421,96 @@ export default function Login() {
             </div>
           </div>
 
+          <div className="mb-5">
+            <label
+              htmlFor="captcha"
+              className="mb-1 block text-xs font-semibold text-gray-500"
+            >
+              KODE CAPTCHA
+            </label>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <input
+                id="captcha"
+                name="captcha_code"
+                type="text"
+                value={captchaCode}
+                onChange={(event) =>
+                  setCaptchaCode(
+                    event.target.value
+                      .replace(/[^a-z0-9]/gi, "")
+                      .slice(0, 5)
+                      .toLowerCase(),
+                  )
+                }
+                autoComplete="off"
+                autoCapitalize="none"
+                maxLength={5}
+                required
+                disabled={isSubmitting || captchaLoading}
+                className="
+                  min-w-0 flex-1 rounded-lg border border-gray-300
+                  p-2.5 text-sm uppercase outline-none
+                  focus:border-orange-400 focus:ring-2
+                  focus:ring-orange-100
+                  disabled:bg-gray-50
+                "
+              />
+
+              <div className="flex items-center gap-2">
+                <div className="
+                  flex h-12 w-[180px] shrink-0 items-center
+                  justify-center overflow-hidden rounded-md
+                  border border-gray-200 bg-gray-100
+                ">
+                  {captchaImage ? (
+                    <img
+                      src={captchaImage}
+                      alt="Kode CAPTCHA"
+                      className="h-12 w-full object-contain"
+                    />
+                  ) : (
+                    <span className="text-xs text-gray-500">
+                      {captchaLoading ? "Memuat..." : "CAPTCHA tidak tersedia"}
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => void loadCaptcha()}
+                  disabled={captchaLoading || isSubmitting}
+                  aria-label="Muat ulang CAPTCHA"
+                  title="Muat ulang CAPTCHA"
+                  className="
+                    flex h-11 w-11 shrink-0 items-center
+                    justify-center rounded-lg border border-gray-300
+                    text-gray-600 transition hover:bg-gray-100
+                    disabled:cursor-not-allowed disabled:opacity-50
+                  "
+                >
+                  <RefreshCw
+                    size={18}
+                    className={captchaLoading ? "animate-spin" : ""}
+                  />
+                </button>
+              </div>
+            </div>
+
+            {captchaLoadError && (
+              <p className="mt-2 text-xs text-red-600" role="alert">
+                {captchaLoadError}
+              </p>
+            )}
+
+            <p className="mt-2 text-xs text-gray-400">
+              Masukkan 5 karakter yang terlihat pada gambar.
+            </p>
+          </div>
+
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || captchaLoading || !captchaId}
             className="
               w-full rounded-lg
               py-2.5 font-semibold text-white
