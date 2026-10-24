@@ -62,7 +62,6 @@ export const DASHBOARD_ACCESS_BY_ROLE = {
   ],
 };
 
-// Prefix URL untuk setiap role.
 export const DASHBOARD_BASE_BY_ROLE = {
   [ROLE.ADMINISTRATOR]: "/admin",
   [ROLE.STAFF]: "/staff",
@@ -350,6 +349,11 @@ export const STATUS_CONFIG = [
     label: "Onhold",
     color: "#3b82f6",
   },
+  {
+    key: "cancel",
+    label: "Cancel",
+    color: "#9ca3af",
+  },
 ];
 
 export const PRIORITY_CONFIG = [
@@ -439,4 +443,55 @@ export function getStatusTotal(statusData = {}) {
       (Number(statusData?.[status.key]) || 0),
     0,
   );
+}
+
+export function formatTrendLabel(value, period = "month") {
+  if (!value) {
+    return "-";
+  }
+
+  const dateString = String(value).slice(0, 10);
+  const parts = dateString.split("-");
+
+  if (parts.length !== 3) {
+    return value;
+  }
+
+  const [year, month, day] = parts.map(Number);
+
+  const date = new Date(year, month - 1, day);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  if (period === "year") {
+    return date.toLocaleDateString("id-ID", {
+      year: "numeric",
+    });
+  }
+
+  if (period === "month") {
+    return date.toLocaleDateString("id-ID", {
+      month: "short",
+      year: "numeric",
+    });
+  }
+
+  if (period === "week") {
+    return `Pekan ${date.toLocaleDateString(
+      "id-ID",
+      {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      },
+    )}`;
+  }
+
+  return date.toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }

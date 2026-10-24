@@ -2,39 +2,37 @@ import {ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Toolt
 import { FiTrendingUp } from "react-icons/fi";
 import DashboardSection from "./DashboardSection";
 import { formatMonthLabel } from "../../utils/dashboard";
+import DashboardPeriodSelect from "./DashboardPeriodSelect";
+import { formatTrendLabel } from "../../utils/dashboard";
 
 export default function TrendChartCard({
   data = [],
   title = "Tren Jumlah Insiden",
-  subtitle = "Ticket berdasarkan bulan dibuat",
+  subtitle,
+  period = "month",
+  onPeriodChange,
 }) {
-  const animationId = data
-    .map((item) => `${item.date}-${item.total}`)
-    .join("|");
+
+  const periodSubtitle = {
+    day: "Ticket berdasarkan hari dibuat",
+    week: "Ticket berdasarkan minggu dibuat",
+    month: "Ticket berdasarkan bulan dibuat",
+    year: "Ticket berdasarkan tahun dibuat",
+  };
+
+  const displaySubtitle = subtitle || periodSubtitle[period];
+  const animationId = data.map((item) => `${item.date}-${item.total}`).join("|");
 
   return (
     <DashboardSection
       title={title}
-      subtitle={subtitle}
+      subtitle={displaySubtitle}
       icon={FiTrendingUp}
       action={
-        <span
-          className="
-            inline-flex
-            items-center
-            rounded-lg
-            border
-            border-gray-200
-            bg-gray-50
-            px-2.5
-            py-1.5
-            text-xs
-            font-medium
-            text-gray-600
-          "
-        >
-          Per Bulan
-        </span>
+        <DashboardPeriodSelect
+          value={period}
+          onChange={onPeriodChange}
+        />
       }
     >
       <div className="h-[260px] sm:h-[300px] lg:h-[320px] min-w-0">
@@ -83,7 +81,9 @@ export default function TrendChartCard({
 
               <XAxis
                 dataKey="date"
-                tickFormatter={formatMonthLabel}
+                tickFormatter={(value) =>
+                  formatTrendLabel(value, period)
+                }
                 tick={{
                   fontSize: 11,
                   fill: "#6b7280",
@@ -103,7 +103,7 @@ export default function TrendChartCard({
 
               <Tooltip
                 labelFormatter={(value) =>
-                  formatMonthLabel(value)
+                  formatTrendLabel(value, period)
                 }
                 formatter={(value) => [
                   value,

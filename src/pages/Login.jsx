@@ -459,7 +459,7 @@ export default function Login() {
 
               <div className="flex items-center gap-2">
                 <div className="
-                  flex h-12 w-[180px] shrink-0 items-center
+                  flex h-13 w-[150px] shrink-0 items-center
                   justify-center overflow-hidden rounded-md
                   border border-gray-200 bg-gray-100
                 ">
@@ -467,7 +467,7 @@ export default function Login() {
                     <img
                       src={captchaImage}
                       alt="Kode CAPTCHA"
-                      className="h-12 w-full object-contain"
+                      className="h-full w-full object-contain"
                     />
                   ) : (
                     <span className="text-xs text-gray-500">

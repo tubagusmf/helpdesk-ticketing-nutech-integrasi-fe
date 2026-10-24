@@ -1,34 +1,12 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-
+import { useCallback, useEffect, useMemo, useState } from "react";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import SummaryCard from "../components/dashboard/SummaryCard";
 import DashboardFilter from "../components/dashboard/DashboardFilter";
 import StatusStackedChart from "../components/dashboard/StatusStackedChart";
-
 import useDashboardFilters from "../hooks/useDashboardFilters";
-
-import {
-  getStaffSummary,
-  getStaffReassignSummary,
-  getStaffOfflineSummary,
-} from "../services/dashboardService";
-
-import {
-  getCurrentRole,
-  getRoleMenu,
-} from "../utils/dashboard";
-
-import {
-  FiActivity,
-  FiClock,
-  FiRefreshCw,
-  FiUsers,
-} from "react-icons/fi";
+import { getStaffSummary, getStaffReassignSummary, getStaffOfflineSummary } from "../services/dashboardService";
+import { getCurrentRole, getRoleMenu } from "../utils/dashboard";
+import { FiActivity, FiClock, FiRefreshCw, FiUsers } from "react-icons/fi";
 
 function formatNumber(value) {
   return Number(value || 0).toLocaleString("id-ID");
@@ -83,10 +61,6 @@ function formatDateTime(value) {
   });
 }
 
-/* =========================================================
-   MAIN COMPONENT
-========================================================= */
-
 export default function DashboardStaff() {
   const role = useMemo(
     () => getCurrentRole(),
@@ -111,6 +85,9 @@ export default function DashboardStaff() {
   const [ticketLoading, setTicketLoading] = useState(true);
   const [ticketError, setTicketError] = useState("");
   const [staffData, setStaffData] = useState([]);
+  const [chartPeriod, setChartPeriod] = useState("month");
+  const [chartData, setChartData] = useState([]);
+  const [chartError, setChartError] = useState("");
   const [activityLoading, setActivityLoading] = useState(true);
   const [activityError, setActivityError] = useState("");
   const [reassignData, setReassignData] = useState([]);
@@ -148,6 +125,40 @@ export default function DashboardStaff() {
       fetchDashboard();
     }
   }, [role, fetchDashboard]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchChart() {
+      setChartError("");
+
+      try {
+        const result = await getStaffSummary({
+          ...appliedFilters,
+          period: chartPeriod,
+        });
+
+        if (!cancelled) {
+          setChartData(Array.isArray(result) ? result : []);
+        }
+      } catch (err) {
+        console.error("Gagal mengambil grafik ticket per Staff:", err);
+
+        if (!cancelled) {
+          setChartData([]);
+          setChartError(
+            err?.message || "Gagal mengambil data grafik Staff.",
+          );
+        }
+      }
+    }
+
+    if (role) fetchChart();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [role, appliedFilters, chartPeriod]);
 
   const fetchStaffActivity = useCallback(async () => {
     setActivityLoading(true);
@@ -360,12 +371,23 @@ export default function DashboardStaff() {
 
             {/* STATUS CHART */}
 
+            {chartError && (
+              <div
+                role="alert"
+                className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+              >
+                {chartError}
+              </div>
+            )}
+
             <StatusStackedChart
               title="Distribusi Ticket per Staff"
               subtitle="Jumlah dan status ticket setiap Staff"
-              data={staffData}
+              data={chartData}
               labelKey="staff_name"
               maxItems={10}
+              period={chartPeriod}
+              onPeriodChange={setChartPeriod}
             />
 
             {/* ============================================
@@ -752,7 +774,7 @@ export default function DashboardStaff() {
           {/* DESKTOP TABLE */}
 
           <div className="hidden overflow-x-auto md:block">
-            <table className="w-full min-w-[420px] text-sm">
+            <table className="w-full min-w-[760px] text-sm">
               <thead>
                 <tr className="border-y border-gray-200 bg-gray-50 text-gray-500">
                   <th className="px-5 py-3 text-left">
@@ -760,44 +782,28 @@ export default function DashboardStaff() {
                   </th>
 
                   <th className="px-4 py-3 text-left">
+                    Code Name
+                  </th>
+
+                  <th className="px-4 py-3 text-left">
                     Status
                   </th>
 
-                  {/* <th className="px-4 py-3 text-right">
-                    Sesi Offline
-                  </th>
-
-                  <th className="px-4 py-3 text-left">
-                    Total Durasi
-                  </th>
-
-                  <th className="px-4 py-3 text-left">
-                    Rata-rata Durasi
-                  </th>
-
-                  <th className="px-4 py-3 text-left">
-                    Offline Sejak
-                  </th>
-
-                  <th className="px-4 py-3 text-left">
-                    Durasi Aktif
-                  </th>
-
                   <th className="px-5 py-3 text-left">
-                    Justifikasi Terakhir
-                  </th> */}
+                    Terakhir Aktif
+                  </th>
                 </tr>
               </thead>
 
               <tbody>
                 {activityLoading ? (
                   <LoadingTable
-                    colSpan={2}
-                    message="Memuat statistik Offline..."
+                    colSpan={4}
+                    message="Memuat status Staff CCIT..."
                   />
                 ) : offlineData.length === 0 ? (
                   <EmptyTable
-                    colSpan={2}
+                    colSpan={4}
                     message="Belum ada data Staff CCIT."
                   />
                 ) : (
@@ -810,44 +816,19 @@ export default function DashboardStaff() {
                         {item.staff_name}
                       </td>
 
+                      <td className="px-4 py-4 font-medium text-orange-600">
+                        {item.code_name || "-"}
+                      </td>
+
                       <td className="px-4 py-4">
                         <OnlineBadge
                           isOnline={item.is_online}
                         />
                       </td>
 
-                      {/* <td className="px-4 py-4 text-right">
-                        {formatNumber(item.offline_session_count)}
+                      <td className="px-5 py-4 text-gray-600">
+                        {formatDateTime(item.last_seen)}
                       </td>
-
-                      <td className="px-4 py-4 text-gray-700">
-                        {formatDuration(item.total_duration_seconds)}
-                      </td>
-
-                      <td className="px-4 py-4 text-gray-700">
-                        {formatDuration(item.average_duration_seconds)}
-                      </td>
-
-                      <td className="px-4 py-4 text-gray-600">
-                        {item.is_online
-                          ? "-"
-                          : formatDateTime(item.active_offline_since)}
-                      </td>
-
-                      <td className="px-4 py-4 font-medium text-orange-600">
-                        {item.is_online
-                          ? "-"
-                          : formatDuration(
-                              item.active_offline_duration_seconds,
-                            )}
-                      </td>
-
-                      <td
-                        className="max-w-[240px] truncate px-5 py-4 text-gray-600"
-                        title={item.last_justification || ""}
-                      >
-                        {item.last_justification || "-"}
-                      </td> */}
                     </tr>
                   ))
                 )}
@@ -865,21 +846,37 @@ export default function DashboardStaff() {
               offlineData.map((item) => (
                 <div
                   key={item.staff_id}
-                  className="
-                    flex items-center justify-between gap-3
-                    rounded-xl border border-gray-100 p-4
-                  "
+                  className="rounded-xl border border-gray-100 p-4"
                 >
-                  <div className="min-w-0">
-                    <p className="break-words font-semibold text-gray-800">
-                      {item.staff_name}
-                    </p>
-                    <p className="mt-1 text-xs text-gray-500">
-                      Status
-                    </p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="break-words font-semibold text-gray-800">
+                        {item.staff_name}
+                      </p>
+
+                      <p className="mt-1 text-xs text-gray-500">
+                        Code Name
+                      </p>
+
+                      <p className="mt-1 font-medium text-orange-600">
+                        {item.code_name || "-"}
+                      </p>
+                    </div>
+
+                    <OnlineBadge
+                      isOnline={item.is_online}
+                    />
                   </div>
 
-                  <OnlineBadge isOnline={item.is_online} />
+                  <div className="mt-3 border-t border-gray-100 pt-3">
+                    <p className="text-xs text-gray-500">
+                      Terakhir Aktif
+                    </p>
+
+                    <p className="mt-1 text-sm text-gray-700">
+                      {formatDateTime(item.last_seen)}
+                    </p>
+                  </div>
                 </div>
               ))
             )}

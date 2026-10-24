@@ -1,25 +1,11 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-
+import { useCallback, useEffect, useMemo, useState } from "react";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import SummaryCard from "../components/dashboard/SummaryCard";
 import DashboardFilter from "../components/dashboard/DashboardFilter";
 import StatusStackedChart from "../components/dashboard/StatusStackedChart";
-
 import useDashboardFilters from "../hooks/useDashboardFilters";
-
-import {
-  getProjectSummary,
-} from "../services/dashboardService";
-
-import {
-  getCurrentRole,
-  getRoleMenu,
-} from "../utils/dashboard";
+import { getProjectSummary } from "../services/dashboardService"
+import { getCurrentRole, getRoleMenu } from "../utils/dashboard";
 
 export default function DashboardProject() {
   const role = useMemo(
@@ -42,14 +28,12 @@ export default function DashboardProject() {
     handleReset,
   } = useDashboardFilters();
 
-  const [loading, setLoading] =
-    useState(true);
-
-  const [error, setError] =
-    useState("");
-
-  const [data, setData] =
-    useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [data, setData] = useState([]);
+  const [chartPeriod, setChartPeriod] = useState("month");
+  const [chartData, setChartData] = useState([]);
+  const [chartError, setChartError] = useState("");
 
   const fetchDashboard =
     useCallback(async () => {
@@ -80,6 +64,40 @@ export default function DashboardProject() {
       fetchDashboard();
     }
   }, [role, fetchDashboard]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchChart() {
+      setChartError("");
+
+      try {
+        const result = await getProjectSummary({
+          ...appliedFilters,
+          period: chartPeriod,
+        });
+
+        if (!cancelled) {
+          setChartData(Array.isArray(result) ? result : []);
+        }
+      } catch (err) {
+        console.error("Gagal mengambil grafik ticket per project:", err);
+
+        if (!cancelled) {
+          setChartData([]);
+          setChartError(
+            err?.message || "Gagal mengambil data grafik project.",
+          );
+        }
+      }
+    }
+
+    if (role) fetchChart();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [role, appliedFilters, chartPeriod]);
 
   const summary = useMemo(() => {
     return data.reduce(
@@ -159,12 +177,23 @@ export default function DashboardProject() {
               />
             </div>
 
+            {chartError && (
+              <div
+                role="alert"
+                className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+              >
+                {chartError}
+              </div>
+            )}
+
             <StatusStackedChart
               title="Status Ticket per Project"
               subtitle="Perbandingan status ticket di setiap project"
-              data={data}
+              data={chartData}
               labelKey="project"
               maxItems={10}
+              period={chartPeriod}
+              onPeriodChange={setChartPeriod}
             />
 
             <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
