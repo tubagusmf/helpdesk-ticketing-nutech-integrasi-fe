@@ -1,16 +1,14 @@
 import { useState, useEffect, useRef } from "react";
-import {
-  createTicketComment,
-  getTicketComments,
-} from "../../services/ticketService";
+import { createTicketComment, getTicketComments, deleteTicketComment } from "../../services/ticketService";
 import useTicketSocket from "../../hooks/useTicketSocket";
 import { jwtDecode } from "jwt-decode";
+import { FiTrash2 } from "react-icons/fi";
 
 export default function TicketCommentModal({ ticket, onClose }) {
   const [comments, setComments] = useState([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-
+  const [deletingCommentId, setDeletingCommentId] = useState(null);
   const bottomRef = useRef(null);
   const isClosed = ticket.status === "CLOSED";
 
@@ -62,19 +60,51 @@ export default function TicketCommentModal({ ticket, onClose }) {
     }
   }
 
+  const handleDeleteComment = async (commentId) => {
+    const confirmed = window.confirm(
+      "Apakah Anda yakin ingin menghapus komentar ini?",
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setDeletingCommentId(commentId);
+
+      await deleteTicketComment(ticket.id, commentId);
+
+      setComments((prev) =>
+        prev.filter((c) => Number(c.id) !== Number(commentId)),
+      );
+    } catch (err) {
+      alert(err.message || "Gagal menghapus komentar");
+    } finally {
+      setDeletingCommentId(null);
+    }
+  };
+
   useTicketSocket({
     onNewComment: (data) => {
-      if (data.ticket_id !== ticket.id) return;
+      if (Number(data.ticket_id) !== Number(ticket.id)) return;
 
       setComments((prev) => {
-        const exists = prev.some((c) => c.id === data.id);
+        const exists = prev.some(
+          (c) => Number(c.id) === Number(data.id),
+        );
 
-        if (exists) {
-          return prev;
-        }
+        if (exists) return prev;
 
         return [...prev, data];
       });
+    },
+
+    onCommentDeleted: (data) => {
+      if (Number(data.ticket_id) !== Number(ticket.id)) return;
+
+      setComments((prev) =>
+        prev.filter(
+          (c) => Number(c.id) !== Number(data.id),
+        ),
+      );
     },
   });
 
@@ -147,9 +177,32 @@ export default function TicketCommentModal({ ticket, onClose }) {
                       <span>{new Date(c.created_at).toLocaleString()}</span>
                     </div>
 
-                    <p className="whitespace-pre-wrap break-words">
-                      {c.message}
-                    </p>
+                    {/* Pesan dan tombol hapus dalam satu baris */}
+                    <div className="flex items-center gap-2">
+                      <p className="min-w-0 flex-1 whitespace-pre-wrap break-words">
+                        {c.message}
+                      </p>
+
+                      {isMine && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteComment(c.id)}
+                          disabled={Number(deletingCommentId) === Number(c.id)}
+                          title="Hapus komentar"
+                          aria-label="Hapus komentar"
+                          className="inline-flex h-7 w-7 shrink-0 items-center justify-center
+                                    rounded-md text-white/80 transition
+                                    hover:bg-white/15 hover:text-white
+                                    disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {Number(deletingCommentId) === Number(c.id) ? (
+                            <span className="text-xs">...</span>
+                          ) : (
+                            <FiTrash2 size={15} />
+                          )}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               );

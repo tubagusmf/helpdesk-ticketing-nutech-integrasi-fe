@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
 
+import { useEffect, useRef } from "react";
 import { connectWebSocket, subscribeWebSocket } from "../services/websocket";
 
 export default function useTicketSocket({
@@ -7,6 +7,7 @@ export default function useTicketSocket({
   onTicketUpdated,
   onStatusUpdate,
   onNewComment,
+  onCommentDeleted,
   onNotification,
   onTicketHistory,
   onEngineerResolution,
@@ -16,6 +17,7 @@ export default function useTicketSocket({
     onTicketUpdated,
     onStatusUpdate,
     onNewComment,
+    onCommentDeleted,
     onNotification,
     onTicketHistory,
     onEngineerResolution,
@@ -27,6 +29,7 @@ export default function useTicketSocket({
       onTicketUpdated,
       onStatusUpdate,
       onNewComment,
+      onCommentDeleted,
       onNotification,
       onTicketHistory,
       onEngineerResolution,
@@ -36,6 +39,7 @@ export default function useTicketSocket({
     onTicketUpdated,
     onStatusUpdate,
     onNewComment,
+    onCommentDeleted,
     onNotification,
     onTicketHistory,
     onEngineerResolution,
@@ -60,6 +64,10 @@ export default function useTicketSocket({
 
         case "NEW_COMMENT":
           callbacksRef.current.onNewComment?.(message.data);
+          break;
+
+        case "COMMENT_DELETED":
+          callbacksRef.current.onCommentDeleted?.(message.data);
           break;
 
         case "NEW_NOTIFICATION":

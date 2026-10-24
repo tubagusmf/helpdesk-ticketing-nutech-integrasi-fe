@@ -146,6 +146,16 @@ export const createTicketComment = async (ticketId, data) => {
   });
 };
 
+export const deleteTicketComment = async (ticketId, commentId) => {
+  return fetchAPI(
+    `${BASE_URL}/tickets/${ticketId}/comments/${commentId}`,
+    {
+      method: "DELETE",
+      headers: getHeaders(),
+    },
+  );
+};
+
 export const getTicketHistories = async (ticketId) => {
   return fetchAPI(`${BASE_URL}/tickets/${ticketId}/history`, {
     headers: getHeaders(),
@@ -384,3 +394,4 @@ export const cancelTicket = async (ticketId, payload) => {
     body: JSON.stringify(payload),
   });
 };
+
