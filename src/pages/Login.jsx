@@ -8,7 +8,6 @@ import API from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { useAppSettings } from "../context/AppSettingsContext";
 import { getAppAssetURL } from "../services/appSettingsService";
-import { updateOnlineStatus } from "../services/userService";
 
 const DEFAULT_SETTINGS = {
   app_name: "Helpdesk Center",
@@ -226,15 +225,6 @@ export default function Login() {
       }
 
       login(token);
-
-      try {
-        await updateOnlineStatus(true);
-      } catch (statusError) {
-        console.warn(
-          "Login berhasil, tetapi status online gagal diperbarui:",
-          statusError,
-        );
-      }
 
       navigate(dashboardPath, {
         replace: true,

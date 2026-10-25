@@ -68,7 +68,6 @@ export const updateOnlineStatus = async (isOnline) => {
   return data;
 };
 
-
 export const getCurrentUser = async () => {
   const res = await fetch(`${BASE_URL}/me`, {
     method: "GET",
@@ -124,4 +123,21 @@ export const getActiveOfflineSession = async () => {
   }
 
   return data.data ?? null;
+};
+
+export const sendHeartbeat = async () => {
+  const res = await fetch(`${BASE_URL}/heartbeat`, {
+    method: "PUT",
+    headers: getHeaders(),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+
+    throw new Error(
+      data.message || "Gagal memperbarui heartbeat."
+    );
+  }
+
+  return true;
 };
