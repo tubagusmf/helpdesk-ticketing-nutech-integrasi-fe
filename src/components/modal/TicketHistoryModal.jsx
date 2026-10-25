@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
-import { getTicketHistories, exportTicketHistory } from "../../services/ticketService";
+import { getTicketHistories, exportTicketHistory, exportTicketHistoryPDF } from "../../services/ticketService";
 import useTicketSocket from "../../hooks/useTicketSocket";
 import { FiDownload } from "react-icons/fi";
+import { FaFilePdf } from "react-icons/fa";
 
 export default function TicketHistoryModal({ ticket, onClose }) {
   const [histories, setHistories] = useState([]);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState("");
+  const [exportingPDF, setExportingPDF] = useState(false);
 
   useEffect(() => {
     fetchHistories();
@@ -38,6 +40,26 @@ export default function TicketHistoryModal({ ticket, onClose }) {
       );
     } finally {
       setExporting(false);
+    }
+  };
+
+  const handleExportHistoryPDF = async () => {
+    try {
+      setExportingPDF(true);
+      setExportError("");
+
+      await exportTicketHistoryPDF(
+        ticket.id,
+        ticket.ticket_code,
+      );
+    } catch (err) {
+      console.error("ERROR EXPORT HISTORY PDF:", err);
+
+      setExportError(
+        err.message || "Gagal mengunduh PDF history tiket.",
+      );
+    } finally {
+      setExportingPDF(false);
     }
   };
 
@@ -134,11 +156,15 @@ export default function TicketHistoryModal({ ticket, onClose }) {
             </p>
           </div>
 
+          
           <div className="flex shrink-0 items-center gap-2">
+            {/* Export Excel */}
             <button
               type="button"
               onClick={handleExportHistory}
               disabled={exporting}
+              title="Unduh history tiket Excel"
+              aria-label="Unduh history tiket Excel"
               className="rounded-lg bg-green-600 px-3 py-2 text-sm font-medium
                 text-white transition hover:bg-green-700
                 disabled:cursor-not-allowed disabled:opacity-60"
@@ -150,6 +176,25 @@ export default function TicketHistoryModal({ ticket, onClose }) {
               )}
             </button>
 
+            {/* Export PDF */}
+            <button
+              type="button"
+              onClick={handleExportHistoryPDF}
+              disabled={exportingPDF}
+              title="Unduh history tiket PDF"
+              aria-label="Unduh history tiket PDF"
+              className="rounded-lg bg-red-600 px-3 py-2 text-sm font-medium
+                text-white transition hover:bg-red-700
+                disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {exportingPDF ? (
+                <span className="text-xs">...</span>
+              ) : (
+                <FaFilePdf size={16} />
+              )}
+            </button>
+
+            {/* Tutup modal */}
             <button
               type="button"
               onClick={onClose}
@@ -160,6 +205,7 @@ export default function TicketHistoryModal({ ticket, onClose }) {
               ✕
             </button>
           </div>
+
         </div>
 
         {/* EXPORT ERROR */}
