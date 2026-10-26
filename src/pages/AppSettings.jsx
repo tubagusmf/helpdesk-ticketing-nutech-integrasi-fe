@@ -1,259 +1,164 @@
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import {
-  FiImage,
-  FiMessageCircle,
-  FiSave,
-  FiSettings,
-  FiUpload,
-} from "react-icons/fi";
-
+import { FiClock, FiImage, FiMessageCircle, FiSave, FiSettings, FiUpload } from "react-icons/fi";
 import DashboardLayout from "../components/layout/DashboardLayout";
+
 import {
+  DEFAULT_APP_SETTINGS,
   getAdminAppSettings,
   getAppAssetURL,
+  mergeAppSettings,
+  normalizeAppSettings,
   updateAppSettings,
 } from "../services/appSettingsService";
+
 import { useAppSettings } from "../context/AppSettingsContext";
 
 const DEFAULT_SETTINGS = {
-  app_name: "Helpdesk Center",
-  login_title: "Helpdesk Center",
-  tagline: "Professional Ticketing System",
-
-  logo_url: "",
-  login_icon_url: "",
-  favicon_url: "",
-
-  whatsapp_number: "6281119521124",
-  whatsapp_display_number: "081119521124",
-
-  whatsapp_message: `Halo Admin,
-
-Mohon untuk mendaftar akun Helpdesk dengan mengisi data berikut:
-
-Nama Lengkap:
-Email:
-Project:
-
-Terima kasih.`,
-
-  primary_color: "#EA580C",
-  sidebar_title: "Helpdesk Center",
-  footer_text: "© 2026 Helpdesk CCIT Nutech Integrasi",
-  app_version: "Version 1.0.0",
+  ...DEFAULT_APP_SETTINGS,
 };
 
-const SETTING_ALIASES = {
-  app_name: ["app_name", "appName", "AppName"],
-  login_title: ["login_title", "loginTitle", "LoginTitle"],
-  tagline: ["tagline", "Tagline"],
+const PRIORITY_FIELDS = [
+  {
+    key: "priority_urgent_minutes",
+    label: "URGENT",
+    defaultValue: 15,
+  },
+  {
+    key: "priority_high_minutes",
+    label: "HIGH",
+    defaultValue: 60,
+  },
+  {
+    key: "priority_medium_minutes",
+    label: "MEDIUM",
+    defaultValue: 120,
+  },
+  {
+    key: "priority_low_minutes",
+    label: "LOW",
+    defaultValue: 240,
+  },
+];
 
-  logo_url: ["logo_url", "logoUrl", "LogoURL"],
-  login_icon_url: [
-    "login_icon_url",
-    "loginIconUrl",
-    "LoginIconURL",
-  ],
-  favicon_url: ["favicon_url", "faviconUrl", "FaviconURL"],
+const MAX_SLA_MINUTES = 525600;
 
-  whatsapp_number: [
-    "whatsapp_number",
-    "whatsappNumber",
-    "WhatsAppNumber",
-    "WhatsappNumber",
-  ],
+function formatDuration(value) {
+  const minutes = Number(value);
 
-  whatsapp_display_number: [
-    "whatsapp_display_number",
-    "whatsappDisplayNumber",
-    "WhatsAppDisplayNumber",
-  ],
-
-  whatsapp_message: [
-    "whatsapp_message",
-    "whatsappMessage",
-    "WhatsAppMessage",
-  ],
-
-  primary_color: [
-    "primary_color",
-    "primaryColor",
-    "PrimaryColor",
-  ],
-
-  sidebar_title: [
-    "sidebar_title",
-    "sidebarTitle",
-    "SidebarTitle",
-  ],
-
-  footer_text: [
-    "footer_text",
-    "footerText",
-    "FooterText",
-  ],
-
-  app_version: [
-    "app_version",
-    "appVersion",
-    "AppVersion",
-  ],
-};
-
-const PRESERVE_ON_EMPTY = new Set([
-  "logo_url",
-  "login_icon_url",
-  "favicon_url",
-  "whatsapp_number",
-  "whatsapp_display_number",
-  "whatsapp_message",
-]);
-
-function unwrapSettingsResponse(response) {
-  let value = response;
-
-  for (let depth = 0; depth < 5; depth += 1) {
-    if (
-      !value ||
-      typeof value !== "object" ||
-      Array.isArray(value)
-    ) {
-      break;
-    }
-
-    if (
-      value.data &&
-      typeof value.data === "object" &&
-      !Array.isArray(value.data)
-    ) {
-      value = value.data;
-      continue;
-    }
-
-    if (
-      value.settings &&
-      typeof value.settings === "object" &&
-      !Array.isArray(value.settings)
-    ) {
-      value = value.settings;
-      continue;
-    }
-
-    break;
+  if (!Number.isInteger(minutes) || minutes < 1) {
+    return "-";
   }
 
-  return value &&
-    typeof value === "object" &&
-    !Array.isArray(value)
-    ? value
-    : {};
+  if (minutes >= 1440 && minutes % 1440 === 0) {
+    return `${minutes / 1440} hari`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+
+  if (hours > 0 && remainingMinutes === 0) {
+    return `${hours} jam`;
+  }
+
+  if (hours > 0) {
+    return `${hours} jam ${remainingMinutes} menit`;
+  }
+
+  return `${minutes} menit`;
 }
 
-function normalizeSettings(response) {
-  const source = unwrapSettingsResponse(response);
-  const result = { ...DEFAULT_SETTINGS };
+function TextField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  maxLength,
+  type = "text",
+  required = false,
+}) {
+  return (
+    <label className="block min-w-0 space-y-1.5">
+      <span className="text-sm font-medium text-gray-700">
+        {label}
+      </span>
 
-  Object.entries(SETTING_ALIASES).forEach(
-    ([field, aliases]) => {
-      for (const alias of aliases) {
-        if (
-          Object.prototype.hasOwnProperty.call(
-            source,
-            alias,
-          ) &&
-          source[alias] !== null &&
-          source[alias] !== undefined
-        ) {
-          result[field] = String(source[alias]);
-          break;
+      <input
+        type={type}
+        value={value ?? ""}
+        maxLength={maxLength}
+        placeholder={placeholder}
+        required={required}
+        onChange={(event) =>
+          onChange(event.target.value)
         }
-      }
-    },
+        className="
+          w-full min-w-0 rounded-lg
+          border border-gray-300 px-3 py-2.5
+          text-sm outline-none transition
+          focus:border-orange-400
+          focus:ring-2 focus:ring-orange-100
+        "
+      />
+    </label>
   );
-
-  const fallbackFields = [
-    "app_name",
-    "login_title",
-    "tagline",
-    "sidebar_title",
-    "footer_text",
-    "app_version",
-    "whatsapp_number",
-    "whatsapp_display_number",
-    "whatsapp_message",
-  ];
-
-  fallbackFields.forEach((field) => {
-    if (!String(result[field] ?? "").trim()) {
-      result[field] = DEFAULT_SETTINGS[field];
-    }
-  });
-
-  result.whatsapp_number = String(
-    result.whatsapp_number,
-  )
-    .trim()
-    .replace(/\D/g, "");
-
-  if (!result.whatsapp_number) {
-    result.whatsapp_number =
-      DEFAULT_SETTINGS.whatsapp_number;
-  }
-
-  if (
-    !/^#[0-9A-Fa-f]{6}$/.test(
-      result.primary_color,
-    )
-  ) {
-    result.primary_color =
-      DEFAULT_SETTINGS.primary_color;
-  }
-
-  return result;
 }
 
-function mergeSettings(current, response) {
-  const source = unwrapSettingsResponse(response);
-  const merged = { ...current };
+function PriorityDurationField({
+  label,
+  value,
+  onChange,
+  defaultValue,
+}) {
+  return (
+    <label className="block min-w-0 space-y-1.5">
+      <span className="text-sm font-medium text-gray-700">
+        SLA {label}
+      </span>
 
-  Object.entries(SETTING_ALIASES).forEach(
-    ([field, aliases]) => {
-      for (const alias of aliases) {
-        if (
-          !Object.prototype.hasOwnProperty.call(
-            source,
-            alias,
-          )
-        ) {
-          continue;
-        }
+      <div className="relative">
+        <input
+          type="number"
+          min={1}
+          max={MAX_SLA_MINUTES}
+          step={1}
+          required
+          value={value ?? ""}
+          onChange={(event) => {
+            const rawValue = event.target.value;
 
-        const rawValue = source[alias];
+            onChange(
+              rawValue === "" ? "" : Number(rawValue),
+            );
+          }}
+          className="
+            w-full rounded-lg border
+            border-gray-300 px-3 py-2.5
+            pr-20 text-sm outline-none
+            focus:border-orange-400
+            focus:ring-2 focus:ring-orange-100
+          "
+        />
 
-        if (
-          rawValue === null ||
-          rawValue === undefined
-        ) {
-          break;
-        }
+        <span
+          className="
+            pointer-events-none absolute
+            inset-y-0 right-3 flex
+            items-center text-sm text-gray-400
+          "
+        >
+          menit
+        </span>
+      </div>
 
-        const value = String(rawValue);
-
-        if (
-          value.trim() === "" &&
-          PRESERVE_ON_EMPTY.has(field)
-        ) {
-          break;
-        }
-
-        merged[field] = value;
-        break;
-      }
-    },
+      <p className="text-xs text-gray-500">
+        Preview:{" "}
+        <span className="font-medium text-orange-700">
+          {formatDuration(value)}
+        </span>
+      </p>
+    </label>
   );
-
-  return normalizeSettings(merged);
 }
 
 function useFilePreview(file, existingURL) {
@@ -277,42 +182,6 @@ function useFilePreview(file, existingURL) {
   }, [file, existingURL]);
 
   return preview;
-}
-
-function TextField({
-  label,
-  value,
-  onChange,
-  placeholder,
-  maxLength,
-  type = "text",
-  required = false,
-}) {
-  return (
-    <label className="block min-w-0 space-y-1.5">
-      <span className="text-sm font-medium text-gray-700">
-        {label}
-      </span>
-
-      <input
-        type={type}
-        value={value ?? ""}
-        maxLength={maxLength}
-        placeholder={placeholder}
-        onChange={(event) =>
-          onChange(event.target.value)
-        }
-        required={required}
-        className="
-          w-full min-w-0 rounded-lg
-          border border-gray-300 px-3 py-2.5
-          text-sm outline-none transition
-          focus:border-orange-400
-          focus:ring-2 focus:ring-orange-100
-        "
-      />
-    </label>
-  );
 }
 
 function ImageField({
@@ -339,14 +208,17 @@ function ImageField({
       return;
     }
 
+    if (selectedFile.size <= 0) {
+      toast.error("File gambar kosong.");
+      return;
+    }
+
     if (selectedFile.size > maxSize) {
       toast.error(
-        `Ukuran file maksimal ${Math.round(
-          maxSize / (1024 * 1024),
-        )} MB.`,
+        `Ukuran ${label} maksimal ${
+          maxSize / (1024 * 1024)
+        } MB.`,
       );
-
-      onChange(null);
       return;
     }
 
@@ -426,9 +298,11 @@ function ImageField({
 
 export default function AppSettings() {
   const { refreshSettings } = useAppSettings();
-  const [form, setForm] = useState(
-    () => ({ ...DEFAULT_SETTINGS }),
-  );
+
+  const [form, setForm] = useState(() => ({
+    ...DEFAULT_SETTINGS,
+  }));
+
   const [logoFile, setLogoFile] = useState(null);
   const [loginIconFile, setLoginIconFile] = useState(null);
   const [faviconFile, setFaviconFile] = useState(null);
@@ -443,7 +317,13 @@ export default function AppSettings() {
         const response =
           await getAdminAppSettings();
 
-        setForm(normalizeSettings(response));
+        setForm(
+          normalizeAppSettings(response),
+        );
+
+        setLogoFile(null);
+        setLoginIconFile(null);
+        setFaviconFile(null);
 
         if (showToast) {
           toast.success(
@@ -457,7 +337,7 @@ export default function AppSettings() {
         );
 
         toast.error(
-          error.message ||
+          error?.message ||
             "Gagal memuat pengaturan aplikasi.",
         );
       } finally {
@@ -468,47 +348,37 @@ export default function AppSettings() {
   );
 
   useEffect(() => {
-    let active = true;
+    loadSettings();
+  }, [loadSettings]);
 
-    async function initialLoad() {
-      try {
-        const response =
-          await getAdminAppSettings();
+  const updateField = useCallback(
+    (name, value) => {
+      setForm((current) => ({
+        ...current,
+        [name]: value,
+      }));
+    },
+    [],
+  );
 
-        if (active) {
-          setForm(normalizeSettings(response));
-        }
-      } catch (error) {
-        if (active) {
-          console.error(
-            "Gagal mengambil pengaturan:",
-            error,
-          );
+  const validatePrioritySettings = () => {
+    for (const field of PRIORITY_FIELDS) {
+      const value = Number(form[field.key]);
 
-          toast.error(
-            error.message ||
-              "Gagal mengambil pengaturan aplikasi.",
-          );
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
+      if (
+        !Number.isInteger(value) ||
+        value < 1 ||
+        value > MAX_SLA_MINUTES
+      ) {
+        toast.error(
+          `SLA ${field.label} harus berupa bilangan bulat antara 1 dan ${MAX_SLA_MINUTES} menit.`,
+        );
+
+        return false;
       }
     }
 
-    initialLoad();
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const updateField = (name, value) => {
-    setForm((current) => ({
-      ...current,
-      [name]: value,
-    }));
+    return true;
   };
 
   const handleSubmit = async (event) => {
@@ -531,10 +401,21 @@ export default function AppSettings() {
       return;
     }
 
-    if (!form.whatsapp_message.trim()) {
+    if (!String(form.whatsapp_display_number || "").trim()) {
+      toast.error(
+        "Nomor WhatsApp yang ditampilkan wajib diisi.",
+      );
+      return;
+    }
+
+    if (!String(form.whatsapp_message || "").trim()) {
       toast.error(
         "Template pesan WhatsApp wajib diisi.",
       );
+      return;
+    }
+
+    if (!validatePrioritySettings()) {
       return;
     }
 
@@ -554,6 +435,10 @@ export default function AppSettings() {
         "sidebar_title",
         "footer_text",
         "app_version",
+        "priority_urgent_minutes",
+        "priority_high_minutes",
+        "priority_medium_minutes",
+        "priority_low_minutes",
       ];
 
       fields.forEach((key) => {
@@ -562,7 +447,7 @@ export default function AppSettings() {
             ? whatsappNumber
             : form[key] ?? "";
 
-        payload.append(key, value);
+        payload.append(key, String(value));
       });
 
       if (logoFile) {
@@ -570,10 +455,7 @@ export default function AppSettings() {
       }
 
       if (loginIconFile) {
-        payload.append(
-          "login_icon",
-          loginIconFile,
-        );
+        payload.append("login_icon", loginIconFile);
       }
 
       if (faviconFile) {
@@ -583,7 +465,7 @@ export default function AppSettings() {
       const savedResponse =
         await updateAppSettings(payload);
 
-      let nextSettings = mergeSettings(
+      let nextSettings = mergeAppSettings(
         form,
         savedResponse,
       );
@@ -592,19 +474,18 @@ export default function AppSettings() {
         const latestResponse =
           await getAdminAppSettings();
 
-        nextSettings = mergeSettings(
+        nextSettings = mergeAppSettings(
           nextSettings,
           latestResponse,
         );
       } catch (refreshError) {
         console.warn(
-          "Pengaturan tersimpan, tetapi gagal membaca ulang data:",
+          "Konfigurasi tersimpan, tetapi gagal mengambil ulang data:",
           refreshError,
         );
       }
 
       setForm(nextSettings);
-
       setLogoFile(null);
       setLoginIconFile(null);
       setFaviconFile(null);
@@ -621,7 +502,7 @@ export default function AppSettings() {
       );
 
       toast.error(
-        error.message ||
+        error?.message ||
           "Gagal menyimpan pengaturan aplikasi.",
       );
     } finally {
@@ -642,6 +523,8 @@ export default function AppSettings() {
             p-5 shadow-sm sm:p-6
           "
         >
+          {/* HEADER */}
+
           <div className="mb-6 flex items-start gap-3">
             <div className="shrink-0 rounded-xl bg-orange-50 p-3 text-orange-600">
               <FiSettings size={22} />
@@ -653,9 +536,8 @@ export default function AppSettings() {
               </h2>
 
               <p className="mt-1 text-sm text-gray-500">
-                Ubah branding, teks halaman Login,
-                WhatsApp, dan informasi footer tanpa
-                mengedit source code.
+                Kelola branding, informasi WhatsApp,
+                SLA prioritas tiket, dan footer aplikasi.
               </p>
             </div>
           </div>
@@ -666,6 +548,8 @@ export default function AppSettings() {
             </div>
           ) : (
             <div className="space-y-7">
+              {/* IDENTITAS DAN BRANDING */}
+
               <section className="space-y-4">
                 <div>
                   <h3 className="font-semibold text-gray-800">
@@ -673,9 +557,8 @@ export default function AppSettings() {
                   </h3>
 
                   <p className="mt-1 text-xs text-gray-500">
-                    Logo digunakan pada Sidebar; ikon
-                    Login ditampilkan di bagian atas
-                    kartu Login.
+                    Atur nama aplikasi, logo, ikon Login,
+                    favicon, dan warna utama.
                   </p>
                 </div>
 
@@ -747,16 +630,11 @@ export default function AppSettings() {
                   file={faviconFile}
                   currentURL={form.favicon_url}
                   onChange={setFaviconFile}
-                  maxSize={1 * 1024 * 1024}
+                  maxSize={1024 * 1024}
                   hint="PNG, JPG, WebP, atau ICO. Maksimal 1 MB."
                 />
 
-                <label
-                  className="
-                    flex flex-wrap items-center gap-3
-                    rounded-xl border border-gray-200 p-4
-                  "
-                >
+                <label className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 p-4">
                   <span className="text-sm font-medium text-gray-700">
                     Warna utama aplikasi
                   </span>
@@ -785,6 +663,80 @@ export default function AppSettings() {
                     {form.primary_color}
                   </span>
                 </label>
+              </section>
+
+              <div className="border-t border-gray-100" />
+
+              {/* PRIORITAS DAN SLA */}
+
+              <section className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-xl bg-orange-50 p-2.5 text-orange-600">
+                    <FiClock size={20} />
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-gray-800">
+                      Prioritas dan SLA Ticket
+                    </h3>
+
+                    <p className="mt-1 text-xs leading-relaxed text-gray-500">
+                      Tentukan durasi SLA setiap prioritas
+                      dalam menit. Durasi ini dipakai saat
+                      tiket baru dibuat.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {PRIORITY_FIELDS.map((field) => (
+                    <PriorityDurationField
+                      key={field.key}
+                      label={field.label}
+                      value={form[field.key]}
+                      defaultValue={field.defaultValue}
+                      onChange={(value) =>
+                        updateField(field.key, value)
+                      }
+                    />
+                  ))}
+                </div>
+
+                <div className="rounded-xl border border-orange-100 bg-orange-50 p-4">
+                  <p className="text-sm font-semibold text-orange-800">
+                    Ringkasan SLA
+                  </p>
+
+                  <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {PRIORITY_FIELDS.map((field) => (
+                      <div
+                        key={field.key}
+                        className="
+                          flex items-center justify-between
+                          gap-3 rounded-lg bg-white
+                          px-3 py-2 text-sm
+                        "
+                      >
+                        <span className="font-medium text-gray-700">
+                          {field.label}
+                        </span>
+
+                        <span className="font-semibold text-orange-700">
+                          {formatDuration(
+                            form[field.key],
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <p className="text-xs leading-relaxed text-gray-500">
+                  Perubahan durasi berlaku untuk tiket
+                  baru. Tenggat tiket lama tidak diubah
+                  otomatis karena waktu sla telah
+                  tercatat di database.
+                </p>
               </section>
 
               <div className="border-t border-gray-100" />
@@ -839,7 +791,7 @@ export default function AppSettings() {
                   </span>
 
                   <textarea
-                    value={form.whatsapp_message}
+                    value={form.whatsapp_message ?? ""}
                     onChange={(event) =>
                       updateField(
                         "whatsapp_message",
@@ -859,25 +811,18 @@ export default function AppSettings() {
                   />
 
                   <span className="text-xs text-gray-400">
-                    Maksimal 4.000 karakter. Baris baru
-                    dipertahankan pada pesan WhatsApp.
+                    Maksimal 4.000 karakter.
                   </span>
                 </label>
 
                 <div className="rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
                   <p className="mb-1 font-medium">
-                    Pratinjau tautan WhatsApp
+                    Pratinjau nomor WhatsApp
                   </p>
 
                   <p className="break-all">
-                    https://wa.me/
-                    {form.whatsapp_number ||
-                      DEFAULT_SETTINGS.whatsapp_number}
-                  </p>
-
-                  <p className="mt-1 text-xs text-gray-400">
-                    Nomor dan template ini digunakan
-                    pada halaman Login.
+                    {form.whatsapp_display_number ||
+                      form.whatsapp_number}
                   </p>
                 </div>
               </section>
@@ -897,7 +842,7 @@ export default function AppSettings() {
                   </span>
 
                   <textarea
-                    value={form.footer_text}
+                    value={form.footer_text ?? ""}
                     onChange={(event) =>
                       updateField(
                         "footer_text",
