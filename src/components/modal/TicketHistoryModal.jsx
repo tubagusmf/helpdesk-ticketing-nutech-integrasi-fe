@@ -1,10 +1,60 @@
 import { useEffect, useState } from "react";
+import { jwtDecode } from "jwt-decode";
 import { getTicketHistories, exportTicketHistory, exportTicketHistoryPDF } from "../../services/ticketService";
 import useTicketSocket from "../../hooks/useTicketSocket";
 import { FiDownload } from "react-icons/fi";
 import { FaFilePdf } from "react-icons/fa";
+import { ROLE } from "../../constants/role";
+
+const getCurrentRoleId = () => {
+  try {
+    const token = localStorage.getItem("token");
+
+    if (!token) return null;
+
+    const decoded = jwtDecode(token);
+
+    const rawRole =
+      decoded?.role_id ??
+      decoded?.roleId ??
+      decoded?.role ??
+      decoded?.role_name;
+
+    if (typeof rawRole === "string") {
+      const roleName = rawRole.trim().toUpperCase();
+
+      const roleMap = {
+        ADMINISTRATOR: ROLE.ADMINISTRATOR,
+        STAFF: ROLE.STAFF,
+        USER: ROLE.USER,
+        EXECUTIVE: ROLE.EXECUTIVE,
+        ENGINEER: ROLE.ENGINEER,
+      };
+
+      if (roleMap[roleName] !== undefined) {
+        return roleMap[roleName];
+      }
+    }
+
+    const roleId = Number(rawRole);
+
+    return Number.isInteger(roleId) ? roleId : null;
+  } catch (error) {
+    console.error("Gagal membaca role pengguna:", error);
+    return null;
+  }
+};
 
 export default function TicketHistoryModal({ ticket, onClose }) {
+  const currentRoleId = getCurrentRoleId();
+
+  const canExportHistory = [
+    ROLE.ADMINISTRATOR,
+    ROLE.STAFF,
+    ROLE.EXECUTIVE,
+    ROLE.ENGINEER,
+  ].includes(currentRoleId);
+
   const [histories, setHistories] = useState([]);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState("");
@@ -144,6 +194,7 @@ export default function TicketHistoryModal({ ticket, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white p-6 shadow-lg">
+        
         {/* HEADER */}
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -156,60 +207,75 @@ export default function TicketHistoryModal({ ticket, onClose }) {
             </p>
           </div>
 
-          
           <div className="flex shrink-0 items-center gap-2">
-            {/* Export Excel */}
-            <button
-              type="button"
-              onClick={handleExportHistory}
-              disabled={exporting}
-              title="Unduh history tiket Excel"
-              aria-label="Unduh history tiket Excel"
-              className="rounded-lg bg-green-600 px-3 py-2 text-sm font-medium
-                text-white transition hover:bg-green-700
-                disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {exporting ? (
-                <span className="text-xs">...</span>
-              ) : (
-                <FiDownload size={16} />
-              )}
-            </button>
 
-            {/* Export PDF */}
-            <button
-              type="button"
-              onClick={handleExportHistoryPDF}
-              disabled={exportingPDF}
-              title="Unduh history tiket PDF"
-              aria-label="Unduh history tiket PDF"
-              className="rounded-lg bg-red-600 px-3 py-2 text-sm font-medium
-                text-white transition hover:bg-red-700
-                disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {exportingPDF ? (
-                <span className="text-xs">...</span>
-              ) : (
-                <FaFilePdf size={16} />
-              )}
-            </button>
+            {/* EXPORT EXCEL DAN PDF */}
+            {canExportHistory && (
+              <>
+                {/* Export Excel */}
+                <button
+                  type="button"
+                  onClick={handleExportHistory}
+                  disabled={exporting}
+                  title="Unduh history tiket Excel"
+                  aria-label="Unduh history tiket Excel"
+                  className="
+                    rounded-lg bg-green-600 px-3 py-2
+                    text-sm font-medium text-white
+                    transition hover:bg-green-700
+                    disabled:cursor-not-allowed
+                    disabled:opacity-60
+                  "
+                >
+                  {exporting ? (
+                    <span className="text-xs">...</span>
+                  ) : (
+                    <FiDownload size={16} />
+                  )}
+                </button>
 
-            {/* Tutup modal */}
+                {/* Export PDF */}
+                <button
+                  type="button"
+                  onClick={handleExportHistoryPDF}
+                  disabled={exportingPDF}
+                  title="Unduh history tiket PDF"
+                  aria-label="Unduh history tiket PDF"
+                  className="
+                    rounded-lg bg-red-600 px-3 py-2
+                    text-sm font-medium text-white
+                    transition hover:bg-red-700
+                    disabled:cursor-not-allowed
+                    disabled:opacity-60
+                  "
+                >
+                  {exportingPDF ? (
+                    <span className="text-xs">...</span>
+                  ) : (
+                    <FaFilePdf size={16} />
+                  )}
+                </button>
+              </>
+            )}
+
+            {/* Tutup modal - tetap tampil untuk semua role */}
             <button
               type="button"
               onClick={onClose}
               aria-label="Tutup riwayat tiket"
-              className="h-fit rounded-md p-2 text-gray-500
-                transition hover:bg-gray-100 hover:text-gray-800"
+              className="
+                h-fit rounded-md p-2 text-gray-500
+                transition hover:bg-gray-100
+                hover:text-gray-800
+              "
             >
               ✕
             </button>
           </div>
-
         </div>
 
         {/* EXPORT ERROR */}
-        {exportError && (
+        {canExportHistory && exportError && (
           <p
             role="alert"
             className="mb-3 rounded-lg border border-red-200

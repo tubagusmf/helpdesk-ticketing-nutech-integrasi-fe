@@ -1,4 +1,3 @@
-
 import { useEffect, useRef } from "react";
 import { connectWebSocket, subscribeWebSocket } from "../services/websocket";
 
@@ -46,8 +45,6 @@ export default function useTicketSocket({
   ]);
 
   useEffect(() => {
-    connectWebSocket();
-
     const unsubscribe = subscribeWebSocket((message) => {
       switch (message.type) {
         case "NEW_TICKET":
@@ -86,6 +83,8 @@ export default function useTicketSocket({
           break;
       }
     });
+
+    connectWebSocket();
 
     return () => {
       unsubscribe();

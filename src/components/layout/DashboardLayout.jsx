@@ -338,7 +338,6 @@ export default function DashboardLayout({
   const fetchingNotifRef = useRef(false);
   const notificationKeysRef = useRef(new Set());
 
-  // Pulihkan preferensi Auto Refresh untuk akun yang sedang login.
   useEffect(() => {
     if (!userId) {
       setIsAutoRefresh(false);
@@ -358,7 +357,6 @@ export default function DashboardLayout({
     return undefined;
   }, [userId]);
 
-  // Muat ulang halaman setiap 30 detik ketika Auto Refresh aktif.
   useEffect(() => {
     if (!userId || !isAutoRefresh) {
       return undefined;
@@ -414,12 +412,18 @@ export default function DashboardLayout({
 
   useEffect(() => {
     if (!userId) {
+      setIsOnline(null);
       return undefined;
     }
 
     let mounted = true;
+    let requestInProgress = false;
 
     const fetchStatus = async () => {
+      if (requestInProgress) return;
+
+      requestInProgress = true;
+
       try {
         const userData = await getCurrentUser();
 
@@ -427,14 +431,21 @@ export default function DashboardLayout({
 
         setIsOnline(userData?.is_online ?? false);
       } catch (error) {
-        console.error("Gagal fetch status:", error);
+        console.error("Gagal mengambil status user:", error);
+      } finally {
+        requestInProgress = false;
       }
     };
 
-    fetchStatus();
+    void fetchStatus();
+
+    const interval = window.setInterval(() => {
+      void fetchStatus();
+    }, 10_000);
 
     return () => {
       mounted = false;
+      window.clearInterval(interval);
     };
   }, [userId]);
 
