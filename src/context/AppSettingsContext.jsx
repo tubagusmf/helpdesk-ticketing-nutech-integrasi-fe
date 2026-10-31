@@ -39,6 +39,14 @@ export function AppSettingsProvider({ children }) {
 
   useEffect(() => {
     refreshSettings();
+
+    const intervalId = window.setInterval(() => {
+      refreshSettings();
+    }, 60 * 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
   }, [refreshSettings]);
 
   useEffect(() => {

@@ -15,20 +15,18 @@ import {
   FiUser,
 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
-
 import TicketResolutionModal from "../modal/TicketResolutionModal";
 import TicketCommentModal from "../modal/TicketCommentModal";
 import TicketHistoryModal from "../modal/TicketHistoryModal";
 import TicketReassignModal from "../modal/TicketReassignModal";
 import TicketEngineerResolutionModal from "../modal/TicketEngineerResolutionModal";
+import { useAppSettings } from "../../context/AppSettingsContext";
 
 import {
   markTicketCommentsAsRead,
   responseTicket,
 } from "../../services/ticketService";
 import { ROLE } from "../../constants/role";
-
-const RESPONSE_SLA_SECONDS = 3 * 60;
 
 const PRIORITY_COLOR = {
   LOW: "bg-gray-100 text-gray-600 ring-gray-200",
@@ -335,12 +333,21 @@ function TicketSla({
   );
 }
 
-export default function TicketRow({
-  ticket,
-  role,
-  userId,
-}) {
+export default function TicketRow({ ticket, role, userId }) {
   const navigate = useNavigate();
+
+  const { settings } = useAppSettings();
+
+  const configuredResponseMinutes = Number(
+    settings?.staff_response_sla_minutes,
+  );
+
+  const responseSlaSeconds =
+    Number.isInteger(configuredResponseMinutes) &&
+    configuredResponseMinutes >= 1 &&
+    configuredResponseMinutes <= 525600
+      ? configuredResponseMinutes * 60
+      : 3 * 60;
 
   const [showResolution, setShowResolution] =
     useState(false);
@@ -435,7 +442,7 @@ export default function TicketRow({
     );
 
     const remainingSeconds =
-      RESPONSE_SLA_SECONDS - elapsedSeconds;
+      responseSlaSeconds - elapsedSeconds;
 
     if (remainingSeconds <= 0) {
       return {
@@ -448,8 +455,7 @@ export default function TicketRow({
       remainingSeconds / 60,
     );
 
-    const seconds =
-      remainingSeconds % 60;
+    const seconds = remainingSeconds % 60;
 
     return {
       overdue: false,
@@ -461,6 +467,7 @@ export default function TicketRow({
   }, [
     canShowResponseSla,
     ticket.staff_assigned_at,
+    responseSlaSeconds,
     now,
   ]);
 

@@ -161,6 +161,69 @@ function PriorityDurationField({
   );
 }
 
+function SystemDurationField({
+  label,
+  value,
+  onChange,
+  min,
+  max,
+  description,
+}) {
+  return (
+    <div className="block min-w-0 space-y-1.5">
+      <label className="block text-sm font-medium text-gray-700">
+        {label}
+      </label>
+
+      <div className="relative">
+        <input
+          type="number"
+          min={min}
+          max={max}
+          step={1}
+          required
+          value={value ?? ""}
+          onChange={(event) => {
+            const rawValue = event.target.value;
+
+            onChange(
+              rawValue === "" ? "" : Number(rawValue),
+            );
+          }}
+          className="
+            w-full rounded-lg border
+            border-gray-300 px-3 py-2.5
+            pr-20 text-sm outline-none
+            focus:border-orange-400
+            focus:ring-2 focus:ring-orange-100
+          "
+        />
+
+        <span className="
+          pointer-events-none absolute
+          inset-y-0 right-3 flex
+          items-center text-sm text-gray-400
+        ">
+          menit
+        </span>
+      </div>
+
+      {/* PREVIEW DURASI */}
+
+      <p className="text-xs text-gray-500">
+        Preview:{" "}
+        <span className="font-semibold text-orange-700">
+          {formatDuration(value)}
+        </span>
+      </p>
+
+      <p className="text-xs leading-relaxed text-gray-400">
+        {description}
+      </p>
+    </div>
+  );
+}
+
 function useFilePreview(file, existingURL) {
   const [preview, setPreview] = useState(
     existingURL || "",
@@ -419,6 +482,36 @@ export default function AppSettings() {
       return;
     }
 
+    const loginMinutes = Number(
+      form.login_session_minutes,
+    );
+
+    if (
+      !Number.isInteger(loginMinutes) ||
+      loginMinutes < 5 ||
+      loginMinutes > 43200
+    ) {
+      toast.error(
+        "Durasi expired login harus antara 5 menit sampai 30 hari.",
+      );
+      return;
+    }
+
+    const responseMinutes = Number(
+      form.staff_response_sla_minutes,
+    );
+
+    if (
+      !Number.isInteger(responseMinutes) ||
+      responseMinutes < 1 ||
+      responseMinutes > 525600
+    ) {
+      toast.error(
+        "Durasi response ticket harus antara 1 sampai 525600 menit.",
+      );
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -439,6 +532,8 @@ export default function AppSettings() {
         "priority_high_minutes",
         "priority_medium_minutes",
         "priority_low_minutes",
+        "login_session_minutes",
+        "staff_response_sla_minutes",
       ];
 
       fields.forEach((key) => {
@@ -667,7 +762,7 @@ export default function AppSettings() {
 
               <div className="border-t border-gray-100" />
 
-              {/* PRIORITAS DAN SLA */}
+              {/* PRIORITAS & SLA */}
 
               <section className="space-y-4">
                 <div className="flex items-start gap-3">
@@ -737,6 +832,106 @@ export default function AppSettings() {
                   otomatis karena waktu sla telah
                   tercatat di database.
                 </p>
+              </section>
+
+              <div className="border-t border-gray-100" />
+
+              {/* SESI LOGIN & DURATION RESPONSE TIME */}
+
+              <section className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-xl bg-orange-50 p-2.5 text-orange-600">
+                    <FiClock size={20} />
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-gray-800">
+                      Sesi Login dan Response Ticket
+                    </h3>
+
+                    <p className="mt-1 text-xs text-gray-500">
+                      Atur masa berlaku autentikasi pengguna dan batas
+                      waktu respons pertama Staff CCIT.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+
+                {/* INPUT DURASI */}
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <SystemDurationField
+                    label="Durasi Expired Login"
+                    value={form.login_session_minutes}
+                    min={5}
+                    max={43200}
+                    onChange={(value) =>
+                      updateField("login_session_minutes", value)
+                    }
+                    description="Default 600 menit (10 jam). Berlaku untuk token yang diterbitkan saat login berikutnya."
+                  />
+
+                  <SystemDurationField
+                    label="Durasi Response Ticket"
+                    value={form.staff_response_sla_minutes}
+                    min={1}
+                    max={525600}
+                    onChange={(value) =>
+                      updateField("staff_response_sla_minutes", value)
+                    }
+                    description="Default 3 menit. Batas waktu Staff memberikan respons pertama setelah assignment."
+                  />
+                </div>
+
+                {/* RINGKASAN DURASI */}
+
+                <div className="
+                  rounded-xl border border-orange-100
+                  bg-orange-50 p-4
+                ">
+                  <p className="text-sm font-semibold text-orange-800">
+                    Ringkasan Durasi
+                  </p>
+
+                  <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+
+                    {/* EXPIRED LOGIN */}
+
+                    <div className="
+                      flex items-center justify-between
+                      gap-3 rounded-lg bg-white
+                      px-3 py-3 text-sm
+                    ">
+                      <span className="font-medium text-gray-700">
+                        Expired Login
+                      </span>
+
+                      <span className="font-semibold text-orange-700">
+                        {formatDuration(form.login_session_minutes)}
+                      </span>
+                    </div>
+
+                    {/* RESPONSE TICKET */}
+
+                    <div className="
+                      flex items-center justify-between
+                      gap-3 rounded-lg bg-white
+                      px-3 py-3 text-sm
+                    ">
+                      <span className="font-medium text-gray-700">
+                        Response Ticket
+                      </span>
+
+                      <span className="font-semibold text-orange-700">
+                        {formatDuration(form.staff_response_sla_minutes)}
+                      </span>
+                    </div>
+
+                  </div>
+                </div>
+
+              </div>
               </section>
 
               <div className="border-t border-gray-100" />

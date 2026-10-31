@@ -38,6 +38,8 @@ Terima kasih.`,
   priority_high_minutes: 60,
   priority_medium_minutes: 120,
   priority_low_minutes: 240,
+  login_session_minutes: 600,
+  staff_response_sla_minutes: 3,
 };
 
 const PRIORITY_DEFAULTS = {
@@ -150,6 +152,16 @@ const FIELD_ALIASES = {
     "priority_low_minutes",
     "priorityLowMinutes",
     "PriorityLowMinutes",
+  ],
+
+  login_session_minutes: [
+    "login_session_minutes",
+    "loginSessionMinutes",
+  ],
+
+  staff_response_sla_minutes: [
+    "staff_response_sla_minutes",
+    "staffResponseSlaMinutes",
   ],
 };
 
@@ -287,6 +299,30 @@ export function normalizeAppSettings(response) {
       Number.isInteger(minutes) &&
       minutes >= 1 &&
       minutes <= MAX_PRIORITY_MINUTES
+        ? minutes
+        : defaultValue;
+  }
+
+  const systemDurationDefaults = {
+    login_session_minutes: 600,
+    staff_response_sla_minutes: 3,
+  };
+
+  for (const [field, defaultValue] of Object.entries(
+    systemDurationDefaults,
+  )) {
+    const minutes = Number(result[field]);
+
+    const minValue =
+      field === "login_session_minutes" ? 5 : 1;
+
+    const maxValue =
+      field === "login_session_minutes" ? 43200 : 525600;
+
+    result[field] =
+      Number.isInteger(minutes) &&
+      minutes >= minValue &&
+      minutes <= maxValue
         ? minutes
         : defaultValue;
   }
