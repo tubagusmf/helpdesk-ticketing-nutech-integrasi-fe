@@ -21,7 +21,7 @@ const createCustomExportMenu = (basePath) => ({
 export const navigationMenu = {
   administrator: [
     createDashboardMenu("/admin"),
-    { label: "Data Tiket", path: "/admin/tickets", icon: FiFileText },
+    { label: "Manajemen Tiket", path: "/admin/tickets", icon: FiFileText },
     createCustomExportMenu("/admin"),
     { label: "Manajemen User", path: "/admin/users", icon: FiUsers },
     { label: "Master Data", path: "/admin/master", icon: FiDatabase },
@@ -29,20 +29,20 @@ export const navigationMenu = {
   ],
   staff: [
     createDashboardMenu("/staff"),
-    { label: "Data Tiket", path: "/staff/tickets", icon: FiFileText },
+    { label: "Manajemen Tiket", path: "/staff/tickets", icon: FiFileText },
     createCustomExportMenu("/staff"),
   ],
   user: [
     createDashboardMenu("/user"),
-    { label: "Data Tiket", path: "/user/tickets", icon: FiFileText },
+    { label: "Manajemen Tiket", path: "/user/tickets", icon: FiFileText },
   ],
   executive: [
     createDashboardMenu("/executive"),
-    { label: "Data Tiket", path: "/executive/tickets", icon: FiFileText },
+    { label: "Manajemen Tiket", path: "/executive/tickets", icon: FiFileText },
     createCustomExportMenu("/executive"),
   ],
   engineer: [
     createDashboardMenu("/engineer"),
-    { label: "Data Tiket", path: "/engineer/tickets", icon: FiFileText },
+    { label: "Manajemen Tiket", path: "/engineer/tickets", icon: FiFileText },
   ],
 };
