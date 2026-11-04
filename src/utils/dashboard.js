@@ -108,12 +108,6 @@ export function normalizeRole(rawRole) {
   return null;
 }
 
-/**
- * Mengambil role akun dari JWT.
- *
- * Mendukung token yang memiliki role_id, role,
- * role_name, atau roleName.
- */
 export function getCurrentRole() {
   const token = localStorage.getItem("token");
 
@@ -338,21 +332,6 @@ export const STATUS_CONFIG = [
     key: "resolved",
     label: "Resolved",
     color: "#22c55e",
-  },
-  {
-    key: "closed",
-    label: "Closed",
-    color: "#64748b",
-  },
-  {
-    key: "onhold",
-    label: "Onhold",
-    color: "#3b82f6",
-  },
-  {
-    key: "cancel",
-    label: "Cancel",
-    color: "#9ca3af",
   },
 ];
 

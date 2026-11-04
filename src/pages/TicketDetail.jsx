@@ -582,11 +582,16 @@ export default function TicketDetail() {
                 </p>
 
                 <div className="bg-gray-50 border rounded-lg p-4">
-                  <p className="text-sm text-gray-700">
-                    {resolution.cause_name || resolution.cause?.name || "-"}
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                    {resolution.custom_cause?.trim() ||
+                      resolution.CustomCause?.trim() ||
+                      resolution.cause_name ||
+                      resolution.cause?.name ||
+                      "-"}
                   </p>
                 </div>
               </div>
+
 
               {/* SOLUSI */}
               <div>

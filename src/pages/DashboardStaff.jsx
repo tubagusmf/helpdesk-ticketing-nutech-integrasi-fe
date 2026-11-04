@@ -242,19 +242,14 @@ export default function DashboardStaff() {
       (summary, item) => {
         summary.total += Number(item.total || 0);
         summary.open += Number(item.open || 0);
-        summary.onhold += Number(item.onhold || 0);
-
-        summary.done +=
-          Number(item.resolved || 0) +
-          Number(item.closed || 0);
+        summary.resolved += Number(item.resolved || 0);
 
         return summary;
       },
       {
         total: 0,
         open: 0,
-        onhold: 0,
-        done: 0,
+        resolved: 0,
       },
     );
   }, [staffData]);
@@ -336,13 +331,12 @@ export default function DashboardStaff() {
           </div>
         ) : (
           <>
-            {/* TICKET SUMMARY CARDS */}
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {/* TICKET SUMMARY CARDS */}            
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <SummaryCard
                 title="Total Ticket"
                 value={formatNumber(ticketSummary.total)}
-                subtitle="Ticket yang di assign ke Staff lain"
+                subtitle="Ticket yang di-assign ke Staff"
                 tone="blue"
                 icon={FiUsers}
               />
@@ -355,16 +349,9 @@ export default function DashboardStaff() {
               />
 
               <SummaryCard
-                title="Ticket Onhold"
-                value={formatNumber(ticketSummary.onhold)}
-                subtitle="Sedang ditunda"
-                tone="orange"
-              />
-
-              <SummaryCard
-                title="Resolved & Closed"
-                value={formatNumber(ticketSummary.done)}
-                subtitle="Ticket selesai"
+                title="Ticket Resolved"
+                value={formatNumber(ticketSummary.resolved)}
+                subtitle="Ticket berhasil diselesaikan"
                 tone="green"
               />
             </div>
@@ -421,19 +408,7 @@ export default function DashboardStaff() {
                       </th>
 
                       <th className="px-4 py-3 text-right">
-                        Progress
-                      </th>
-
-                      <th className="px-4 py-3 text-right">
-                        Onhold
-                      </th>
-
-                      <th className="px-4 py-3 text-right">
                         Resolved
-                      </th>
-
-                      <th className="px-5 py-3 text-right">
-                        Closed
                       </th>
                     </tr>
                   </thead>
@@ -441,7 +416,7 @@ export default function DashboardStaff() {
                   <tbody>
                     {staffData.length === 0 ? (
                       <EmptyTable
-                        colSpan={7}
+                        colSpan={4}
                         message="Belum ada data Staff."
                       />
                     ) : (
@@ -462,20 +437,8 @@ export default function DashboardStaff() {
                             {formatNumber(item.open)}
                           </td>
 
-                          <td className="px-4 py-4 text-right text-yellow-600">
-                            {formatNumber(item.in_progress)}
-                          </td>
-
-                          <td className="px-4 py-4 text-right text-orange-600">
-                            {formatNumber(item.onhold)}
-                          </td>
-
                           <td className="px-4 py-4 text-right text-green-600">
                             {formatNumber(item.resolved)}
-                          </td>
-
-                          <td className="px-5 py-4 text-right text-gray-600">
-                            {formatNumber(item.closed)}
                           </td>
                         </tr>
                       ))
@@ -525,27 +488,9 @@ export default function DashboardStaff() {
                         />
 
                         <Metric
-                          label="Progress"
-                          value={item.in_progress}
-                          className="bg-yellow-50 text-yellow-600"
-                        />
-
-                        <Metric
-                          label="Onhold"
-                          value={item.onhold}
-                          className="bg-orange-50 text-orange-600"
-                        />
-
-                        <Metric
                           label="Resolved"
                           value={item.resolved}
                           className="bg-green-50 text-green-600"
-                        />
-
-                        <Metric
-                          label="Closed"
-                          value={item.closed}
-                          className="bg-gray-50 text-gray-600"
                         />
                       </div>
                     </div>

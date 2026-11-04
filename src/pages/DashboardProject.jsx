@@ -102,20 +102,16 @@ export default function DashboardProject() {
   const summary = useMemo(() => {
     return data.reduce(
       (acc, item) => {
-        acc.total += item.total || 0;
-        acc.open += item.open || 0;
-        acc.onhold += item.onhold || 0;
-        acc.done +=
-          (item.resolved || 0) +
-          (item.closed || 0);
+        acc.total += Number(item.total || 0);
+        acc.open += Number(item.open || 0);
+        acc.resolved += Number(item.resolved || 0);
 
         return acc;
       },
       {
         total: 0,
         open: 0,
-        onhold: 0,
-        done: 0,
+        resolved: 0,
       },
     );
   }, [data]);
@@ -146,8 +142,8 @@ export default function DashboardProject() {
             Loading dashboard project...
           </div>
         ) : (
-          <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <>    
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               <SummaryCard
                 title="Total Ticket"
                 value={summary.total}
@@ -158,21 +154,14 @@ export default function DashboardProject() {
               <SummaryCard
                 title="Ticket Open"
                 value={summary.open}
-                subtitle="Masih open"
+                subtitle="Masih membutuhkan penanganan"
                 tone="red"
               />
 
               <SummaryCard
-                title="Ticket Onhold"
-                value={summary.onhold}
-                subtitle="Sedang ditunda"
-                tone="orange"
-              />
-
-              <SummaryCard
-                title="Resolved & Closed"
-                value={summary.done}
-                subtitle="Ticket selesai"
+                title="Ticket Resolved"
+                value={summary.resolved}
+                subtitle="Ticket berhasil diselesaikan"
                 tone="green"
               />
             </div>
@@ -213,33 +202,10 @@ export default function DashboardProject() {
                 <table className="w-full text-sm min-w-[850px]">
                   <thead>
                     <tr className="border-t border-b bg-gray-50 text-gray-500">
-                      <th className="text-left px-5 py-3">
-                        Project
-                      </th>
-
-                      <th className="text-right px-4 py-3">
-                        Total
-                      </th>
-
-                      <th className="text-right px-4 py-3">
-                        Open
-                      </th>
-
-                      <th className="text-right px-4 py-3">
-                        Progress
-                      </th>
-
-                      <th className="text-right px-4 py-3">
-                        Onhold
-                      </th>
-
-                      <th className="text-right px-4 py-3">
-                        Resolved
-                      </th>
-
-                      <th className="text-right px-5 py-3">
-                        Closed
-                      </th>
+                      <th className="text-left px-5 py-3">Project</th>
+                      <th className="text-right px-4 py-3">Total</th>
+                      <th className="text-right px-4 py-3">Open</th>
+                      <th className="text-right px-5 py-3">Resolved</th>
                     </tr>
                   </thead>
 
@@ -247,7 +213,7 @@ export default function DashboardProject() {
                     {data.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={7}
+                          colSpan={4}
                           className="text-center py-10 text-gray-400"
                         >
                           Belum ada data project.
@@ -270,21 +236,9 @@ export default function DashboardProject() {
                           <td className="text-right px-4 text-red-600">
                             {item.open}
                           </td>
-
-                          <td className="text-right px-4 text-yellow-600">
-                            {item.in_progress}
-                          </td>
-
-                          <td className="text-right px-4 text-orange-600">
-                            {item.onhold}
-                          </td>
-
+                          
                           <td className="text-right px-4 text-green-600">
                             {item.resolved}
-                          </td>
-
-                          <td className="text-right px-5 text-gray-600">
-                            {item.closed}
                           </td>
                         </tr>
                       ))
@@ -330,35 +284,11 @@ export default function DashboardProject() {
                         />
 
                         <Metric
-                          label="Progress"
-                          value={
-                            item.in_progress
-                          }
-                          className="text-yellow-600 bg-yellow-50"
-                        />
-
-                        <Metric
-                          label="Onhold"
-                          value={
-                            item.onhold
-                          }
-                          className="text-orange-600 bg-orange-50"
-                        />
-
-                        <Metric
                           label="Resolved"
                           value={
                             item.resolved
                           }
                           className="text-green-600 bg-green-50"
-                        />
-
-                        <Metric
-                          label="Closed"
-                          value={
-                            item.closed
-                          }
-                          className="text-gray-600 bg-gray-50"
                         />
                       </div>
                     </div>

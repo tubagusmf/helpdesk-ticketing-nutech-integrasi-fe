@@ -16,7 +16,7 @@ import {
   getVolumePerProject,
   getIncidentTrend,
   getOpenTickets,
-  getOnHoldTickets,
+  getResolvedTickets,
 } from "../services/dashboardService";
 import useDashboardFilters from "../hooks/useDashboardFilters";
 import { getCurrentRole, getRoleMenu } from "../utils/dashboard";
@@ -43,7 +43,7 @@ export default function DashboardTicket() {
   const [volumeData, setVolumeData] = useState([]);
   const [trendData, setTrendData] = useState([]);
   const [openTickets, setOpenTickets] = useState([]);
-  const [onholdTickets, setOnholdTickets] = useState([]);
+  const [resolvedTickets, setResolvedTickets] = useState([]);
   const [trendPeriod, setTrendPeriod] = useState("month");
   const [trendLoading, setTrendLoading] = useState(true);
   const [trendError, setTrendError] = useState("");
@@ -53,14 +53,14 @@ export default function DashboardTicket() {
     setError("");
 
     try {
-      const [summaryRes, statusRes, priorityRes, volumeRes, openRes, onholdRes] =
+      const [summaryRes, statusRes, priorityRes, volumeRes, openRes, resolvedRes] =
         await Promise.all([
           getDashboardSummary(appliedFilters),
           getStatusDistribution(appliedFilters),
           getPriorityDistribution(appliedFilters),
           getVolumePerProject(appliedFilters),
           getOpenTickets(appliedFilters),
-          getOnHoldTickets(appliedFilters),
+          getResolvedTickets(appliedFilters),
         ]);
 
       setSummary(summaryRes || {});
@@ -68,7 +68,7 @@ export default function DashboardTicket() {
       setPriorityData(Array.isArray(priorityRes) ? priorityRes : []);
       setVolumeData(Array.isArray(volumeRes) ? volumeRes : []);
       setOpenTickets(Array.isArray(openRes) ? openRes : []);
-      setOnholdTickets(Array.isArray(onholdRes) ? onholdRes : []);
+      setResolvedTickets(Array.isArray(resolvedRes) ? resolvedRes : []);
     } catch (err) {
       console.error("Gagal mengambil data ticket:", err);
       setError(err?.message || "Gagal mengambil data ticket.");
@@ -141,30 +141,26 @@ export default function DashboardTicket() {
             Memuat dashboard ticket...
           </div>
         ) : (
-          <>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <>            
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <SummaryCard
                 title="Total Ticket"
                 value={summary.total_ticket || 0}
                 subtitle="Semua ticket"
                 tone="blue"
               />
+
               <SummaryCard
                 title="Ticket Open"
                 value={summary.ticket_open || 0}
                 subtitle="Masih open"
                 tone="red"
               />
+
               <SummaryCard
-                title="Ticket Onhold"
-                value={summary.ticket_onhold || 0}
-                subtitle="Sedang ditunda"
-                tone="orange"
-              />
-              <SummaryCard
-                title="Resolved & Closed"
-                value={(summary.ticket_resolved || 0) + (summary.ticket_closed || 0)}
-                subtitle="Ticket selesai"
+                title="Ticket Resolved"
+                value={summary.ticket_resolved || 0}
+                subtitle="Ticket berhasil diselesaikan"
                 tone="green"
               />
             </div>
@@ -208,11 +204,11 @@ export default function DashboardTicket() {
                 tone="red"
               />
               <TicketListCard
-                title="Ticket Onhold"
-                subtitle="5 ticket terbaru yang sedang ditunda"
-                total={summary.ticket_onhold || 0}
-                data={onholdTickets}
-                tone="orange"
+                title="Ticket Resolved"
+                subtitle="5 ticket terbaru yang berhasil diselesaikan"
+                total={summary.ticket_resolved || 0}
+                data={resolvedTickets}
+                tone="green"
               />
             </div>
           </>

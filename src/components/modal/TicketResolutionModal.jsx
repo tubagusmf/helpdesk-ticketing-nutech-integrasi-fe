@@ -1,12 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import {
-  getCauses,
-  getSolutions,
   updateTicketStatusOnly,
   createTicketResolution,
   getTicketResolution,
   reassignTicketToOnlineStaff,
-  cancelTicket
 } from "../../services/ticketService";
 
 import Select from "react-select";
@@ -19,6 +16,8 @@ import {
   FiSend,
   FiX,
 } from "react-icons/fi";
+
+const MAX_RESOLUTION_ATTACHMENT_SIZE = 10 * 1024 * 1024;
 
 const parseSlaDate = (value) => {
   if (!value) return null;
@@ -89,16 +88,11 @@ const formatSlaRemaining = (totalSeconds) => {
 
 export default function TicketResolutionModal({ ticket, onClose, onSuccess, role }) {
   const [loading, setLoading] = useState(false);
-  const [causes, setCauses] = useState([]);
-  const [solutions, setSolutions] = useState([]);
-  const [selectedCause, setSelectedCause] = useState(null);
-  const [selectedSolution, setSelectedSolution] = useState(null);
   const [preview, setPreview] = useState(null);
   const [attachment, setAttachment] = useState(null);
   const [problemImageError, setProblemImageError] = useState(false);
   const fileInputRef = useRef(null);
   const [resolution, setResolution] = useState(null);
-  const [solutionMode, setSolutionMode] = useState("select");
   const getNowLocal = () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
@@ -107,7 +101,6 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
 
   const isUser = Number(role) === ROLE.USER;
   const isStaff = Number(role) === ROLE.STAFF;
-  const isAdministrator = Number(role) === ROLE.ADMINISTRATOR;
   const [reassignJustification, setReassignJustification] = useState("");
   const [reassignLoading, setReassignLoading] = useState(false);
   const [showReassignForm, setShowReassignForm] = useState(false);
@@ -252,17 +245,7 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
 
   const fetchResolution = async () => {
     try {
-      const partId = ticket.part_id || ticket.part?.id;
-      let causeList = [];
-      if (partId) {
-        const causeRes = await getCauses(partId);
-        causeList = causeRes.data || [];
-      }
-
-      setCauses(causeList);
-
-      const res = await getTicketResolution(ticket.id);
-      const data = res;
+      const data = await getTicketResolution(ticket.id);
 
       if (!data) {
         setResolution(null);
@@ -271,65 +254,31 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
 
       setResolution(data);
 
-      const customSolutionValue = String(
-        data.custom_solution ?? data.CustomSolution ?? "",
+      // Mendukung data resolusi lama (Cause/Solution relation)
+      // dan data baru yang disimpan sebagai teks bebas.
+      const causeText = String(
+        data.custom_cause ||
+          data.CustomCause ||
+          data.cause?.name ||
+          data.Cause?.name ||
+          "",
       ).trim();
 
-      const foundCause = causeList.find(
-        (cause) => String(cause.id) === String(data.cause_id),
-      );
-
-      if (foundCause) {
-        setSelectedCause({
-          value: foundCause.id,
-          label: foundCause.name,
-        });
-
-        const solRes = await getSolutions(foundCause.id);
-        const solList = solRes.data || [];
-
-        setSolutions(solList);
-
-        if (customSolutionValue) {
-          setSolutionMode("custom");
-          setSelectedSolution(null);
-        } else {
-          setSolutionMode("select");
-
-          const foundSolution = solList.find(
-            (solution) =>
-              String(solution.id) === String(data.solution_id),
-          );
-
-          if (foundSolution) {
-            setSelectedSolution({
-              value: foundSolution.id,
-              label: foundSolution.name,
-            });
-          } else {
-            setSelectedSolution(null);
-          }
-        }
-      } else {
-        setSelectedCause(null);
-        setSelectedSolution(null);
-        setSolutions([]);
-
-        setSolutionMode(
-          customSolutionValue ? "custom" : "select",
-        );
-      }
+      const solutionText = String(
+        data.custom_solution ||
+          data.CustomSolution ||
+          data.solution?.name ||
+          data.Solution?.name ||
+          "",
+      ).trim();
 
       setForm((prev) => ({
         ...prev,
-        cause: data.cause_id || "",
-        solution: customSolutionValue
-          ? ""
-          : data.solution_id || "",
-        custom_solution: customSolutionValue,
+        cause: causeText,
+        custom_solution: solutionText,
         notes: data.resolution_notes || "",
         resolution_time: formatDatetimeLocal(data.completion_time),
-        status: ticket.status,
+        status: "RESOLVED",
       }));
     } catch (err) {
       console.error("[TICKET RESOLUTION] Gagal mengambil resolusi:", err);
@@ -345,26 +294,53 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
     }));
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0] || null;
+  const setResolutionAttachment = (file) => {
+    if (!file) return;
 
-    if (!file) {
-      setAttachment(null);
-      setPreview(null);
+    if (!file.type || !file.type.startsWith("image/")) {
+      alert("File yang diunggah harus berupa gambar.");
       return;
     }
 
-    if (!file.type.startsWith("image/")) {
-      alert("File yang diunggah harus berupa gambar.");
-
-      e.target.value = "";
-      setAttachment(null);
-      setPreview(null);
+    if (file.size > MAX_RESOLUTION_ATTACHMENT_SIZE) {
+      alert("Ukuran foto penyelesaian maksimal 10 MB.");
       return;
     }
 
     setAttachment(file);
     setPreview(URL.createObjectURL(file));
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0] || null;
+    setResolutionAttachment(file);
+
+    // Memungkinkan memilih file yang sama kembali setelah dihapus.
+    e.target.value = "";
+  };
+
+  const handlePaste = (e) => {
+    const items = Array.from(e.clipboardData?.items || []);
+    const imageItem = items.find(
+      (item) => item.kind === "file" && item.type.startsWith("image/"),
+    );
+
+    if (!imageItem) return;
+
+    const pastedBlob = imageItem.getAsFile();
+    if (!pastedBlob) return;
+
+    e.preventDefault();
+
+    const subtype = (pastedBlob.type.split("/")[1] || "png").toLowerCase();
+    const extension = subtype === "jpeg" ? "jpg" : subtype;
+    const pastedFile = new File(
+      [pastedBlob],
+      `resolution-${Date.now()}.${extension}`,
+      { type: pastedBlob.type },
+    );
+
+    setResolutionAttachment(pastedFile);
   };
 
   const clearSelectedAttachment = () => {
@@ -377,101 +353,47 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
   };
 
   const handleSubmit = async () => {
-    if (isUser || isReadOnly) {
+    if (isUser || isReadOnly || loading) {
       return;
     }
 
-    if (form.status === "RESOLVED") {
-      if (!form.cause) {
-        alert("Penyebab wajib dipilih.");
-        return;
-      }
+    const cause = String(form.cause || "").trim();
+    const solution = String(form.custom_solution || "").trim();
 
-      if (solutionMode === "select" && !form.solution) {
-        alert("Silakan pilih solusi dari daftar.");
-        return;
-      }
-
-      if (
-        solutionMode === "custom" &&
-        !form.custom_solution.trim()
-      ) {
-        alert("Silakan isi solusi secara manual.");
-        return;
-      }
-
-      if (!form.resolution_time) {
-        alert("Waktu penyelesaian wajib diisi.");
-        return;
-      }
+    if (!cause) {
+      alert("Penyebab wajib diisi.");
+      return;
     }
 
-    if (form.status === "CANCEL") {
-      const reason = (form.cancellation_reason || "").trim();
+    if (cause.length > 2000) {
+      alert("Penyebab maksimal 2000 karakter.");
+      return;
+    }
 
-      if (!reason) {
-        alert("Alasan pembatalan tiket wajib diisi.");
-        return;
-      }
+    if (!solution) {
+      alert("Solusi wajib diisi.");
+      return;
+    }
 
-      if (reason.length > 1000) {
-        alert("Alasan pembatalan maksimal 1000 karakter.");
-        return;
-      }
+    if (solution.length > 2000) {
+      alert("Solusi maksimal 2000 karakter.");
+      return;
+    }
+
+    if (!form.resolution_time) {
+      alert("Waktu penyelesaian wajib diisi.");
+      return;
     }
 
     try {
       setLoading(true);
 
-      if (form.status === "ONHOLD") {
-        await updateTicketStatusOnly(ticket.id, {
-          status: form.status,
-          onhold_notes: form.onhold_notes,
-        });
-
-        alert("Ticket berhasil diubah menjadi ONHOLD!");
-
-        onSuccess();
-        onClose();
-        return;
-      }
-
-      if (form.status === "CANCEL") {
-        const reason = form.cancellation_reason.trim();
-
-        const confirmed = window.confirm(
-          `Apakah Anda yakin ingin membatalkan tiket ${ticket.ticket_code}?`,
-        );
-
-        if (!confirmed) {
-          return;
-        }
-
-        await cancelTicket(ticket.id, { reason });
-
-        alert("Tiket berhasil dibatalkan!");
-
-        onSuccess();
-        onClose();
-        return;
-      }
-
       const formData = new FormData();
-
-      formData.append("cause_id", form.cause);
-      formData.append(
-        "solution_id",
-        solutionMode === "select" ? String(form.solution || "") : "",
-      );
-      formData.append(
-        "custom_solution",
-        solutionMode === "custom"
-          ? form.custom_solution.trim()
-          : "",
-      );
-      formData.append("resolution_notes", form.notes);
+      formData.append("custom_cause", cause);
+      formData.append("custom_solution", solution);
+      formData.append("resolution_notes", form.notes || "");
       formData.append("completion_time", form.resolution_time);
-      formData.append("status", form.status);
+      formData.append("status", "RESOLVED");
 
       if (attachment) {
         formData.append("attachment", attachment);
@@ -480,11 +402,9 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
       await createTicketResolution(ticket.id, formData);
 
       clearSelectedAttachment();
-
       await fetchResolution();
 
       alert("Ticket berhasil disimpan!");
-
       onSuccess();
     } catch (err) {
       console.error("[TICKET RESOLUTION] Gagal menyimpan:", err);
@@ -494,23 +414,8 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
     }
   };
 
-  const causeOptions = causes.map((cause) => ({
-    value: cause.id,
-    label: cause.name,
-  }));
-
-  const solutionOptions = solutions.map((solution) => ({
-    value: solution.id,
-    label: solution.name,
-  }));
-
   const statusOptions = [
     { value: "RESOLVED", label: "RESOLVED" },
-    { value: "ONHOLD", label: "ONHOLD" },
-
-    ...(isStaff || isAdministrator
-      ? [{ value: "CANCEL", label: "CANCEL" }]
-      : []),
   ];
 
   const handleReassignToOnlineStaff = async () => {
@@ -690,13 +595,10 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
   
   const [form, setForm] = useState({
     cause: "",
-    solution: "",
     custom_solution: "",
     resolution_time: getNowLocal(),
     notes: "",
-    onhold_notes: "",
-    cancellation_reason: ticket?.cancellation_reason || "",
-    status: ticket?.status || "OPEN",
+    status: "RESOLVED",
   });
 
   useTicketSocket({
@@ -908,39 +810,16 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
                 <Select
                   options={statusOptions}
                   placeholder="Pilih Status"
-                  value={statusOptions.find(
-                    (status) => status.value === form.status,
-                  )}
+                  value={statusOptions[0]}
                   isDisabled={isReadOnly || loading}
+                  isSearchable={false}
+                  isClearable={false}
                   onChange={(selected) => {
-                    if (!selected) return;
-
-                    const newStatus = selected.value;
-                    const clearResolution = ["ONHOLD", "CANCEL"].includes(
-                      newStatus,
-                    );
-
-                    setForm((prev) => ({
-                      ...prev,
-                      status: newStatus,
-                      ...(clearResolution
-                        ? {
-                            cause: "",
-                            solution: "",
-                            resolution_time: "",
-                          }
-                        : {}),
-                    }));
-
-                    if (clearResolution) {
-                      setSelectedCause(null);
-                      setSelectedSolution(null);
-                      setAttachment(null);
-                      setPreview(null);
-
-                      if (fileInputRef.current) {
-                        fileInputRef.current.value = "";
-                      }
+                    if (selected?.value === "RESOLVED") {
+                      setForm((prev) => ({
+                        ...prev,
+                        status: "RESOLVED",
+                      }));
                     }
                   }}
                 />
@@ -984,216 +863,80 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
           </h3>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {form.status !== "ONHOLD" && form.status !== "CANCEL" && (
-              <>
-                {/* PENYEBAB */}
-                <div className="flex min-w-0 flex-col">
-                  <label className="mb-1 text-sm font-medium text-gray-700">
-                    Penyebab
-                  </label>
-
-                  <Select
-                    options={causeOptions}
-                    value={selectedCause}
-                    isDisabled={isReadOnly || loading}
-                    onChange={async (selected) => {
-                      setSelectedCause(selected);
-                      setSelectedSolution(null);
-                      setSolutionMode("select");
-
-                      setForm((prev) => ({
-                        ...prev,
-                        cause: selected?.value || "",
-                        solution: "",
-                        custom_solution: "",
-                      }));
-
-                      if (!selected?.value) {
-                        setSolutions([]);
-                        return;
-                      }
-
-                      try {
-                        const res = await getSolutions(selected.value);
-                        setSolutions(res.data || []);
-                      } catch (err) {
-                        console.error("Gagal mengambil daftar solusi:", err);
-                        setSolutions([]);
-                      }
-                    }}
-                    placeholder="Pilih atau ketik penyebab..."
-                    isSearchable
-                    className="w-full"
-                    classNamePrefix="ticket-select"
-                  />
-                </div>
-
-                {/* SOLUSI */}
-                <div className="flex min-w-0 flex-col">
-                  {/* LABEL DAN BUTTON INPUT MANUAL */}
-                  <div className="mb-1 flex h-5 items-center justify-between gap-2">
-                    <label className="text-sm font-medium leading-5 text-gray-700">
-                      Solusi
-                      <span className="ml-1 text-red-500">*</span>
-                    </label>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (solutionMode === "custom") {
-                          // Sembunyikan textarea dan tampilkan dropdown kembali.
-                          setSolutionMode("select");
-
-                          setForm((prev) => ({
-                            ...prev,
-                            custom_solution: "",
-                          }));
-                        } else {
-                          // Tampilkan textarea dan kosongkan pilihan dropdown.
-                          setSolutionMode("custom");
-                          setSelectedSolution(null);
-
-                          setForm((prev) => ({
-                            ...prev,
-                            solution: "",
-                            custom_solution: "",
-                          }));
-                        }
-                      }}
-                      disabled={isReadOnly || loading}
-                      aria-pressed={solutionMode === "custom"}
-                      className={`h-5 shrink-0 rounded-md border px-2 text-[10px] font-medium leading-none transition ${
-                        solutionMode === "custom"
-                          ? "border-orange-600 bg-orange-600 text-white"
-                          : "border-orange-200 bg-white text-orange-700 hover:bg-orange-50"
-                      } disabled:cursor-not-allowed disabled:opacity-50`}
-                    >
-                      Input Manual
-                    </button>
-                  </div>
-
-                  {/* DROPDOWN SOLUSI */}
-                  {solutionMode === "select" && (
-                    <Select
-                      options={solutionOptions}
-                      value={selectedSolution}
-                      isDisabled={isReadOnly || loading || !selectedCause}
-                      onChange={(selected) => {
-                        setSelectedSolution(selected);
-
-                        setForm((prev) => ({
-                          ...prev,
-                          solution: selected?.value || "",
-                          custom_solution: "",
-                        }));
-                      }}
-                      placeholder="Pilih atau ketik solusi..."
-                      isSearchable
-                      className="w-full"
-                      classNamePrefix="ticket-select"
-                    />
-                  )}
-                </div>
-
-                {/* TEXTAREA SOLUSI MANUAL - LEBAR PENUH */}
-                {solutionMode === "custom" && (
-                  <div className="flex min-w-0 flex-col lg:col-span-2">
-                    <label
-                      htmlFor="custom-solution"
-                      className="mb-1 text-sm font-medium text-gray-700"
-                    >
-                      Input Solusi Manual
-                      <span className="ml-1 text-red-500">*</span>
-                    </label>
-
-                    <textarea
-                      id="custom-solution"
-                      name="custom_solution"
-                      value={form.custom_solution || ""}
-                      onChange={handleChange}
-                      disabled={isReadOnly || loading}
-                      rows={4}
-                      maxLength={2000}
-                      placeholder="Tuliskan solusi penyelesaian masalah..."
-                      className="w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 disabled:cursor-not-allowed disabled:bg-gray-100"
-                    />
-
-                    <p className="mt-1 text-right text-xs text-gray-500">
-                      {(form.custom_solution || "").length}/2000 karakter
-                    </p>
-                  </div>
-                )}
-
-                {/* WAKTU PENYELESAIAN */}
-                <div className="flex min-w-0 flex-col lg:col-span-2">
-                  <label className="mb-1 text-sm font-medium text-gray-700">
-                    Waktu Penyelesaian
-                  </label>
-
-                  <input
-                    type="datetime-local"
-                    name="resolution_time"
-                    value={form.resolution_time}
-                    onChange={handleChange}
-                    disabled={isReadOnly || loading}
-                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
-                  />
-                </div>
-              </>
-            )}
-
-            {/* CATATAN ONHOLD */}
-            {form.status === "ONHOLD" && (
-              <div className="flex min-w-0 flex-col lg:col-span-2">
-                <label className="mb-1 text-sm font-medium text-gray-700">
-                  Catatan ONHOLD
-                </label>
-
-                <textarea
-                  name="onhold_notes"
-                  value={
-                    form.onhold_notes || ticket.onhold_notes || ""
-                  }
-                  onChange={handleChange}
-                  disabled={isReadOnly || loading}
-                  rows={3}
-                  className="w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
-                />
-              </div>
-            )}
-
-            {/* JUSTIFIKASI PEMBATALAN */}
-            {form.status === "CANCEL" && (
-              <div className="flex min-w-0 flex-col lg:col-span-2">
+            {/* PENYEBAB */}
+              <div className="flex min-w-0 flex-col">
                 <label
-                  htmlFor="cancellation-reason"
-                  className="mb-2 text-sm font-medium text-gray-700"
+                  htmlFor="resolution-cause"
+                  className="mb-1 text-sm font-medium text-gray-700"
                 >
-                  Alasan / Justifikasi Pembatalan
+                  Penyebab
                   <span className="ml-1 text-red-500">*</span>
                 </label>
 
                 <textarea
-                  id="cancellation-reason"
-                  name="cancellation_reason"
-                  value={form.cancellation_reason || ""}
+                  id="resolution-cause"
+                  name="cause"
+                  value={form.cause || ""}
                   onChange={handleChange}
                   disabled={isReadOnly || loading}
                   rows={4}
-                  maxLength={1000}
-                  placeholder="Jelaskan alasan mengapa tiket ini harus dibatalkan..."
-                  className="w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 disabled:bg-gray-100"
+                  maxLength={2000}
+                  required
+                  placeholder="Tuliskan penyebab permasalahan..."
+                  className="w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 disabled:cursor-not-allowed disabled:bg-gray-100"
                 />
 
                 <p className="mt-1 text-right text-xs text-gray-500">
-                  {(form.cancellation_reason || "").length}/1000 karakter
+                  {(form.cause || "").length}/2000 karakter
                 </p>
               </div>
-            )}
+
+              {/* SOLUSI */}
+              <div className="flex min-w-0 flex-col">
+                <label
+                  htmlFor="custom-solution"
+                  className="mb-1 text-sm font-medium text-gray-700"
+                >
+                  Solusi
+                  <span className="ml-1 text-red-500">*</span>
+                </label>
+
+                <textarea
+                  id="custom-solution"
+                  name="custom_solution"
+                  value={form.custom_solution || ""}
+                  onChange={handleChange}
+                  disabled={isReadOnly || loading}
+                  rows={4}
+                  maxLength={2000}
+                  required
+                  placeholder="Tuliskan solusi penyelesaian masalah..."
+                  className="w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 disabled:cursor-not-allowed disabled:bg-gray-100"
+                />
+
+                <p className="mt-1 text-right text-xs text-gray-500">
+                  {(form.custom_solution || "").length}/2000 karakter
+                </p>
+              </div>
+
+              {/* WAKTU PENYELESAIAN */}
+              <div className="flex min-w-0 flex-col lg:col-span-2">
+                <label className="mb-1 text-sm font-medium text-gray-700">
+                  Waktu Penyelesaian
+                </label>
+
+                <input
+                  type="datetime-local"
+                  name="resolution_time"
+                  value={form.resolution_time}
+                  onChange={handleChange}
+                  disabled={isReadOnly || loading}
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
+                />
+              </div>
 
             {/* UPLOAD FOTO PENYELESAIAN */}
-            {form.status !== "ONHOLD" && form.status !== "CANCEL" && (
-              <div className="flex min-w-0 flex-col lg:col-span-2">
+            <div className="flex min-w-0 flex-col lg:col-span-2">
                 <label
                   htmlFor="resolution-attachment"
                   className="mb-2 text-sm font-medium text-gray-700"
@@ -1201,7 +944,11 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
                   Upload Foto Penyelesaian
                 </label>
 
-                <div className="flex flex-col gap-3 rounded-lg border border-dashed border-gray-300 bg-white p-4">
+                <div
+                  tabIndex={0}
+                  onPaste={handlePaste}
+                  className="flex flex-col gap-3 rounded-lg border border-dashed border-gray-300 bg-white p-4 outline-none focus:ring-2 focus:ring-green-200"
+                >
                   <div className="flex items-start gap-3">
                     <FiImage
                       className="mt-0.5 shrink-0 text-gray-500"
@@ -1214,7 +961,7 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
                       </p>
 
                       <p className="mt-1 text-xs text-gray-500">
-                        Format gambar JPG, JPEG, atau PNG.
+                        Format gambar JPG, JPEG, atau PNG. Maksimal 10 MB.
                       </p>
                     </div>
                   </div>
@@ -1265,7 +1012,6 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
                   )}
                 </div>
               </div>
-            )}
 
             {/* FOTO PENYELESAIAN YANG SUDAH TERSIMPAN */}
             {resolutionAttachmentUrl && (
@@ -1420,16 +1166,10 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
               className={`rounded-lg px-4 py-2 text-white ${
                 loading
                   ? "bg-gray-400"
-                  : form.status === "CANCEL"
-                    ? "bg-red-600 hover:bg-red-700"
-                    : "bg-blue-600 hover:bg-blue-700"
+                  : "bg-blue-600 hover:bg-blue-700"
               }`}
             >
-              {loading
-                ? "Memproses..."
-                : form.status === "CANCEL"
-                  ? "Batalkan Tiket"
-                  : "Simpan Perubahan"}
+              {loading ? "Memproses..." : "Simpan Perubahan"}
             </button>
           )}
         </div>

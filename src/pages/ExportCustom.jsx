@@ -110,22 +110,6 @@ const COLUMN_GROUPS = [
         label: "Description",
       },
       {
-        key: "onhold_notes",
-        label: "Onhold Notes",
-      },
-      {
-        key: "cancellation_reason",
-        label: "Cancellation Reason",
-      },
-      {
-        key: "cancelled_at",
-        label: "Cancelled At",
-      },
-      {
-        key: "cancelled_by",
-        label: "Cancelled By",
-      },
-      {
         key: "attachment",
         label: "Ticket Attachment",
       },
@@ -220,9 +204,6 @@ const DEFAULT_COLUMNS = [
   "priority",
   "status",
   "resolution_solution",
-  "cancellation_reason",
-  "cancelled_at",
-  "cancelled_by",
   "created_at",
   "due_at",
   "resolved_at",
@@ -1785,25 +1766,9 @@ export default function ExportCustom() {
                 <option value="OPEN">
                   OPEN
                 </option>
-
-                <option value="IN_PROGRESS">
-                  IN PROGRESS
-                </option>
-
+                
                 <option value="RESOLVED">
                   RESOLVED
-                </option>
-
-                <option value="CLOSED">
-                  CLOSED
-                </option>
-
-                <option value="ONHOLD">
-                  ON HOLD
-                </option>
-
-                <option value="CANCEL">
-                  CANCEL
                 </option>
               </select>
             </div>

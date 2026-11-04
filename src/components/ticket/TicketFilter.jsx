@@ -36,6 +36,7 @@ export default function TicketFilter({
   setFilters,
   tickets,
   role,
+  onTicketCreated,
 }) {
   const [openModal, setOpenModal] = useState(false);
 
@@ -414,7 +415,7 @@ export default function TicketFilter({
                 <option value="URGENT">URGENT</option>
               </select>
             </div>
-
+ 
             {/* STATUS */}
             <div className="min-w-0">
               <label className="block mb-1 text-[11px] font-semibold uppercase text-gray-400">
@@ -428,22 +429,8 @@ export default function TicketFilter({
                 className={selectClassName}
               >
                 <option value="">Semua Status</option>
-
-                {role === ROLE.ENGINEER ? (
-                  <>
-                    <option value="PENDING">PENDING</option>
-
-                    <option value="DONE">DONE</option>
-                  </>
-                ) : (
-                  <>
-                    <option value="OPEN">OPEN</option>
-                    <option value="ONHOLD">ONHOLD</option>
-                    <option value="RESOLVED">RESOLVED</option>
-                    <option value="CLOSED">CLOSED</option>
-                    <option value="CANCEL">CANCEL</option>
-                  </>
-                )}
+                <option value="OPEN">OPEN</option>
+                <option value="RESOLVED">RESOLVED</option>
               </select>
             </div>
 
@@ -521,7 +508,12 @@ export default function TicketFilter({
           )}
         </div>
       </div>
-      {openModal && <TicketModal onClose={() => setOpenModal(false)} />}
+      {openModal && (
+        <TicketModal
+          onClose={() => setOpenModal(false)}
+          onSuccess={onTicketCreated}
+        />
+      )}
     </>
   );
 }

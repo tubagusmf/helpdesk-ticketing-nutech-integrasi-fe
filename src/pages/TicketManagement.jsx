@@ -284,6 +284,7 @@ export default function TicketManagement() {
           setFilters={setFilters}
           tickets={tickets}
           role={role}
+          onTicketCreated={fetchTickets}
         />
 
         <TicketTable

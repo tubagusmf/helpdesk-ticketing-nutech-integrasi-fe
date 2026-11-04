@@ -101,7 +101,7 @@ export default function ProblemTab() {
             whitespace-nowrap
           "
         >
-          + Add Permasalahan
+          + Permasalahan
         </button>
       </div>
 

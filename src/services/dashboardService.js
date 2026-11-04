@@ -137,3 +137,14 @@ export const getStaffOfflineSummary = async (filters = {}) => {
     },
   );
 };
+
+export const getResolvedTickets = async (filters = {}) => {
+  const query = new URLSearchParams(filters).toString();
+
+  return fetchAPI(
+    `${BASE_URL}/dashboard/resolved-tickets?${query}`,
+    {
+      headers: getHeaders(),
+    },
+  );
+};

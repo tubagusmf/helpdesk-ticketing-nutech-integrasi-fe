@@ -148,37 +148,27 @@ export default function Dashboard() {
             Memuat dashboard...
           </div>
         ) : (
-          <>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <>    
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <SummaryCard
                 title="Total Ticket"
                 value={summary.total_ticket || 0}
                 subtitle="Semua ticket"
                 tone="blue"
               />
+
               <SummaryCard
                 title="Ticket Open"
                 value={summary.ticket_open || 0}
                 subtitle="Masih membutuhkan penanganan"
                 tone="red"
               />
+
               <SummaryCard
-                title="Ticket Onhold"
-                value={summary.ticket_onhold || 0}
-                subtitle="Ticket yang sedang ditunda"
-                tone="orange"
-              />
-              <SummaryCard
-                title="Resolved & Closed"
-                value={(summary.ticket_resolved || 0) + (summary.ticket_closed || 0)}
-                subtitle="Ticket selesai"
+                title="Ticket Resolved"
+                value={summary.ticket_resolved || 0}
+                subtitle="Ticket berhasil diselesaikan"
                 tone="green"
-              />
-              <SummaryCard
-                title="Ticket Cancel"
-                value={summary.ticket_cancel || 0}
-                subtitle="Ticket dibatalkan"
-                tone="red"
               />
             </div>
 

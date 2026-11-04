@@ -18,10 +18,10 @@ async function handleResponse(res) {
   return result;
 }
 
-export async function getProblems(page = 1, search = "") {
+export async function getProblems(page = 1, search = "", limit = 10) {
   const params = new URLSearchParams({
     page: String(page),
-    limit: "10",
+    limit: String(limit),
     name: search,
   });
 
@@ -32,7 +32,46 @@ export async function getProblems(page = 1, search = "") {
     },
   );
 
-  return handleResponse(res);
+  const result = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new Error(
+      result.message || "Gagal mengambil data permasalahan",
+    );
+  }
+
+  return result;
+}
+
+export async function getAllProblems() {
+  const firstResponse = await getProblems(1, "", 50);
+
+  const firstData = Array.isArray(firstResponse?.data)
+    ? firstResponse.data
+    : [];
+
+  const totalPage = Math.max(
+    Number(firstResponse?.total_page) || 1,
+    1,
+  );
+
+  if (totalPage === 1) {
+    return firstData;
+  }
+
+  const remainingResponses = await Promise.all(
+    Array.from(
+      { length: totalPage - 1 },
+      (_, index) => getProblems(index + 2, "", 50),
+    ),
+  );
+
+  return [
+    ...firstData,
+    ...remainingResponses.flatMap((response) =>
+      Array.isArray(response?.data) ? response.data : [],
+    ),
+  ];
 }
 
 export async function createProblem(data) {

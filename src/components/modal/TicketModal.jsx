@@ -6,6 +6,7 @@ import { FiImage, FiUpload, FiX } from "react-icons/fi";
 import { createTicket, getLocations, getParts, getAssets } from "../../services/ticketService";
 import { getCurrentUser } from "../../services/userService";
 import { useAppSettings } from "../../context/AppSettingsContext";
+import { getAllProblems } from "../../services/problemService";
 import { DEFAULT_APP_SETTINGS } from "../../services/appSettingsService";
 
 const MAX_ATTACHMENT_SIZE = 2 * 1024 * 1024;
@@ -133,7 +134,7 @@ function useAttachmentPreview(file) {
   return preview;
 }
 
-export default function TicketModal({ onClose }) {
+export default function TicketModal({ onClose, onSuccess }) {
   const { settings } = useAppSettings();
 
   const currentUser = useMemo(
@@ -159,6 +160,10 @@ export default function TicketModal({ onClose }) {
   const [loadingLocations, setLoadingLocations] = useState(false);
   const [loadingParts, setLoadingParts] = useState(false);
   const [loadingAssets, setLoadingAssets] = useState(false);
+  const [problems, setProblems] = useState([]);
+  const [loadingProblems, setLoadingProblems] = useState(true);
+  const [selectedProblem, setSelectedProblem] = useState(null);
+  const [descriptionMode, setDescriptionMode] = useState("select");
   const preview = useAttachmentPreview(attachment);
 
   const primaryColor = getValidColor(
@@ -297,6 +302,15 @@ export default function TicketModal({ onClose }) {
     [assets],
   );
 
+  const problemOptions = useMemo(
+    () =>
+      problems.map((problem) => ({
+        value: problem.id,
+        label: problem.name,
+      })),
+    [problems],
+  );
+
   // ==========================================================
   // FETCH USER PROJECTS
   // ==========================================================
@@ -336,6 +350,44 @@ export default function TicketModal({ onClose }) {
     }
 
     fetchProjects();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    const fetchProblems = async () => {
+      setLoadingProblems(true);
+
+      try {
+        const response = await getAllProblems();
+
+        if (!active) return;
+
+        setProblems(response);
+      } catch (error) {
+        console.error(
+          "Gagal mengambil data permasalahan:",
+          error,
+        );
+
+        if (active) {
+          toast.error(
+            error?.message ||
+              "Gagal mengambil data permasalahan.",
+          );
+        }
+      } finally {
+        if (active) {
+          setLoadingProblems(false);
+        }
+      }
+    };
+
+    fetchProblems();
 
     return () => {
       active = false;
@@ -548,6 +600,8 @@ export default function TicketModal({ onClose }) {
         );
       }
 
+      onSuccess?.(response);
+
       onClose();
     } catch (error) {
       console.error("Gagal membuat tiket:", error);
@@ -727,41 +781,142 @@ export default function TicketModal({ onClose }) {
                     }
                   />
                 </div>
-
-                {/* DESKRIPSI */}
+                
+                {/* DESKRIPSI PERMASALAHAN */}
 
                 <div className="min-w-0">
-                  <label
-                    htmlFor="ticket-description"
-                    className="mb-1 block text-sm font-medium text-gray-700"
-                  >
-                    Deskripsi Permasalahan
-                  </label>
 
-                  <textarea
-                    id="ticket-description"
-                    name="description"
-                    value={form.description}
-                    onChange={(event) =>
-                      updateFormField(
-                        "description",
-                        event.target.value,
-                      )
-                    }
-                    placeholder="Masukkan deskripsi masalah..."
-                    rows={4}
-                    maxLength={10000}
-                    required
-                    disabled={loading}
-                    className="
-                      w-full rounded-lg border
-                      border-gray-300 px-3 py-2.5
-                      text-sm outline-none
-                      focus:border-orange-400
-                      focus:ring-2 focus:ring-orange-100
-                      disabled:bg-gray-50
-                    "
-                  />
+                  {/* LABEL DAN BUTTON INPUT MANUAL */}
+
+                  <div className="mb-1 flex h-5 items-center justify-between gap-2">
+
+                    <label
+                      htmlFor="ticket-description"
+                      className="text-sm font-medium leading-5 text-gray-700"
+                    >
+                      Deskripsi Permasalahan
+
+                      <span className="ml-1 text-red-500">*</span>
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDescriptionMode(
+                          descriptionMode === "custom"
+                            ? "select"
+                            : "custom",
+                        );
+
+                        setSelectedProblem(null);
+
+                        updateFormField("description", "");
+                      }}
+                      disabled={loading}
+                      aria-pressed={descriptionMode === "custom"}
+                      className={`
+                        h-5 shrink-0 rounded-md border
+                        px-2 text-[10px] font-medium
+                        leading-none transition
+
+                        ${
+                          descriptionMode === "custom"
+                            ? "border-orange-600 bg-orange-600 text-white"
+                            : "border-orange-200 bg-white text-orange-700 hover:bg-orange-50"
+                        }
+
+                        disabled:cursor-not-allowed
+                        disabled:opacity-50
+                      `}
+                    >
+                      {descriptionMode === "custom"
+                        ? "Pilih dari Daftar"
+                        : "Input Manual"}
+                    </button>
+
+                  </div>
+
+                  {/* DROPDOWN PERMASALAHAN */}
+
+                  {descriptionMode === "select" && (
+                    <Select
+                      options={problemOptions}
+                      value={selectedProblem}
+                      isDisabled={loading || loadingProblems}
+                      isLoading={loadingProblems}
+                      onChange={(selected) => {
+                        setSelectedProblem(selected);
+
+                        updateFormField(
+                          "description",
+                          selected?.label || "",
+                        );
+                      }}
+                      placeholder="Pilih atau ketik permasalahan..."
+                      isSearchable
+                      isClearable
+                      noOptionsMessage={() =>
+                        loadingProblems
+                          ? "Memuat data..."
+                          : "Belum ada data permasalahan."
+                      }
+                      className="w-full"
+                      classNamePrefix="ticket-select"
+                      styles={selectStyles}
+                      menuPortalTarget={
+                        typeof document !== "undefined"
+                          ? document.body
+                          : undefined
+                      }
+                    />
+                  )}
+
+                  {/* INPUT MANUAL */}
+
+                  {descriptionMode === "custom" && (
+                    <div className="flex min-w-0 flex-col">
+
+                      <label
+                        htmlFor="ticket-description"
+                        className="mb-1 text-sm font-medium text-gray-700"
+                      >
+                        Input Deskripsi Manual
+                        <span className="ml-1 text-red-500">*</span>
+                      </label>
+
+                      <textarea
+                        id="ticket-description"
+                        name="description"
+                        value={form.description}
+                        onChange={(event) =>
+                          updateFormField(
+                            "description",
+                            event.target.value,
+                          )
+                        }
+                        placeholder="Tuliskan deskripsi permasalahan..."
+                        rows={4}
+                        maxLength={10000}
+                        required
+                        disabled={loading}
+                        className="
+                          w-full resize-y rounded-lg
+                          border border-gray-300
+                          px-3 py-2.5 text-sm
+                          outline-none
+                          focus:border-orange-400
+                          focus:ring-2 focus:ring-orange-100
+                          disabled:bg-gray-50
+                        "
+                      />
+
+                      <p className="mt-1 text-right text-xs text-gray-400">
+                        {form.description.length}/10000 karakter
+                      </p>
+
+                    </div>
+                  )}
+
                 </div>
 
                 {/* ATTACHMENT */}
