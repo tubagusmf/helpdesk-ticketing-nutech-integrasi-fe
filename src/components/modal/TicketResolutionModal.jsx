@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import {
-  updateTicketStatusOnly,
   createTicketResolution,
   getTicketResolution,
   reassignTicketToOnlineStaff,
@@ -465,29 +464,6 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
     }
   };
 
-  const handleCloseAsUser = async () => {
-    if (!isUser || ticket.status !== "RESOLVED") {
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      await updateTicketStatusOnly(ticket.id, {
-        status: "CLOSED",
-      });
-
-      alert("Ticket berhasil diubah menjadi CLOSED!");
-
-      onSuccess();
-      onClose();
-    } catch (err) {
-      alert(err.message || "Gagal menutup ticket.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const resolveAttachmentUrl = (value) => {
     if (typeof value !== "string" || !value.trim()) {
       return "";
@@ -592,7 +568,7 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
       alert(err.message || "Gagal mengunduh gambar.");
     }
   };
-  
+
   const [form, setForm] = useState({
     cause: "",
     custom_solution: "",
@@ -864,154 +840,154 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {/* PENYEBAB */}
-              <div className="flex min-w-0 flex-col">
-                <label
-                  htmlFor="resolution-cause"
-                  className="mb-1 text-sm font-medium text-gray-700"
-                >
-                  Penyebab
-                  <span className="ml-1 text-red-500">*</span>
-                </label>
+            <div className="flex min-w-0 flex-col">
+              <label
+                htmlFor="resolution-cause"
+                className="mb-1 text-sm font-medium text-gray-700"
+              >
+                Penyebab
+                <span className="ml-1 text-red-500">*</span>
+              </label>
 
-                <textarea
-                  id="resolution-cause"
-                  name="cause"
-                  value={form.cause || ""}
-                  onChange={handleChange}
-                  disabled={isReadOnly || loading}
-                  rows={4}
-                  maxLength={2000}
-                  required
-                  placeholder="Tuliskan penyebab permasalahan..."
-                  className="w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 disabled:cursor-not-allowed disabled:bg-gray-100"
-                />
+              <textarea
+                id="resolution-cause"
+                name="cause"
+                value={form.cause || ""}
+                onChange={handleChange}
+                disabled={isReadOnly || loading}
+                rows={4}
+                maxLength={2000}
+                required
+                placeholder="Tuliskan penyebab permasalahan..."
+                className="w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 disabled:cursor-not-allowed disabled:bg-gray-100"
+              />
 
-                <p className="mt-1 text-right text-xs text-gray-500">
-                  {(form.cause || "").length}/2000 karakter
-                </p>
-              </div>
+              <p className="mt-1 text-right text-xs text-gray-500">
+                {(form.cause || "").length}/2000 karakter
+              </p>
+            </div>
 
-              {/* SOLUSI */}
-              <div className="flex min-w-0 flex-col">
-                <label
-                  htmlFor="custom-solution"
-                  className="mb-1 text-sm font-medium text-gray-700"
-                >
-                  Solusi
-                  <span className="ml-1 text-red-500">*</span>
-                </label>
+            {/* SOLUSI */}
+            <div className="flex min-w-0 flex-col">
+              <label
+                htmlFor="custom-solution"
+                className="mb-1 text-sm font-medium text-gray-700"
+              >
+                Solusi
+                <span className="ml-1 text-red-500">*</span>
+              </label>
 
-                <textarea
-                  id="custom-solution"
-                  name="custom_solution"
-                  value={form.custom_solution || ""}
-                  onChange={handleChange}
-                  disabled={isReadOnly || loading}
-                  rows={4}
-                  maxLength={2000}
-                  required
-                  placeholder="Tuliskan solusi penyelesaian masalah..."
-                  className="w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 disabled:cursor-not-allowed disabled:bg-gray-100"
-                />
+              <textarea
+                id="custom-solution"
+                name="custom_solution"
+                value={form.custom_solution || ""}
+                onChange={handleChange}
+                disabled={isReadOnly || loading}
+                rows={4}
+                maxLength={2000}
+                required
+                placeholder="Tuliskan solusi penyelesaian masalah..."
+                className="w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 disabled:cursor-not-allowed disabled:bg-gray-100"
+              />
 
-                <p className="mt-1 text-right text-xs text-gray-500">
-                  {(form.custom_solution || "").length}/2000 karakter
-                </p>
-              </div>
+              <p className="mt-1 text-right text-xs text-gray-500">
+                {(form.custom_solution || "").length}/2000 karakter
+              </p>
+            </div>
 
-              {/* WAKTU PENYELESAIAN */}
-              <div className="flex min-w-0 flex-col lg:col-span-2">
-                <label className="mb-1 text-sm font-medium text-gray-700">
-                  Waktu Penyelesaian
-                </label>
+            {/* WAKTU PENYELESAIAN */}
+            <div className="flex min-w-0 flex-col lg:col-span-2">
+              <label className="mb-1 text-sm font-medium text-gray-700">
+                Waktu Penyelesaian
+              </label>
 
-                <input
-                  type="datetime-local"
-                  name="resolution_time"
-                  value={form.resolution_time}
-                  onChange={handleChange}
-                  disabled={isReadOnly || loading}
-                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
-                />
-              </div>
+              <input
+                type="datetime-local"
+                name="resolution_time"
+                value={form.resolution_time}
+                onChange={handleChange}
+                disabled={isReadOnly || loading}
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
+              />
+            </div>
 
             {/* UPLOAD FOTO PENYELESAIAN */}
             <div className="flex min-w-0 flex-col lg:col-span-2">
-                <label
-                  htmlFor="resolution-attachment"
-                  className="mb-2 text-sm font-medium text-gray-700"
-                >
-                  Upload Foto Penyelesaian
-                </label>
+              <label
+                htmlFor="resolution-attachment"
+                className="mb-2 text-sm font-medium text-gray-700"
+              >
+                Upload Foto Penyelesaian
+              </label>
 
-                <div
-                  tabIndex={0}
-                  onPaste={handlePaste}
-                  className="flex flex-col gap-3 rounded-lg border border-dashed border-gray-300 bg-white p-4 outline-none focus:ring-2 focus:ring-green-200"
-                >
-                  <div className="flex items-start gap-3">
-                    <FiImage
-                      className="mt-0.5 shrink-0 text-gray-500"
-                      size={20}
+              <div
+                tabIndex={0}
+                onPaste={handlePaste}
+                className="flex flex-col gap-3 rounded-lg border border-dashed border-gray-300 bg-white p-4 outline-none focus:ring-2 focus:ring-green-200"
+              >
+                <div className="flex items-start gap-3">
+                  <FiImage
+                    className="mt-0.5 shrink-0 text-gray-500"
+                    size={20}
+                  />
+
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm text-gray-700">
+                      Upload foto sesudah (opsional).
+                    </p>
+
+                    <p className="mt-1 text-xs text-gray-500">
+                      Format gambar JPG, JPEG, atau PNG. Maksimal 10 MB.
+                    </p>
+                  </div>
+                </div>
+
+                {!isReadOnly && (
+                  <input
+                    ref={fileInputRef}
+                    id="resolution-attachment"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    disabled={loading}
+                    className="block w-full cursor-pointer rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-700 file:mr-4 file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-sm file:font-medium hover:file:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  />
+                )}
+
+                {/* PREVIEW FOTO BARU */}
+                {preview && attachment && (
+                  <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+                    <img
+                      src={preview}
+                      alt="Preview foto penyelesaian yang akan diunggah"
+                      className="h-40 w-40 rounded-lg border border-gray-200 object-cover"
                     />
 
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm text-gray-700">
-                        Upload foto sesudah (opsional).
+                    <div className="min-w-0">
+                      <p className="max-w-xs break-all text-sm text-gray-700">
+                        {attachment.name}
                       </p>
 
                       <p className="mt-1 text-xs text-gray-500">
-                        Format gambar JPG, JPEG, atau PNG. Maksimal 10 MB.
+                        {(attachment.size / 1024 / 1024).toFixed(2)} MB
                       </p>
+
+                      {!isReadOnly && (
+                        <button
+                          type="button"
+                          onClick={clearSelectedAttachment}
+                          disabled={loading}
+                          className="mt-2 inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+                        >
+                          <FiX size={16} />
+                          Hapus Pilihan
+                        </button>
+                      )}
                     </div>
                   </div>
-
-                  {!isReadOnly && (
-                    <input
-                      ref={fileInputRef}
-                      id="resolution-attachment"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileChange}
-                      disabled={loading}
-                      className="block w-full cursor-pointer rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-700 file:mr-4 file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-sm file:font-medium hover:file:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-60"
-                    />
-                  )}
-
-                  {/* PREVIEW FOTO BARU */}
-                  {preview && attachment && (
-                    <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-                      <img
-                        src={preview}
-                        alt="Preview foto penyelesaian yang akan diunggah"
-                        className="h-40 w-40 rounded-lg border border-gray-200 object-cover"
-                      />
-
-                      <div className="min-w-0">
-                        <p className="max-w-xs break-all text-sm text-gray-700">
-                          {attachment.name}
-                        </p>
-
-                        <p className="mt-1 text-xs text-gray-500">
-                          {(attachment.size / 1024 / 1024).toFixed(2)} MB
-                        </p>
-
-                        {!isReadOnly && (
-                          <button
-                            type="button"
-                            onClick={clearSelectedAttachment}
-                            disabled={loading}
-                            className="mt-2 inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
-                          >
-                            <FiX size={16} />
-                            Hapus Pilihan
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
+            </div>
 
             {/* FOTO PENYELESAIAN YANG SUDAH TERSIMPAN */}
             {resolutionAttachmentUrl && (
@@ -1144,18 +1120,6 @@ export default function TicketResolutionModal({ ticket, onClose, onSuccess, role
           >
             Batal
           </button>
-
-          {/* USER MENUTUP TIKET */}
-          {isUser && ticket.status === "RESOLVED" && (
-            <button
-              type="button"
-              onClick={handleCloseAsUser}
-              disabled={loading}
-              className="rounded-lg bg-green-600 px-4 py-2 text-white disabled:opacity-50"
-            >
-              {loading ? "Memproses..." : "Close Ticket"}
-            </button>
-          )}
 
           {/* SIMPAN PERUBAHAN */}
           {!isUser && !isLockedForAdmin && (

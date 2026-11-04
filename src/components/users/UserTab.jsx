@@ -230,7 +230,7 @@ export default function UserTab({
             >
               <span className="text-[10px]">●</span>
 
-              {user.is_active ? "Online" : "Offline"}
+              {user.is_active ? "AKTIF" : "NON AKTIF"}
             </span>
           </div>
         </div>
@@ -418,7 +418,7 @@ export default function UserTab({
                     >
                       <span className="text-[10px]">●</span>
 
-                      {user.is_active ? "Online" : "Offline"}
+                      {user.is_active ? "AKTIF" : "NON AKTIF"}
                     </span>
                   </td>
 
