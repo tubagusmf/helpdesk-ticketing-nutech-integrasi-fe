@@ -120,15 +120,19 @@ const COLUMN_GROUPS = [
     key: "resolution",
     title: "Resolution",
     description:
-      "Informasi penyelesaian ticket.",
+      "Informasi penyelesaian tiket.",
     columns: [
       {
+        key: "resolution_part_category",
+        label: "Kategori Part",
+      },
+      {
         key: "resolution_cause",
-        label: "Resolution Cause",
+        label: "Resolusi Penyebab",
       },
       {
         key: "resolution_solution",
-        label: "Resolution Solution",
+        label: "Resolusi Solusi",
       },
       {
         key: "resolution_notes",
@@ -141,7 +145,7 @@ const COLUMN_GROUPS = [
       },
       {
         key: "resolution_attachment",
-        label: "Resolution Attachment",
+        label: "Resolusi Lampiran",
       },
     ],
   },
@@ -203,6 +207,7 @@ const DEFAULT_COLUMNS = [
   "assigned_engineer",
   "priority",
   "status",
+  "resolution_part_category",
   "resolution_solution",
   "created_at",
   "due_at",

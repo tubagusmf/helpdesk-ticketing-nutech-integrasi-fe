@@ -575,6 +575,23 @@ export default function TicketDetail() {
             </div>
           ) : (
             <div className="space-y-5">
+              {/* KATEGORI PART */}
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">
+                  Kategori Part
+                </p>
+
+                <div className="bg-gray-50 border rounded-lg p-4">
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                    {resolution.part_category?.name ||
+                      resolution.PartCategory?.Name ||
+                      resolution.part_category_name ||
+                      resolution.PartCategoryName ||
+                      "-"}
+                  </p>
+                </div>
+              </div>
+              
               {/* PENYEBAB */}
               <div>
                 <p className="text-xs font-medium text-gray-500 mb-1">

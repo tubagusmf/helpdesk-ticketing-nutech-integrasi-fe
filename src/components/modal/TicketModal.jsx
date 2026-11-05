@@ -519,27 +519,87 @@ export default function TicketModal({ onClose, onSuccess }) {
     }));
   }, []);
 
-  const handleFileChange = useCallback((event) => {
-    const file = event.target.files?.[0] || null;
-
-    event.target.value = "";
-
+  const setTicketAttachment = useCallback((file) => {
     if (!file) {
-      return;
+      return false;
     }
 
-    if (!file.type.startsWith("image/")) {
+    if (!file.type || !file.type.startsWith("image/")) {
       toast.error("Lampiran harus berupa file gambar.");
-      return;
+      return false;
     }
 
     if (file.size > MAX_ATTACHMENT_SIZE) {
       toast.error("Ukuran foto maksimal 2 MB.");
-      return;
+      return false;
     }
 
     setAttachment(file);
+
+    return true;
   }, []);
+
+  const handleFileChange = useCallback((event) => {
+    const file = event.target.files?.[0] || null;
+
+    if (file) {
+      setTicketAttachment(file);
+    }
+
+    event.target.value = "";
+  }, [setTicketAttachment]);
+
+  const handlePaste = useCallback((event) => {
+    if (loading) {
+      return;
+    }
+
+    const items = Array.from(
+      event.clipboardData?.items || []
+    );
+
+    const imageItem = items.find(
+      (item) =>
+        item.kind === "file" &&
+        item.type.startsWith("image/")
+    );
+
+    if (!imageItem) {
+      return;
+    }
+
+    const pastedBlob = imageItem.getAsFile();
+
+    if (!pastedBlob) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const subtype = (
+      pastedBlob.type.split("/")[1] || "png"
+    ).toLowerCase();
+
+    const extension = subtype === "jpeg"
+      ? "jpg"
+      : subtype;
+
+    const pastedFile = new File(
+      [pastedBlob],
+      `ticket-problem-${Date.now()}.${extension}`,
+      {
+        type: pastedBlob.type,
+      }
+    );
+
+    const success = setTicketAttachment(pastedFile);
+
+    if (success) {
+      toast.success(
+        "Foto bukti masalah berhasil diupload."
+      );
+    }
+  }, [loading, setTicketAttachment]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -920,7 +980,6 @@ export default function TicketModal({ onClose, onSuccess }) {
                 </div>
 
                 {/* ATTACHMENT */}
-
                 <div className="min-w-0">
                   <label
                     htmlFor="ticket-attachment"
@@ -929,67 +988,134 @@ export default function TicketModal({ onClose, onSuccess }) {
                     Bukti Foto Masalah (Opsional)
                   </label>
 
-                  <label
-                    htmlFor="ticket-attachment"
+                  <div
+                    tabIndex={0}
+                    onPaste={handlePaste}
+                    onClick={(event) => {
+                      if (event.target === event.currentTarget) {
+                        event.currentTarget.focus();
+                      }
+                    }}
                     className="
-                      flex cursor-pointer items-center
-                      gap-3 rounded-lg border
-                      border-gray-300 px-3 py-3
-                      text-sm text-gray-600
-                      transition hover:bg-gray-50
+                      flex min-w-0 flex-col gap-3
+                      rounded-lg border border-dashed
+                      border-gray-300 bg-white p-3
+                      outline-none transition
+                      focus:border-orange-400
+                      focus:ring-2 focus:ring-orange-100
                     "
                   >
-                    <FiUpload size={18} />
 
-                    <span className="min-w-0 flex-1 break-words">
-                      {attachment
-                        ? attachment.name
-                        : "Pilih gambar, maksimal 2 MB"}
-                    </span>
+                    {/* INFORMASI UPLOAD */}
 
-                    <input
-                      id="ticket-attachment"
-                      type="file"
-                      accept="image/*"
-                      disabled={loading}
-                      onChange={handleFileChange}
-                      className="sr-only"
-                    />
-                  </label>
+                    <div className="flex items-start gap-3">
 
-                  {preview && (
-                    <div className="mt-3 flex items-start gap-3">
-                      <img
-                        src={preview}
-                        alt="Pratinjau bukti masalah"
-                        className="
-                          h-24 w-24 rounded-lg
-                          border border-gray-200
-                          object-cover
-                        "
+                      <FiImage
+                        size={18}
+                        className="mt-0.5 shrink-0 text-gray-500"
                       />
 
-                      <button
-                        type="button"
-                        onClick={() => setAttachment(null)}
-                        disabled={loading}
-                        className="
-                          inline-flex items-center
-                          gap-1 rounded-lg px-3 py-2
-                          text-xs font-medium
-                          text-red-600 hover:bg-red-50
-                        "
-                      >
-                        <FiX size={14} />
-                        Hapus gambar
-                      </button>
+                      <div className="min-w-0 flex-1">
+
+                        <p className="text-sm text-gray-700">
+                          Upload foto bukti masalah.
+                        </p>
+
+                      </div>
+
                     </div>
-                  )}
+
+                    {/* PILIH FILE */}
+
+                    <label
+                      htmlFor="ticket-attachment"
+                      className="
+                        flex cursor-pointer items-center
+                        gap-3 rounded-lg border
+                        border-gray-300 px-3 py-2.5
+                        text-sm text-gray-600
+                        transition hover:bg-gray-50
+                      "
+                    >
+
+                      <FiUpload size={18} />
+
+                      <span className="min-w-0 flex-1 break-words">
+                        {attachment
+                          ? attachment.name
+                          : "Pilih gambar, maksimal 2 MB"}
+                      </span>
+
+                      <input
+                        id="ticket-attachment"
+                        type="file"
+                        accept="image/*"
+                        disabled={loading}
+                        onChange={handleFileChange}
+                        className="sr-only"
+                      />
+
+                    </label>
+
+                    {/* PREVIEW GAMBAR */}
+
+                    {preview && attachment && (
+                      <div className="
+                        flex flex-col items-start gap-3
+                        sm:flex-row sm:items-center
+                      ">
+
+                        <img
+                          src={preview}
+                          alt="Pratinjau bukti masalah"
+                          className="
+                            h-36 w-36 rounded-lg
+                            border border-gray-200
+                            object-cover
+                          "
+                        />
+
+                        <div className="min-w-0">
+
+                          <p className="max-w-xs break-all text-sm text-gray-700">
+                            {attachment.name}
+                          </p>
+
+                          <p className="mt-1 text-xs text-gray-500">
+                            {(attachment.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+
+                          <button
+                            type="button"
+                            onClick={() => setAttachment(null)}
+                            disabled={loading}
+                            className="
+                              mt-2 inline-flex items-center
+                              gap-2 rounded-lg border
+                              border-red-200 px-3 py-2
+                              text-xs font-medium
+                              text-red-600 transition
+                              hover:bg-red-50
+                              disabled:cursor-not-allowed
+                              disabled:opacity-50
+                            "
+                          >
+                            <FiX size={14} />
+                            Hapus Gambar
+                          </button>
+
+                        </div>
+
+                      </div>
+                    )}
+
+                  </div>
 
                   <p className="mt-1 text-xs text-gray-400">
                     Format gambar didukung oleh backend,
                     dengan ukuran maksimal 2 MB.
                   </p>
+
                 </div>
               </div>
             </section>
