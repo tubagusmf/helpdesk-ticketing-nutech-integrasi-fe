@@ -5,12 +5,26 @@ const getHeaders = () => ({
   Authorization: `Bearer ${localStorage.getItem("token")}`,
 });
 
-export async function getParts(page = 1, search = "") {
-  const res = await fetch(`${BASE_URL}?page=${page}&name=${search}`, {
+export async function getParts(page = 1, search = "", limit = 10) {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+    name: search.trim(),
+  });
+
+  const res = await fetch(`${BASE_URL}?${params.toString()}`, {
     headers: getHeaders(),
   });
 
-  return res.json();
+  const result = await res.json();
+
+  if (!res.ok) {
+    throw new Error(
+      result?.message || "Gagal mengambil data Part"
+    );
+  }
+
+  return result;
 }
 
 export async function createPart(data) {
@@ -48,4 +62,35 @@ export async function getPartsByProjectId(projectId) {
   });
 
   return res.json();
+}
+
+export async function getAllParts(search = "") {
+  const firstResponse = await getParts(1, search, 1000);
+
+  const firstData = Array.isArray(firstResponse?.data)
+    ? firstResponse.data
+    : [];
+
+  const totalPage = Math.max(
+    Number(firstResponse?.total_page) || 1,
+    1,
+  );
+
+  if (totalPage === 1) {
+    return firstData;
+  }
+
+  const remainingResponses = await Promise.all(
+    Array.from(
+      { length: totalPage - 1 },
+      (_, index) => getParts(index + 2, search, 1000),
+    ),
+  );
+
+  return [
+    ...firstData,
+    ...remainingResponses.flatMap((response) =>
+      Array.isArray(response?.data) ? response.data : [],
+    ),
+  ];
 }

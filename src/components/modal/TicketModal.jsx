@@ -6,7 +6,7 @@ import { FiImage, FiUpload, FiX } from "react-icons/fi";
 import { createTicket, getLocations, getParts, getAssets } from "../../services/ticketService";
 import { getCurrentUser } from "../../services/userService";
 import { useAppSettings } from "../../context/AppSettingsContext";
-import { getAllProblems } from "../../services/problemService";
+import { getProblemsByPartId } from "../../services/problemService";
 import { DEFAULT_APP_SETTINGS } from "../../services/appSettingsService";
 
 const MAX_ATTACHMENT_SIZE = 2 * 1024 * 1024;
@@ -161,8 +161,8 @@ export default function TicketModal({ onClose, onSuccess }) {
   const [loadingParts, setLoadingParts] = useState(false);
   const [loadingAssets, setLoadingAssets] = useState(false);
   const [problems, setProblems] = useState([]);
-  const [loadingProblems, setLoadingProblems] = useState(true);
-  const [selectedProblem, setSelectedProblem] = useState(null);
+  const [loadingProblems, setLoadingProblems] = useState(false);
+  const [selectedProblem, setSelectedProblem] = useState(null); 
   const [descriptionMode, setDescriptionMode] = useState("select");
   const preview = useAttachmentPreview(attachment);
 
@@ -356,25 +356,68 @@ export default function TicketModal({ onClose, onSuccess }) {
     };
   }, []);
 
+  // ==========================================================
+  // UPDATE FORM
+  // ==========================================================
+
+  const updateFormField = useCallback((name, value) => {
+    setForm((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  }, []);
+
+  const resetProblemSelection = useCallback(() => {
+    setSelectedProblem(null);
+    setProblems([]);
+
+    if (descriptionMode === "select") {
+      setForm((current) => ({
+        ...current,
+        description: "",
+      }));
+    }
+  }, [descriptionMode]);
+
+  const selectedPartID = selectedPart?.value ?? null;
+
+  // ==========================================================
+  // FETCH PROBLEM DATA BY PART
+  // ==========================================================
+
   useEffect(() => {
     let active = true;
 
-    const fetchProblems = async () => {
-      setLoadingProblems(true);
+    setProblems([]);
 
+    if (!selectedPartID) {
+      setLoadingProblems(false);
+
+      return () => {
+        active = false;
+      };
+    }
+
+    const fetchProblems = async () => {
       try {
-        const response = await getAllProblems();
+        setLoadingProblems(true);
+
+        const response = await getProblemsByPartId(
+          selectedPartID,
+        );
 
         if (!active) return;
 
-        setProblems(response);
+        setProblems(extractList(response));
       } catch (error) {
         console.error(
-          "Gagal mengambil data permasalahan:",
+          "Gagal mengambil permasalahan berdasarkan Part:",
           error,
         );
 
         if (active) {
+          setProblems([]);
+
           toast.error(
             error?.message ||
               "Gagal mengambil data permasalahan.",
@@ -392,18 +435,7 @@ export default function TicketModal({ onClose, onSuccess }) {
     return () => {
       active = false;
     };
-  }, []);
-
-  // ==========================================================
-  // UPDATE FORM
-  // ==========================================================
-
-  const updateFormField = useCallback((name, value) => {
-    setForm((current) => ({
-      ...current,
-      [name]: value,
-    }));
-  }, []);
+  }, [selectedPartID]);
 
   const handleProjectChange = useCallback(
     async (selected) => {
@@ -411,6 +443,8 @@ export default function TicketModal({ onClose, onSuccess }) {
       setSelectedLocation(null);
       setSelectedPart(null);
       setSelectedAsset(null);
+
+      resetProblemSelection();
 
       setLocations([]);
       setParts([]);
@@ -455,7 +489,7 @@ export default function TicketModal({ onClose, onSuccess }) {
         setLoadingParts(false);
       }
     },
-    [],
+    [resetProblemSelection],
   );
 
   const handleLocationChange = useCallback(
@@ -463,6 +497,8 @@ export default function TicketModal({ onClose, onSuccess }) {
       setSelectedLocation(selected);
       setSelectedPart(null);
       setSelectedAsset(null);
+
+      resetProblemSelection();
 
       setAssets([]);
 
@@ -473,13 +509,16 @@ export default function TicketModal({ onClose, onSuccess }) {
         asset_id: "",
       }));
     },
-    [],
+    [resetProblemSelection],
   );
 
   const handlePartChange = useCallback(
     async (selected) => {
       setSelectedPart(selected);
       setSelectedAsset(null);
+
+      resetProblemSelection();
+
       setAssets([]);
 
       setForm((current) => ({
@@ -496,9 +535,13 @@ export default function TicketModal({ onClose, onSuccess }) {
 
       try {
         const response = await getAssets(selected.value);
+
         setAssets(extractList(response));
       } catch (error) {
-        console.error("Gagal mengambil perangkat:", error);
+        console.error(
+          "Gagal mengambil perangkat:",
+          error,
+        );
 
         toast.error(
           error?.message || "Gagal mengambil data perangkat.",
@@ -507,7 +550,7 @@ export default function TicketModal({ onClose, onSuccess }) {
         setLoadingAssets(false);
       }
     },
-    [],
+    [resetProblemSelection],
   );
 
   const handleAssetChange = useCallback((selected) => {
@@ -624,6 +667,15 @@ export default function TicketModal({ onClose, onSuccess }) {
       toast.error("Deskripsi permasalahan wajib diisi.");
       return;
     }
+    if (
+    descriptionMode === "select" &&
+    !selectedProblem
+  ) {
+    toast.error(
+      "Silakan pilih permasalahan dari daftar atau gunakan Input Manual.",
+    );
+    return;
+  }
 
     const validPriority = priorityOptions.some(
       (option) => option.value === form.priority,
@@ -897,12 +949,15 @@ export default function TicketModal({ onClose, onSuccess }) {
                   </div>
 
                   {/* DROPDOWN PERMASALAHAN */}
-
                   {descriptionMode === "select" && (
                     <Select
                       options={problemOptions}
                       value={selectedProblem}
-                      isDisabled={loading || loadingProblems}
+                      isDisabled={
+                        loading ||
+                        !selectedPart ||
+                        loadingProblems
+                      }
                       isLoading={loadingProblems}
                       onChange={(selected) => {
                         setSelectedProblem(selected);
@@ -912,14 +967,26 @@ export default function TicketModal({ onClose, onSuccess }) {
                           selected?.label || "",
                         );
                       }}
-                      placeholder="Pilih atau ketik permasalahan..."
+                      placeholder={
+                        !selectedPart
+                          ? "Pilih perangkat terlebih dahulu..."
+                          : loadingProblems
+                            ? "Memuat permasalahan..."
+                            : "Pilih atau ketik permasalahan..."
+                      }
                       isSearchable
                       isClearable
-                      noOptionsMessage={() =>
-                        loadingProblems
-                          ? "Memuat data..."
-                          : "Belum ada data permasalahan."
-                      }
+                      noOptionsMessage={() => {
+                        if (!selectedPart) {
+                          return "Pilih perangkat terlebih dahulu.";
+                        }
+
+                        if (loadingProblems) {
+                          return "Memuat data...";
+                        }
+
+                        return "Belum ada permasalahan untuk perangkat ini.";
+                      }}
                       className="w-full"
                       classNamePrefix="ticket-select"
                       styles={selectStyles}

@@ -1,21 +1,70 @@
-
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Select from "react-select";
 
 export default function ProblemModal({
   isOpen,
   onClose,
   onSubmit,
   initialData,
+  parts = [],
+  partsLoading = false,
 }) {
   const [name, setName] = useState("");
+  const [selectedPart, setSelectedPart] = useState(null);
+
+  const partOptions = useMemo(() => {
+    return parts.map((part) => ({
+      value: Number(part.id),
+      label: `${part.name} - ${
+        part.project?.name || "Tanpa Project"
+      }`,
+    }));
+  }, [parts]);
 
   useEffect(() => {
-    if (initialData) {
-      setName(initialData.name || "");
-    } else {
-      setName("");
+    if (!isOpen) return;
+
+    setName(initialData?.name || "");
+
+    if (!initialData) {
+      setSelectedPart(null);
+      return;
     }
-  }, [initialData, isOpen]);
+
+    const initialPartID = Number(
+      initialData.part_id ??
+      initialData.PartID ??
+      initialData.part?.id ??
+      initialData.Part?.ID ??
+      0
+    );
+
+    if (!initialPartID) {
+      setSelectedPart(null);
+      return;
+    }
+
+    const existingPart = parts.find(
+      (part) => Number(part.id) === initialPartID
+    );
+
+    if (existingPart) {
+      setSelectedPart({
+        value: Number(existingPart.id),
+        label: `${existingPart.name} - ${
+          existingPart.project?.name || "Tanpa Project"
+        }`,
+      });
+    } else {
+      setSelectedPart({
+        value: initialPartID,
+        label:
+          initialData.part?.name ||
+          initialData.Part?.Name ||
+          "Part tidak ditemukan",
+      });
+    }
+  }, [isOpen, initialData, parts]);
 
   if (!isOpen) return null;
 
@@ -25,33 +74,41 @@ export default function ProblemModal({
     const trimmedName = name.trim();
 
     if (!trimmedName) {
-      alert("Nama permasalahan wajib diisi");
+      alert("Nama permasalahan wajib diisi.");
       return;
     }
 
-    onSubmit(trimmedName);
+    if (!selectedPart?.value) {
+      alert("Silakan pilih Part terlebih dahulu.");
+      return;
+    }
+
+    onSubmit(
+      trimmedName,
+      selectedPart.value
+    );
   };
 
   return (
     <div
       className="
-        fixed inset-0
-        bg-black bg-opacity-40
+        fixed inset-0 z-50
         flex items-center justify-center
-        z-50
+        bg-black bg-opacity-40
         p-4
       "
     >
       <div
         className="
-          bg-white
           w-full max-w-md
-          rounded-xl shadow-lg
-          overflow-hidden
+          overflow-visible
+          rounded-xl
+          bg-white
+          shadow-lg
         "
       >
         {/* HEADER */}
-        <div className="p-5 border-b">
+        <div className="rounded-t-xl border-b p-5">
           <h3 className="text-lg font-semibold text-gray-900">
             {initialData
               ? "Edit Permasalahan"
@@ -61,41 +118,140 @@ export default function ProblemModal({
 
         {/* FORM */}
         <form onSubmit={handleSubmit}>
-          <div className="p-5">
-            <label className="text-sm font-semibold text-gray-600">
-              NAMA PERMASALAHAN
-            </label>
+          <div className="space-y-4 p-5">
 
-            <input
-              type="text"
-              placeholder="Contoh: APLIKASI NOT RESPONDING"
-              value={name}
-              maxLength={255}
-              onChange={(e) => setName(e.target.value)}
-              className="
-                w-full mt-2
-                border border-gray-300
-                p-3 rounded-lg
-                focus:outline-none
-                focus:ring-2 focus:ring-blue-500
-              "
-              autoFocus
-            />
+            {/* NAMA PERMASALAHAN */}
+            <div>
+              <label
+                htmlFor="problem-name"
+                className="
+                  mb-2 block
+                  text-sm font-semibold
+                  text-gray-600
+                "
+              >
+                NAMA PERMASALAHAN
+              </label>
 
-            <p className="text-xs text-gray-400 mt-2">
-              Maksimal 255 karakter.
-            </p>
+              <input
+                id="problem-name"
+                type="text"
+                placeholder="Contoh: APLIKASI NOT RESPONDING"
+                value={name}
+                maxLength={255}
+                onChange={(e) => setName(e.target.value)}
+                className="
+                  mt-1 w-full
+                  rounded-lg
+                  border border-gray-300
+                  p-3
+                  focus:outline-none
+                  focus:ring-2
+                  focus:ring-blue-500
+                "
+                autoFocus
+              />
+            </div>
+
+            {/* PART */}
+            <div>
+              <label
+                className="
+                  mb-2 block
+                  text-sm font-semibold
+                  text-gray-600
+                "
+              >
+                PART
+                <span className="ml-1 text-red-500">*</span>
+              </label>
+
+              <Select
+                options={partOptions}
+                value={selectedPart}
+                onChange={setSelectedPart}
+                placeholder={
+                  partsLoading
+                    ? "Memuat data Part..."
+                    : "Pilih atau ketik nama Part..."
+                }
+                isLoading={partsLoading}
+                isDisabled={partsLoading}
+                isSearchable
+                isClearable
+                noOptionsMessage={() =>
+                  partsLoading
+                    ? "Memuat data..."
+                    : "Data Part tidak ditemukan"
+                }
+                loadingMessage={() => "Memuat data Part..."}
+
+                menuPortalTarget={
+                  typeof document !== "undefined"
+                    ? document.body
+                    : null
+                }
+                menuPosition="fixed"
+
+                styles={{
+                  menuPortal: (base) => ({
+                    ...base,
+                    zIndex: 9999,
+                  }),
+
+                  menu: (base) => ({
+                    ...base,
+                    zIndex: 9999,
+                  }),
+
+                  control: (base, state) => ({
+                    ...base,
+                    minHeight: "42px",
+                    borderRadius: "8px",
+                    borderColor: state.isFocused
+                      ? "#3B82F6"
+                      : "#D1D5DB",
+                    boxShadow: state.isFocused
+                      ? "0 0 0 1px #3B82F6"
+                      : "none",
+                    "&:hover": {
+                      borderColor: "#3B82F6",
+                    },
+                  }),
+
+                  option: (base, state) => ({
+                    ...base,
+                    cursor: "pointer",
+                    backgroundColor: state.isSelected
+                      ? "#2563EB"
+                      : state.isFocused
+                        ? "#EFF6FF"
+                        : "#FFFFFF",
+                    color: state.isSelected
+                      ? "#FFFFFF"
+                      : "#1F2937",
+                  }),
+                }}
+              />
+            </div>
+
           </div>
 
           {/* FOOTER */}
-          <div className="flex justify-end gap-3 p-5 border-t">
+          <div
+            className="
+              flex justify-end gap-3
+              rounded-b-xl
+              border-t p-5
+            "
+          >
             <button
               type="button"
               onClick={onClose}
               className="
-                px-4 py-2
-                border border-gray-300
                 rounded-lg
+                border border-gray-300
+                px-4 py-2
                 hover:bg-gray-50
               "
             >
@@ -104,13 +260,19 @@ export default function ProblemModal({
 
             <button
               type="submit"
-              disabled={!name.trim()}
+              disabled={
+                !name.trim() ||
+                !selectedPart?.value ||
+                partsLoading
+              }
               className="
-                bg-blue-600 text-white
-                px-5 py-2 rounded-lg
+                rounded-lg
+                bg-blue-600
+                px-5 py-2
+                text-white
                 hover:bg-blue-700
-                disabled:opacity-50
                 disabled:cursor-not-allowed
+                disabled:opacity-50
               "
             >
               Simpan

@@ -20,8 +20,8 @@ export default function MasterDataAdmin() {
     "Part ID",
     "Kategori Part",
     "Permasalahan",
-    "Cause",
-    "Solution",
+    "Penyebab",
+    "Solusi",
   ];
 
   const [activeTab, setActiveTab] = useState("Project");
@@ -149,11 +149,11 @@ export default function MasterDataAdmin() {
             <ProblemTab />
           )}
 
-          {activeTab === "Cause" && (
+          {activeTab === "Penyebab" && (
             <CauseTab />
           )}
 
-          {activeTab === "Solution" && (
+          {activeTab === "Solusi" && (
             <SolutionTab />
           )}
 

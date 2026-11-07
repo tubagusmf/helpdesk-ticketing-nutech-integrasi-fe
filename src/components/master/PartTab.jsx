@@ -13,12 +13,9 @@ import { getProjects } from "../../services/projectService";
 export default function PartTab() {
   const [data, setData] = useState([]);
   const [projects, setProjects] = useState([]);
-
   const [selectedData, setSelectedData] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
-
   const [isModalOpen, setIsModalOpen] = useState(false);
-
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [totalPage, setTotalPage] = useState(1);

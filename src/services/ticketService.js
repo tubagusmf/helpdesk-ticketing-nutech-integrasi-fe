@@ -94,7 +94,13 @@ export const getLocations = async (projectId) => {
 };
 
 export const getParts = async (projectId) => {
-  return fetchAPI(`${BASE_URL}/parts?project_id=${projectId}`, {
+  const params = new URLSearchParams({
+    project_id: String(projectId),
+    page: "1",
+    limit: "1000",
+  });
+
+  return fetchAPI(`${BASE_URL}/parts?${params.toString()}`, {
     headers: getHeaders(),
   });
 };

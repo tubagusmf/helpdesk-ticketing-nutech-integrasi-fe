@@ -1,4 +1,3 @@
-
 const BASE_URL = `${import.meta.env.VITE_API_URL}/v1/problems`;
 
 const getHeaders = () => ({
@@ -102,6 +101,21 @@ export async function deleteProblem(id) {
     `${BASE_URL}/delete/${id}`,
     {
       method: "DELETE",
+      headers: getHeaders(),
+    },
+  );
+
+  return handleResponse(res);
+}
+
+export async function getProblemsByPartId(partId) {
+  if (!partId) {
+    return { data: [] };
+  }
+
+  const res = await fetch(
+    `${BASE_URL}/part/${encodeURIComponent(partId)}`,
+    {
       headers: getHeaders(),
     },
   );
